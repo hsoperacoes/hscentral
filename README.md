@@ -39,6 +39,15 @@
         .form-link:hover {
             background-color: #45a049;
         }
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #fff;
+            background-color: #333;
+            padding: 10px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
@@ -49,5 +58,9 @@
         <a href="https://forms.gle/GCzCaD6iLEh9Hhhu7" class="form-link" target="_blank">DIVERGÊNCIA DE NOTAS FISCAIS</a>
         <a href="https://forms.gle/Qp1yY1EAX1FLc7Wg9" class="form-link" target="_blank">TRANSFERÊNCIA ENTRE LOJAS</a>
     </div>
+
+    <footer>
+        Dúvidas, entrar em contato com Sr. Leonardo
+    </footer>
 </body>
 </html>
