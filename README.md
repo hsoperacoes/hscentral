@@ -74,7 +74,7 @@
         
         <!-- Imagem centralizada -->
         <div class="image-container">
-            <img src="https://i.imgur.com/4muNZ9u.jpg" alt="Minha Imagem">
+            <img src="https://raw.githubusercontent.com/seu-usuario/seu-repositorio/main/Hering_S%C3%ADmbolo_N_CMYK.png" alt="Logo Hering">
         </div>
     </div>
 </body>
