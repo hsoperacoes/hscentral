@@ -74,7 +74,7 @@
         
         <!-- Imagem centralizada -->
         <div class="image-container">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Logo_da_Hering.svg/1200px-Logo_da_Hering.svg.png" alt="Logo Hering">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/4/43/Logo_da_Hering.svg" alt="Logo Hering">
         </div>
     </div>
 </body>
