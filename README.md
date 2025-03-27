@@ -48,6 +48,19 @@
             padding: 10px;
             border-radius: 5px;
         }
+        
+        /* Estilo para a imagem */
+        .image-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .image-container img {
+            width: 50%; /* Ajuste o tamanho conforme necessário */
+            max-width: 400px; /* Tamanho máximo para a imagem */
+            height: auto;
+            border-radius: 8px; /* Opção para deixar a imagem com borda arredondada */
+        }
     </style>
 </head>
 <body>
@@ -58,8 +71,11 @@
         <a href="https://forms.gle/Wy9axrgLnoC5ymBk6" class="form-link" target="_blank">CONTAGEM DE SACOLA</a>
         <a href="https://forms.gle/GCzCaD6iLEh9Hhhu7" class="form-link" target="_blank">DIVERGÊNCIA DE NOTAS FISCAIS</a>
         <a href="https://forms.gle/Qp1yY1EAX1FLc7Wg9" class="form-link" target="_blank">TRANSFERÊNCIA ENTRE LOJAS</a>
+        
+        <!-- Imagem centralizada -->
+        <div class="image-container">
+            <img src="https://i.imgur.com/4muNZ9u.jpg" alt="Minha Imagem">
+        </div>
     </div>
-
-
 </body>
 </html>
