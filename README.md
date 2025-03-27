@@ -44,9 +44,9 @@
 <body>
     <div class="container">
         <h1>GERENCIAL HS</h1>
-        <a href="https://forms.gle/GCzCaD6iLEh9Hhhu7" class="form-link" target="_blank">DIVERGÊNCIA DE NOTAS FISCAIS</a>
-        <a href="https://forms.gle/wXWsukfKS2w7yKuX8" class="form-link" target="_blank">CADASTRO DE FALTA</a>
         <a href="https://forms.gle/rgvVTs1dqfEsujzHA" class="form-link" target="_blank">CADASTRO DE FOLGAS</a>
+        <a href="https://forms.gle/wXWsukfKS2w7yKuX8" class="form-link" target="_blank">CADASTRO DE FALTA</a>
+        <a href="https://forms.gle/GCzCaD6iLEh9Hhhu7" class="form-link" target="_blank">DIVERGÊNCIA DE NOTAS FISCAIS</a>
         <a href="https://forms.gle/Qp1yY1EAX1FLc7Wg9" class="form-link" target="_blank">TRANSFERÊNCIA ENTRE LOJAS</a>
     </div>
 </body>
