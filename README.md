@@ -69,4 +69,13 @@
         <a href="https://forms.gle/rgvVTs1dqfEsujzHA" class="form-link" target="_blank">CADASTRO DE FOLGAS</a>
         <a href="https://forms.gle/wXWsukfKS2w7yKuX8" class="form-link" target="_blank">CADASTRO DE FALTA</a>
         <a href="https://forms.gle/Wy9axrgLnoC5ymBk6" class="form-link" target="_blank">CONTAGEM DE SACOLA</a>
-        <a href="https://forms.gle/GCzCaD6iLEh9Hhhu7" class="form-link" target="_blank">DIVERGÊNCIA DE NOTAS FISCA_
+        <a href="https://forms.gle/GCzCaD6iLEh9Hhhu7" class="form-link" target="_blank">DIVERGÊNCIA DE NOTAS FISCAIS</a>
+        <a href="https://forms.gle/Qp1yY1EAX1FLc7Wg9" class="form-link" target="_blank">TRANSFERÊNCIA ENTRE LOJAS</a>
+        
+        <!-- Imagem centralizada -->
+        <div class="image-container">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Logo_da_Hering.svg/1200px-Logo_da_Hering.svg.png" alt="Logo Hering">
+        </div>
+    </div>
+</body>
+</html>
