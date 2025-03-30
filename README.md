@@ -72,10 +72,6 @@
         <a href="https://forms.gle/GCzCaD6iLEh9Hhhu7" class="form-link" target="_blank">DIVERGÊNCIA DE NOTAS FISCAIS</a>
         <a href="https://forms.gle/Qp1yY1EAX1FLc7Wg9" class="form-link" target="_blank">TRANSFERÊNCIA ENTRE LOJAS</a>
         
-        <!-- Imagem centralizada -->
-        <div class="image-container">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Logo_da_Hering.svg/1200px-Logo_da_Hering.svg.png" alt="Logo Hering">
-        </div>
-    </div>
+        
 </body>
 </html>
