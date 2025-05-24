@@ -29,7 +29,7 @@
     }
 
     .logo-topo {
-      width: 140px; /* tamanho maior */
+      width: 150px;
       height: auto;
       margin-bottom: 30px;
     }
@@ -71,33 +71,27 @@
 <body>
 
   <div class="container">
-    <!-- Logo centralizada acima do menu -->
+    <!-- LOGO NO TOPO CENTRALIZADA -->
     <img src="logo.png" alt="Logo HS" class="logo-topo" />
 
     <a href="https://hsoperacoes.github.io/FOLGAS/" class="form-link" target="_blank">
       <i class="fas fa-calendar-alt"></i> CADASTRO DE FOLGAS
     </a>
-
     <a href="https://forms.gle/wXWsukfKS2w7yKuX8" class="form-link" target="_blank">
       <i class="fas fa-calendar-minus"></i> CADASTRO DE FALTA
     </a>
-
     <a href="https://forms.gle/Wy9axrgLnoC5ymBk6" class="form-link" target="_blank">
       <i class="fas fa-lock"></i> CONTAGEM DE SACOLA
     </a>
-
     <a href="https://hsoperacoes.github.io/divergencia/" class="form-link" target="_blank">
       <i class="fas fa-file-invoice-dollar"></i> DIVERGÊNCIA DE NOTAS FISCAIS
     </a>
-
     <a href="https://hsoperacoes.github.io/transferencia/" class="form-link" target="_blank">
       <i class="fas fa-exchange-alt"></i> TRANSFERÊNCIA ENTRE LOJAS
     </a>
-
     <a href="https://hsoperacoes.github.io/gerador/" class="form-link" target="_blank">
       <i class="fas fa-barcode"></i> GERADOR DE CÓDIGO DE BARRAS
     </a>
-
     <a href="https://hsoperacoes.github.io/nf/" class="form-link" target="_blank">
       <i class="fas fa-receipt"></i> RECEBIMENTO DE NOTA FISCAL
     </a>
