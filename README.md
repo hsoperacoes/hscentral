@@ -15,21 +15,11 @@
 
     .container {
       max-width: 700px;
-      margin: 50px auto;
+      margin: 0 auto; /* Tirou o espaço no topo */
       background-color: #2c2c2c;
       padding: 30px;
       border-radius: 12px;
       box-shadow: 0 0 10px rgba(0,0,0,0.5);
-    }
-
-    h1 {
-      text-align: center;
-      font-size: 28px;
-      margin-bottom: 30px;
-    }
-
-    h1 i {
-      margin-right: 10px;
     }
 
     .form-link {
@@ -69,7 +59,7 @@
 <body>
 
   <div class="container">
-    <h1><i class="fas fa-tasks"></i> GERENCIAL HS</h1>
+    <!-- Removido o título H1 -->
 
     <a href="https://hsoperacoes.github.io/FOLGAS/" class="form-link" target="_blank">
       <i class="fas fa-calendar-alt"></i> CADASTRO DE FOLGAS
