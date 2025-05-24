@@ -1,3 +1,4 @@
+
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
@@ -13,9 +14,14 @@
       padding: 0;
     }
 
+    /* Oculta o cabeçalho "hscentral" que está fora do controle do HTML */
+    h1:first-of-type {
+      display: none !important;
+    }
+
     .container {
       max-width: 700px;
-      margin: 0 auto; /* Tirou o espaço no topo */
+      margin: 0 auto;
       background-color: #2c2c2c;
       padding: 30px;
       border-radius: 12px;
@@ -59,7 +65,6 @@
 <body>
 
   <div class="container">
-    <!-- Removido o título H1 -->
 
     <a href="https://hsoperacoes.github.io/FOLGAS/" class="form-link" target="_blank">
       <i class="fas fa-calendar-alt"></i> CADASTRO DE FOLGAS
