@@ -22,9 +22,16 @@
       max-width: 700px;
       margin: 0 auto;
       background-color: #2c2c2c;
-      padding: 30px;
+      padding: 40px 30px;
       border-radius: 12px;
       box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+
+    .logo-topo {
+      width: 140px; /* tamanho maior */
+      height: auto;
+      margin-bottom: 30px;
     }
 
     .form-link {
@@ -59,41 +66,38 @@
       margin: 20px auto 0 auto;
       max-width: 700px;
     }
-
-    .logo-direita {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      width: 100px;
-      height: auto;
-      z-index: 999;
-    }
   </style>
 </head>
 <body>
 
-  <!-- Troque o src abaixo pelo link da sua logo -->
-  <img src="https://hsoperacoes.github.io/img/logo.png" alt="Logo HS" class="logo-direita" />
-
   <div class="container">
+    <!-- Logo centralizada acima do menu -->
+    <img src="logo.png" alt="Logo HS" class="logo-topo" />
+
     <a href="https://hsoperacoes.github.io/FOLGAS/" class="form-link" target="_blank">
       <i class="fas fa-calendar-alt"></i> CADASTRO DE FOLGAS
     </a>
+
     <a href="https://forms.gle/wXWsukfKS2w7yKuX8" class="form-link" target="_blank">
       <i class="fas fa-calendar-minus"></i> CADASTRO DE FALTA
     </a>
+
     <a href="https://forms.gle/Wy9axrgLnoC5ymBk6" class="form-link" target="_blank">
       <i class="fas fa-lock"></i> CONTAGEM DE SACOLA
     </a>
+
     <a href="https://hsoperacoes.github.io/divergencia/" class="form-link" target="_blank">
       <i class="fas fa-file-invoice-dollar"></i> DIVERGÊNCIA DE NOTAS FISCAIS
     </a>
+
     <a href="https://hsoperacoes.github.io/transferencia/" class="form-link" target="_blank">
       <i class="fas fa-exchange-alt"></i> TRANSFERÊNCIA ENTRE LOJAS
     </a>
+
     <a href="https://hsoperacoes.github.io/gerador/" class="form-link" target="_blank">
       <i class="fas fa-barcode"></i> GERADOR DE CÓDIGO DE BARRAS
     </a>
+
     <a href="https://hsoperacoes.github.io/nf/" class="form-link" target="_blank">
       <i class="fas fa-receipt"></i> RECEBIMENTO DE NOTA FISCAL
     </a>
