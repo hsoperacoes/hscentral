@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
@@ -90,6 +89,14 @@
 
     <a href="https://hsoperacoes.github.io/transferencia/" class="form-link" target="_blank">
       <i class="fas fa-exchange-alt"></i> TRANSFERÊNCIA ENTRE LOJAS
+    </a>
+
+    <a href="https://hsoperacoes.github.io/gerador/" class="form-link" target="_blank">
+      <i class="fas fa-barcode"></i> GERADOR DE CÓDIGO DE BARRAS
+    </a>
+
+    <a href="https://hsoperacoes.github.io/nf/" class="form-link" target="_blank">
+      <i class="fas fa-receipt"></i> RECEBIMENTO DE NOTA FISCAL
     </a>
   </div>
 
