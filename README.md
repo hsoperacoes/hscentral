@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -66,7 +65,6 @@
       margin-right: 10px;
     }
 
-    /* Botão de voltar - sempre no canto superior esquerdo */
     .back-button {
       position: fixed;
       top: 20px;
@@ -91,7 +89,6 @@
       display: block;
     }
 
-    /* Estilos para formulários - centralizados e com fundo escuro */
     .form-container {
       max-width: 600px;
       background: #1e1e1e;
@@ -197,7 +194,6 @@
       background-color: #3c4043;
     }
 
-    /* Estilos para gerador de códigos */
     .gerador-section .form-container {
       background-color: #1e1e1e;
       color: white;
@@ -267,7 +263,6 @@
       fill: white !important;
     }
 
-    /* Mensagens de sucesso e erro */
     #success-message, #error-message {
       display: none;
       padding: 12px;
@@ -412,7 +407,6 @@
       display: flex;
     }
 
-    /* Estilos específicos para formulários de Contagem de Sacola e Cadastro de Falta */
     .checkbox-label {
       font-size: 14px;
       display: flex;
@@ -430,7 +424,6 @@
       display: none;
     }
 
-    /* Estilos para NF */
     #scanner {
       width: 100%;
       height: 100vh;
@@ -515,12 +508,10 @@
   </style>
 </head>
 <body>
-  <!-- Botão de voltar -->
   <button class="back-button" id="backButton" onclick="voltarHome()">
     <i class="fas fa-arrow-left"></i> Voltar à Home
   </button>
 
-  <!-- SEÇÃO HOME -->
   <div id="home" class="section active">
     <img src="logo.png" alt="Logo HS" class="logo-topo" />
     
@@ -549,7 +540,6 @@
     </div>
   </div>
 
-  <!-- SEÇÃO CADASTRO DE FOLGAS -->
   <div id="folgas" class="section">
     <div class="form-container">
       <img src="logo.png" alt="Logo" class="logo">
@@ -604,7 +594,6 @@
     </div>
   </div>
 
-  <!-- SEÇÃO CADASTRO DE FALTA -->
   <div id="falta" class="section">
     <div class="form-container">
       <img src="logo.png" alt="Logo" class="logo">
@@ -653,7 +642,6 @@
     </div>
   </div>
 
-  <!-- SEÇÃO CONTAGEM DE SACOLA -->
   <div id="sacola" class="section">
     <div class="form-container">
       <img src="logo.png" alt="Logo" class="logo">
@@ -717,7 +705,6 @@
     </div>
   </div>
 
-  <!-- SEÇÃO DIVERGÊNCIA DE NOTAS FISCAIS -->
   <div id="divergencia" class="section">
     <div class="form-container">
       <img src="logo.png" alt="Logo" class="logo">
@@ -803,7 +790,6 @@
     </div>
   </div>
 
-  <!-- SEÇÃO TRANSFERÊNCIA ENTRE LOJAS -->
   <div id="transferencia" class="section">
     <div class="form-container">
       <img src="logo.png" alt="Logo" class="logo">
@@ -873,7 +859,6 @@
     </div>
   </div>
 
-  <!-- SEÇÃO GERADOR DE CÓDIGOS DE BARRAS -->
   <div id="gerador" class="section gerador-section">
     <div class="form-container">
       <img src="logo.png" alt="Logo" class="logo">
@@ -900,7 +885,6 @@
     </div>
   </div>
 
-  <!-- SEÇÃO RECEBIMENTO DE NOTA FISCAL -->
   <div id="nf" class="section">
     <div class="form-container">
       <img src="logo.png" alt="Logo" class="logo">
@@ -940,42 +924,26 @@
   <footer>HS Operações © 2025 - Todos os direitos reservados</footer>
 
   <script>
-    // Configuração Dynamsoft
     Dynamsoft.DBR.BarcodeScanner.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMTA0MDgyMzg1LVRYbFhaV0pRY205cSIsIm1haW5TZXJ2ZXJVUkwiOiJodHRwczovL21kbHMuZHluYW1zb2Z0b25saW5lLmNvbSIsIm9yZ2FuaXphdGlvbklEIjoiMTA0MDgyMzg1Iiwic3RhbmRieVNlcnZlclVSTCI6Imh0dHBzOi8vc2Rscy5keW5hbXNvZnRvbmxpbmUuY29tIiwiY2hlY2tDb2RlIjoxNzI0OTg5ODA0fQ==";
 
-    // Função para mostrar seções
     function mostrarSecao(secaoId) {
-      // Esconder todas as seções
       const secoes = document.querySelectorAll(".section");
       secoes.forEach(secao => secao.classList.remove('active'));
       
-      // Mostrar a seção selecionada
       document.getElementById(secaoId).classList.add('active');
-      
-      // Mostrar botão de voltar
       document.getElementById('backButton').classList.add('show');
-      
-      // Rolagem suave para o topo da seção
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // Função para voltar à home
     function voltarHome() {
-      // Esconder todas as seções
       const secoes = document.querySelectorAll(".section");
       secoes.forEach(secao => secao.classList.remove('active'));
       
-      // Mostrar a home
       document.getElementById('home').classList.add('active');
-      
-      // Esconder botão de voltar
       document.getElementById('backButton').classList.remove('show');
-      
-      // Rolagem suave para o topo
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // SCRIPTS PARA CADASTRO DE FOLGAS
     const funcionariosPorFilial = {
       "ARTUR": ["FERNANDA", "ISABELLA", "LUCILENE"],
       "FLORIANO": ["FERNANDA", "MEIRE", "SARA", "THACIANNE"],
@@ -999,15 +967,13 @@
       }
     }
 
-    // Adiciona event listener para o campo de data de trabalho
     document.getElementById('dataTrabalho-folgas').addEventListener('change', function() {
       const motivoSelect = document.getElementById('motivo-folgas');
       if (motivoSelect.value !== '') {
-        verificarMotivo(); // Chama a função se um motivo já estiver selecionado
+        verificarMotivo();
       }
     });
 
-    // Adiciona event listener para o campo de motivo da folga
     document.getElementById('motivo-folgas').addEventListener('change', verificarMotivo);
 
     function verificarMotivo() {
@@ -1022,7 +988,7 @@
         return;
       }
 
-      const dataTrabalho = new Date(dataTrabalhoInput.value + 'T00:00:00'); // Garante fuso horário
+      const dataTrabalho = new Date(dataTrabalhoInput.value + 'T00:00:00');
       const maxDate = new Date(dataTrabalho);
 
       if (motivo === "DOMINGO") {
@@ -1061,7 +1027,6 @@
         .catch(error => alert("Erro ao enviar os dados!"));
     });
 
-    // SCRIPTS PARA CADASTRO DE FALTA
     const filialSelectFalta = document.getElementById('filial-falta');
     const funcionarioSelectFalta = document.getElementById('funcionario-falta');
     const motivoSelectFalta = document.getElementById('motivo-falta');
@@ -1113,7 +1078,6 @@
       });
     });
 
-    // SCRIPTS PARA CONTAGEM DE SACOLA
     function toggleCamposG() {
       const grupoG = document.getElementById("grupo-tamanho-g");
       const checkbox = document.getElementById("mostrar-g");
@@ -1125,7 +1089,6 @@
       return agora.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
     }
 
-    // Preenche a data ao carregar a seção de sacola
     function preencherDataSacola() {
       document.getElementById("data-contagem").value = getDataHoraAtualBR();
     }
@@ -1137,7 +1100,6 @@
       const sacolaG = document.getElementById("sacola-g");
       const envelopeG = document.getElementById("envelope-g");
 
-      // Verifica se campos G estão preenchidos se checkbox marcado
       if (checkboxG.checked) {
         if (sacolaG.value === "" || envelopeG.value === "") {
           alert("Preencha os campos de Sacola G e Envelope G.");
@@ -1148,7 +1110,6 @@
       const botao = document.getElementById("btn-enviar");
       botao.disabled = true;
 
-      // Atualiza a data com hora antes de enviar
       document.getElementById("data-contagem").value = getDataHoraAtualBR();
 
       const form = e.target;
@@ -1173,10 +1134,8 @@
       }
     });
 
-    // SCRIPTS PARA DIVERGÊNCIA DE NOTAS FISCAIS
     let isSubmittingDiv = false;
 
-    // Mostrar/esconder campo "Outros" transportadora
     document.getElementById('transportadora-div').addEventListener('change', function() {
       const outrosDiv = document.getElementById('outrosTransportadoraDiv');
       if (this.value === 'OUTROS') {
@@ -1231,7 +1190,6 @@
       });
     }
 
-    // SCRIPTS PARA TRANSFERÊNCIA ENTRE LOJAS
     function atualizarEmailTrans() {
       const filialOrigem = document.getElementById('filial-origem').value;
       const filialDestinoSelect = document.getElementById('filial-destino');
@@ -1324,7 +1282,6 @@
       contarLinhasTrans();
     }
 
-    // SCRIPTS PARA GERADOR DE CÓDIGOS DE BARRAS
     function generateEAN13(code, skipValidation = false) {
       if (!/^\d{12,13}$/.test(code)) {
         throw new Error(`Código inválido: "${code}" - Deve conter 12 ou 13 dígitos`);
@@ -1472,7 +1429,6 @@
       alert("Códigos copiados para a área de transferência!");
     }
 
-    // SCRIPTS PARA RECEBIMENTO DE NOTA FISCAL
     const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbwfoYOgleHUcmbr_1B8tV_NG6cEZxcHm5zBSrJ0ItgRV_Cp7tumh3GjBzsvzTSNJ5sbmA/exec";
     const filiaisValidas = ["293", "488", "287", "288", "761"];
     let scannerInstance = null;
@@ -1610,7 +1566,6 @@
       }
     }
 
-    // Verificar se já está logado ao carregar a seção NF
     window.addEventListener('load', function () {
       const filial = localStorage.getItem('filial');
       if (filial) {
@@ -1620,9 +1575,7 @@
       }
     });
 
-    // Inicializar data da contagem de sacola quando a seção for mostrada
     document.addEventListener('DOMContentLoaded', function() {
-      // Observar mudanças na seção ativa para inicializar dados quando necessário
       const observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
           if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
@@ -1634,7 +1587,6 @@
         });
       });
 
-      // Observar todas as seções
       document.querySelectorAll('.section').forEach(function(section) {
         observer.observe(section, { attributes: true });
       });
