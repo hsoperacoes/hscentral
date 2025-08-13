@@ -946,7 +946,7 @@
     const funcionariosPorFilial = {
       "ARTUR": ["FERNANDA", "ISABELLA", "LUCILENE"],
       "FLORIANO": ["FERNANDA", "MEIRE", "SARA", "THACIANNE"],
-      "JOTA": ["BRUNO", "CARINA", "DENISE", "FABIOLA", "JÉSSICA", "LOUISE", "NATALIA", "PRISCILA", "RAYSSA", "VERA"],
+      "JOTA": ["BRUNO", "CARINA", "DENISE", "FABIOLA", "HERCULES", "INGRID", "MARCOS", "RAYSSA", "VERA"],
       "MODA": ["ANA CLARA", "DAIANE", "JÉSSICA", "MARCIA", "NAISE", "MARIA"],
       "PONTO": ["DANIELA", "EVANEUZA", "ISADORA", "PAULA", "PRISCILA", "SANDY", "SÔNIA", "SUELI"]
     };
