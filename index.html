@@ -944,10 +944,10 @@
     }
 
     const funcionariosPorFilial = {
-      "ARTUR": ["FERNANDA", "ISABELLA", "LUCILENE"],
-      "FLORIANO": ["FERNANDA", "MEIRE", "SARA", "THACIANNE"],
-      "JOTA": ["BRUNO", "CARINA", "DENISE", "FABIOLA", "HERCULES", "INGRID", "MARCOS", "RAYSSA", "VERA"],
-      "MODA": ["ANA CLARA", "DAIANE", "JÉSSICA", "MARCIA", "NAISE", "MARIA"],
+      "ARTUR": ["FERNANDA", "LUCILENE"],
+      "FLORIANO": ["CLAUDIANA", "IOLANDA", "MEIRE", "SARA"],
+      "JOTA": ["BRUNO", "CARINA", "DENISE", "FABIOLA", "INGRID", "MARCOS", "PRISCILA", "RAYSSA", "VERA"],
+      "MODA": ["ANA CLARA", "DAIANE", "JÉSSICA", "MARCIA", "MARIA"],
       "PONTO": ["DANIELA", "EVANEUZA", "ISADORA", "PAULA", "PRISCILA", "SANDY", "SÔNIA", "SUELI"]
     };
 
