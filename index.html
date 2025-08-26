@@ -1056,10 +1056,17 @@
       submitButtonFalta.disabled = true;
 
       const data = new FormData(formFalta);
-      const dataFaltaInput = document.getElementById('data-falta');
-      const dataFalta = new Date(dataFaltaInput.value);
-      const dataFormatada = `${('0' + dataFalta.getDate()).slice(-2)}/${('0' + (dataFalta.getMonth() + 1)).slice(-2)}/${dataFalta.getFullYear()}`;
-      data.set("data_falta", dataFormatada);
+     const dataFaltaInput = document.getElementById('data-falta');
+const val = dataFaltaInput.value;
+if (!val) {
+  alert("Informe a Data da Falta.");
+  submitButtonFalta.disabled = false;
+  return;
+}
+const [yyyy, mm, dd] = val.split('-'); // "2025-08-26"
+const dataFormatada = `${dd}/${mm}/${yyyy}`;
+data.set("data_falta", dataFormatada);
+
 
       fetch('https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec', {
         method: 'POST',
