@@ -1572,3 +1572,37 @@
 
         await scannerInstance.show(scannerDiv);
       } catch
+      catch (ex) {
+        alert("Erro ao iniciar o leitor: " + ex.message);
+        scannerDiv.style.display = "none";
+      }
+    }
+
+    window.addEventListener('load', function () {
+      const filial = localStorage.getItem('filial');
+      if (filial) {
+        document.getElementById('login-nf').classList.add('hidden');
+        document.getElementById('principal-nf').classList.remove('hidden');
+        carregarHistoricoNF(filial);
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+            const target = mutation.target;
+            if (target.id === 'sacola' && target.classList.contains('active')) {
+              preencherDataSacola();
+            }
+          }
+        });
+      });
+
+      document.querySelectorAll('.section').forEach(function(section) {
+        observer.observe(section, { attributes: true });
+      });
+    });
+  </script>
+</body>
+</html>
