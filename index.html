@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -35,7 +36,7 @@
       background-color: #2c2c2c;
       padding: 40px 30px;
       border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      box-shadow: 0 0 10px rgba(0,0,0,0.5 );
       margin-bottom: 20px;
     }
 
@@ -546,7 +547,7 @@
       <form id="form-folgas" method="POST" action="https://script.google.com/macros/s/AKfycbwh-YUwL2o3_i-bfcV9RMzLcoI98vyyGwEXf4LHlG5KJ59gIAlUe1_VVlFQMBqU6PwR/exec">
         <div class="form-group">
           <label for="filial-folgas">Filial</label>
-          <select id="filial-folgas" name="filial" required onchange="atualizarFuncionarios()">
+          <select id="filial-folgas" name="filial" required onchange="atualizarFuncionarios( )">
             <option value="">Selecione uma filial</option>
             <option value="ARTUR">ARTUR</option>
             <option value="FLORIANO">FLORIANO</option>
@@ -836,10 +837,7 @@
         <div id="barcode-count-trans" class="barcode-count">Total de itens: <span id="total-itens-trans" class="count-number">0</span></div>
 
         <div id="success-message-trans" style="display: none; background-color: #e8f5e8; color: #137333; padding: 12px; margin-top: 20px; border-radius: 4px; text-align: center; border: 1px solid #ceead6;">Transferência enviada com sucesso!</div>
-        <div id="error-message-trans" style="display: none; background-color: #fce8e6; color: #d93025; padding: 12px; margin-top: 20px; border-radius: 4px; text-align: center; border: 1px solid #f9dedc;"></div>
-
-        <div class="submit-buttons">
-          <button type="reset" class="clear-button">Limpar formulário</button>
+        <div id="error-message-trans" style="display: none; background-color: #fce8e6; color: #d93025; padding: 12px; margin-top: 20px; border-radius: 4px;
           <button type="submit" class="submit-button" id="submit-button-trans">Enviar</button>
         </div>
       </form>
@@ -1050,21 +1048,31 @@
       diasContainer.style.display = motivoSelectFalta.value === 'ATESTADO MÉDICO' ? 'block' : 'none';
     });
 
+    // ===================================================================
+    // ========= INÍCIO DO CÓDIGO CORRIGIDO PARA O FORM DE FALTA =========
+    // ===================================================================
     formFalta.addEventListener('submit', e => {
       e.preventDefault();
       submitButtonFalta.disabled = true;
 
       const data = new FormData(formFalta);
       const dataFaltaInput = document.getElementById('data-falta');
-      const dataFalta = new Date(dataFaltaInput.value);
-       const dataFalta = new Date(dataFaltaInput.value); 
-      const dataFormatada = `${('0' + dataFalta.getDate()).slice(-2)}/${('0' + (dataFalta.getMonth() + 1)).slice(-2)}/${dataFalta.getFullYear()}`;
-  data.set("data_falta", dataFormatada);
+      
+      // Pega o valor diretamente como string: "AAAA-MM-DD"
+      const valorData = dataFaltaInput.value; 
+      
+      // Divide a string em partes: [AAAA, MM, DD]
+      const partesData = valorData.split('-'); 
+      
+      // Remonta a data no formato DD/MM/AAAA para evitar erros de fuso horário
+      const dataFormatada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
+
+      data.set("data_falta", dataFormatada);
 
       fetch('https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec', {
         method: 'POST',
         body: data
-      })
+      } )
       .then(res => res.text())
       .then(() => {
         alert("Falta cadastrada com sucesso!");
@@ -1077,6 +1085,9 @@
         submitButtonFalta.disabled = false;
       });
     });
+    // ===================================================================
+    // ========= FIM DO CÓDIGO CORRIGIDO PARA O FORM DE FALTA ============
+    // ===================================================================
 
     function toggleCamposG() {
       const grupoG = document.getElementById("grupo-tamanho-g");
@@ -1119,7 +1130,7 @@
         const response = await fetch("https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec", {
           method: "POST",
           body: formData
-        });
+        } );
 
         const resText = await response.text();
         alert("Contagem registrada com sucesso!");
@@ -1170,7 +1181,7 @@
       fetch("https://script.google.com/macros/s/AKfycbw5xq6i5Qoc0s3f-ZaQ6FCZdsjXrC_my8d0tmgr756hWZQqT9Olu9DjsGOYwTlvnBQA/exec", {
         method: "POST",
         body: formData
-      })
+      } )
       .then(response => response.json())
       .then(data => {
         alert("SUA DIVERGÊNCIA FOI ENVIADA COM SUCESSO, AGRADECEMOS SEU APOIO");
@@ -1240,7 +1251,7 @@
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: data
-      })
+      } )
       .then(response => response.json())
       .then(responseData => {
         document.getElementById('loading-overlay-trans').style.display = 'none';
@@ -1341,7 +1352,7 @@
       const margin = 10;
       const fontSize = 14;
 
-      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg" );
       const totalWidth = (binary.length * width) + (margin * 2);
       const totalHeight = height + fontSize + 15;
 
@@ -1352,7 +1363,7 @@
       let x = margin;
       for (let i = 0; i < binary.length; i++) {
         if (binary[i] === '1') {
-          const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect" );
           rect.setAttribute("x", x);
           rect.setAttribute("y", margin);
           rect.setAttribute("width", width);
@@ -1363,7 +1374,7 @@
         x += width;
       }
 
-      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      const text = document.createElementNS("http://www.w3.org/2000/svg", "text" );
       text.setAttribute("x", totalWidth / 2);
       text.setAttribute("y", totalHeight - 5);
       text.setAttribute("text-anchor", "middle");
@@ -1433,7 +1444,7 @@
     const filiaisValidas = ["293", "488", "287", "288", "761"];
     let scannerInstance = null;
 
-    function entrarNF() {
+    function entrarNF( ) {
       const codigo = document.getElementById('codigo-nf').value.trim();
       if (!codigo || !filiaisValidas.includes(codigo)) {
         alert("Código de filial inválido.");
@@ -1560,38 +1571,4 @@
         };
 
         await scannerInstance.show(scannerDiv);
-      } catch (ex) {
-        alert("Erro ao iniciar o leitor: " + ex.message);
-        scannerDiv.style.display = "none";
-      }
-    }
-
-    window.addEventListener('load', function () {
-      const filial = localStorage.getItem('filial');
-      if (filial) {
-        document.getElementById('login-nf').classList.add('hidden');
-        document.getElementById('principal-nf').classList.remove('hidden');
-        carregarHistoricoNF(filial);
-      }
-    });
-
-    document.addEventListener('DOMContentLoaded', function() {
-      const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-          if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-            const target = mutation.target;
-            if (target.id === 'sacola' && target.classList.contains('active')) {
-              preencherDataSacola();
-            }
-          }
-        });
-      });
-
-      document.querySelectorAll('.section').forEach(function(section) {
-        observer.observe(section, { attributes: true });
-      });
-    });
-  </script>
-</body>
-</html>
-
+      } catch
