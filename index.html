@@ -949,7 +949,7 @@
       "FLORIANO": ["CLAUDIANA", "IOLANDA", "MEIRE", "SARA"],
       "JOTA": ["BRUNO", "CARINA", "DENISE", "FABIOLA", "INGRID", "MARCOS", "PRISCILA", "RAYSSA", "VERA"],
       "MODA": ["ANA CLARA", "DAIANE", "JÉSSICA", "MARCIA", "MARIA"],
-      "PONTO": ["DANIELA", "EVANEUZA", "ISADORA", "PAULA", "PRISCILA", "SANDY", "SÔNIA", "SUELI"]
+      "PONTO": ["DANIELA", "EVANEUZA", "ISADORA", "PAULA", "PRISCILA", "BARBARA", "SÔNIA", "SUELI"]
     };
 
     function atualizarFuncionarios() {
