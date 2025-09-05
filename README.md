@@ -945,11 +945,11 @@
     }
 
     const funcionariosPorFilial = {
-      "ARTUR": ["FERNANDA", "LUCILENE"],
-      "FLORIANO": ["CLAUDIANA", "IOLANDA", "MEIRE", "SARA"],
-      "JOTA": ["BRUNO", "CARINA", "DENISE", "FABIOLA", "INGRID", "MARCOS", "PRISCILA", "RAYSSA", "VERA"],
-      "MODA": ["ANA CLARA", "DAIANE", "JÉSSICA", "MARCIA", "MARIA"],
-      "PONTO": ["DANIELA", "EVANEUZA", "ISADORA", "PAULA", "PRISCILA", "BARBARA", "SÔNIA", "SUELI"]
+      "ARTUR": ["LUCILENE", "POLIANA"],
+      "FLORIANO": ["IOLANDA", "MEIRE", "SARA"],
+      "JOTA": ["BRUNO", "CARINA", "DENISE", "FABIOLA", "INGRID", "MARCOS", "RAYSSA", "VERA"],
+      "MODA": ["ANA CLARA", "DAIANE", "JAIRLY", "JÉSSICA", "MARCIA", "MARIA"],
+      "PONTO": ["BARBARA", "DANIELA", "EVANEUZA", "ISADORA", "PAULA", "PRISCILA", "SÔNIA", "SUELI"]
     };
 
     function atualizarFuncionarios() {
