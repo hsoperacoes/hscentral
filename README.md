@@ -544,7 +544,7 @@
     <div class="form-container">
       <img src="logo.png" alt="Logo" class="logo">
       <h2>Cadastro de Folga Funcionários</h2>
-      <form id="form-folgas" method="POST" action="https://script.google.com/macros/s/AKfycbwh-YUwL2o3_i-bfcV9RMzLcoI98vyyGwEXf4LHlG5KJ59gIAlUe1_VVlFQMBqU6PwR/exec">
+      <form id="form-folgas" method="POST" action="https://script.google.com/macros/library/d/1KJTfJ78TzOQ7h1ToGaAYNTt1TNMiBhsYKKKAN9eIrZQdp0rCFEo0m_Xd/175">
         <div class="form-group">
           <label for="filial-folgas">Filial</label>
           <select id="filial-folgas" name="filial" required onchange="atualizarFuncionarios()">
