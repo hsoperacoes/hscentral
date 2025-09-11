@@ -1174,7 +1174,7 @@ data.set("data_falta", dataFormatada);
       var form = document.getElementById("formulario-divergencia");
       var formData = new FormData(form);
 
-      fetch("https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec", {
+      fetch("https://script.google.com/macros/s/AKfycbw5xq6i5Qoc0s3f-ZaQ6FCZdsjXrC_my8d0tmgr756hWZQqT9Olu9DjsGOYwTlvnBQA/exec", {
         method: "POST",
         body: formData
       })
