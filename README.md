@@ -1,3 +1,4 @@
+
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -294,9 +295,9 @@
       display: none;
       position: fixed;
       top: 0;
-      left: 0,
-      right: 0,
-      bottom: 0,
+      left: 0;
+      right: 0;
+      bottom: 0;
       background-color: rgba(0, 0, 0, 0.5);
       color: white;
       justify-content: center;
@@ -543,8 +544,7 @@
     <div class="form-container">
       <img src="logo.png" alt="Logo" class="logo">
       <h2>Cadastro de Folga Funcionários</h2>
-      <!-- Mantido como você enviou -->
-      <form id="form-folgas" method="POST" action="https://script.google.com/macros/library/d/1KJTfJ78TzOQ7h1ToGaAYNTt1TNMiBhsYKKKAN9eIrZQdp0rCFEo0m_Xd/175">
+      <form id="form-folgas" method="POST" action="https://script.google.com/macros/s/AKfycbwh-YUwL2o3_i-bfcV9RMzLcoI98vyyGwEXf4LHlG5KJ59gIAlUe1_VVlFQMBqU6PwR/exec">
         <div class="form-group">
           <label for="filial-folgas">Filial</label>
           <select id="filial-folgas" name="filial" required onchange="atualizarFuncionarios()">
@@ -1056,16 +1056,17 @@
       submitButtonFalta.disabled = true;
 
       const data = new FormData(formFalta);
-      const dataFaltaInput = document.getElementById('data-falta');
-      const val = dataFaltaInput.value;
-      if (!val) {
-        alert("Informe a Data da Falta.");
-        submitButtonFalta.disabled = false;
-        return;
-      }
-      const [yyyy, mm, dd] = val.split('-');
-      const dataFormatada = `${dd}/${mm}/${yyyy}`;
-      data.set("data_falta", dataFormatada);
+     const dataFaltaInput = document.getElementById('data-falta');
+const val = dataFaltaInput.value;
+if (!val) {
+  alert("Informe a Data da Falta.");
+  submitButtonFalta.disabled = false;
+  return;
+}
+const [yyyy, mm, dd] = val.split('-'); // "2025-08-26"
+const dataFormatada = `${dd}/${mm}/${yyyy}`;
+data.set("data_falta", dataFormatada);
+
 
       fetch('https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec', {
         method: 'POST',
@@ -1127,7 +1128,7 @@
           body: formData
         });
 
-        await response.text();
+        const resText = await response.text();
         alert("Contagem registrada com sucesso!");
         form.reset();
         toggleCamposG();
@@ -1170,10 +1171,9 @@
 
       loadingMessage.style.display = "block";
 
-      const form = document.getElementById("formulario-divergencia");
-      const formData = new FormData(form);
+      var form = document.getElementById("formulario-divergencia");
+      var formData = new FormData(form);
 
-      // ✅ URL correta do GAS de Divergências
       fetch("https://script.google.com/macros/s/AKfycbw5xq6i5Qoc0s3f-ZaQ6FCZdsjXrC_my8d0tmgr756hWZQqT9Olu9DjsGOYwTlvnBQA/exec", {
         method: "POST",
         body: formData
@@ -1396,7 +1396,7 @@
         return;
       }
 
-      const codigos = input.split('\\n').map(line => line.trim()).filter(line => line.length > 0);
+      const codigos = input.split('\n').map(line => line.trim()).filter(line => line.length > 0);
       let successCount = 0;
       let errorCount = 0;
       const errorMessages = [];
@@ -1418,7 +1418,7 @@
       });
 
       if (errorCount > 0) {
-        alert(`Foram gerados ${successCount} códigos com sucesso.\\n\\nErros encontrados (${errorCount}):\\n${errorMessages.join('\\n')}`);
+        alert(`Foram gerados ${successCount} códigos com sucesso.\n\nErros encontrados (${errorCount}):\n${errorMessages.join('\n')}`);
       } else if (successCount > 0) {
         alert(`Todos os ${successCount} códigos foram gerados com sucesso!`);
       }
