@@ -924,7 +924,7 @@
   <footer>HS Operações © 2025 - Todos os direitos reservados</footer>
 
   <script>
-    Dynamsoft.DBR.BarcodeScanner.license = "`DLS2eyJoYW5kc2hha2VDb2RlIjoiMTA0MDgyMzg1LU1UQTBNRGd5TXpnMUxYZGxZaTFVY21saGJGQnliMm8iLCJtYWluU2VydmVyVVJMIjoiaHR0cHM6Ly9tZGxzLmR5bmFtc29mdG9ubGluZS5jb20iLCJvcmdhbml6YXRpb25JRCI6IjEwNDA4MjM4NSIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NkbHMuZHluYW1zb2Z0b25saW5lLmNvbSIsImNoZWNrQ29kZSI6LTE2MDA4MjQzNjB9"=";
+    Dynamsoft.DBR.BarcodeScanner.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMTA0MDgyMzg1LU1UQTBNRGd5TXpnMUxYZGxZaTFVY21saGJGQnliMm8iLCJtYWluU2VydmVyVVJMIjoiaHR0cHM6Ly9tZGxzLmR5bmFtc29mdG9ubGluZS5jb20iLCJvcmdhbml6YXRpb25JRCI6IjEwNDA4MjM4NSIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NkbHMuZHluYW1zb2Z0b25saW5lLmNvbSIsImNoZWNrQ29kZSI6LTE2MDA4MjQzNjB9";
 
     function mostrarSecao(secaoId) {
       const secoes = document.querySelectorAll(".section");
@@ -949,7 +949,7 @@
       "FLORIANO": ["IOLANDA", "MEIRE", "SARA"],
       "JOTA": ["BRUNO", "CARINA", "DENISE", "FABIOLA", "INGRID", "MARCOS", "RAYSSA", "VERA"],
       "MODA": ["ANA CLARA", "DAIANE", "JAIRLY", "JÉSSICA", "MARCIA", "MARIA"],
-      "PONTO": ["BARBARA", "DANIELA", "EVANEUZA", "ISADORA", "PAULA", "PRISCILA", "SÔNIA", "SUELI"]
+      "PONTO": ["DANIELA", "EVANEUZA", "ISADORA", "PAULA", "PRISCILA", "SANDY", "SÔNIA", "SUELI"]
     };
 
     function atualizarFuncionarios() {
