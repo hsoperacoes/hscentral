@@ -1,4 +1,3 @@
-
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -796,6 +795,8 @@
       <h1>TRANSFERÊNCIA ENTRE LOJAS</h1>
 
       <form id="transfer-form">
+        <input type="hidden" name="acao" value="transferencia">
+        
         <div class="form-group">
           <div class="question-title">Email da filial de origem:(Preenchimento automatico) <span class="required-star">*</span></div>
           <input type="email" name="email" id="email-trans" required readonly>
@@ -1238,31 +1239,42 @@ data.set("data_falta", dataFormatada);
         return;
       }
 
-      const formData = new FormData(form);
-      const data = new URLSearchParams(formData).toString();
+      // Garante que o e-mail esteja preenchido ao trocar a filial de origem
+      if (!document.getElementById('email-trans').value) {
+        atualizarEmailTrans();
+      }
 
+      const formData = new FormData(form);        // <-- igual aos outros forms
       document.getElementById('loading-overlay-trans').style.display = 'flex';
 
       fetch("https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec", {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: data
+        body: formData
       })
-      .then(response => response.json())
-      .then(responseData => {
+      .then(res => res.text())                     // <-- não força JSON
+      .then(text => {
         document.getElementById('loading-overlay-trans').style.display = 'none';
 
-        if (responseData.numeroTransferencia) {
+        // Tenta interpretar como JSON, mas funciona mesmo se vier texto
+        let data = null;
+        try { data = JSON.parse(text); } catch (e) {}
+
+        if (data && data.numeroTransferencia) {
           mostrarMensagemSucessoTrans();
-          exibirNumeroTransferencia(responseData.numeroTransferencia);
+          exibirNumeroTransferencia(data.numeroTransferencia);
+          setTimeout(limparFormularioTrans, 5000);
+        } else if (String(text).toUpperCase().includes("SUCESSO")) {
+          // fallback: servidor respondeu texto de sucesso
+          mostrarMensagemSucessoTrans();
+          document.getElementById('numero-transferencia').style.display = 'none';
           setTimeout(limparFormularioTrans, 5000);
         } else {
-          mostrarMensagemErroTrans("Erro ao enviar: Resposta inválida do servidor.");
+          mostrarMensagemErroTrans("Erro ao enviar: " + (text || "Servidor não retornou dados."));
         }
       })
-      .catch(error => {
+      .catch(() => {
         document.getElementById('loading-overlay-trans').style.display = 'none';
-        mostrarMensagemErroTrans("Erro ao enviar o formulário. Tente novamente.");
+        mostrarMensagemErroTrans("Erro de comunicação com o servidor. Tente novamente.");
       });
     }
 
