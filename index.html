@@ -795,8 +795,6 @@
       <h1>TRANSFERÊNCIA ENTRE LOJAS</h1>
 
       <form id="transfer-form">
-        <input type="hidden" name="acao" value="transferencia">
-        
         <div class="form-group">
           <div class="question-title">Email da filial de origem:(Preenchimento automatico) <span class="required-star">*</span></div>
           <input type="email" name="email" id="email-trans" required readonly>
@@ -1244,36 +1242,61 @@ data.set("data_falta", dataFormatada);
         atualizarEmailTrans();
       }
 
-      const formData = new FormData(form);        // <-- igual aos outros forms
+      const formData = new FormData(form);
       document.getElementById('loading-overlay-trans').style.display = 'flex';
+
+      // Converte FormData para URLSearchParams (que o script atual espera)
+      const params = new URLSearchParams();
+      for (const [key, value] of formData.entries()) {
+        params.append(key, value);
+      }
+
+      console.log('Enviando dados:', params.toString());
 
       fetch("https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec", {
         method: "POST",
-        body: formData
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: params
       })
-      .then(res => res.text())                     // <-- não força JSON
+      .then(res => res.text()) // Primeiro pega como texto
       .then(text => {
         document.getElementById('loading-overlay-trans').style.display = 'none';
-
-        // Tenta interpretar como JSON, mas funciona mesmo se vier texto
+        
+        console.log('Resposta do servidor:', text);
+        
+        // Tenta interpretar como JSON
         let data = null;
-        try { data = JSON.parse(text); } catch (e) {}
-
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          // Se não for JSON, verifica se é texto "SUCESSO"
+          if (text.toUpperCase().includes("SUCESSO")) {
+            mostrarMensagemSucessoTrans();
+            document.getElementById('numero-transferencia').style.display = 'none';
+            setTimeout(limparFormularioTrans, 5000);
+            return;
+          } else if (text.toUpperCase().includes("ERRO")) {
+            mostrarMensagemErroTrans(text);
+            return;
+          }
+        }
+        
+        // Se conseguiu parsear como JSON
         if (data && data.numeroTransferencia) {
           mostrarMensagemSucessoTrans();
           exibirNumeroTransferencia(data.numeroTransferencia);
           setTimeout(limparFormularioTrans, 5000);
-        } else if (String(text).toUpperCase().includes("SUCESSO")) {
-          // fallback: servidor respondeu texto de sucesso
-          mostrarMensagemSucessoTrans();
-          document.getElementById('numero-transferencia').style.display = 'none';
-          setTimeout(limparFormularioTrans, 5000);
+        } else if (data && data.error) {
+          mostrarMensagemErroTrans("Erro: " + data.error);
         } else {
-          mostrarMensagemErroTrans("Erro ao enviar: " + (text || "Servidor não retornou dados."));
+          mostrarMensagemErroTrans("Resposta inesperada do servidor: " + text);
         }
       })
-      .catch(() => {
+      .catch(error => {
         document.getElementById('loading-overlay-trans').style.display = 'none';
+        console.error('Erro na requisição:', error);
         mostrarMensagemErroTrans("Erro de comunicação com o servidor. Tente novamente.");
       });
     }
@@ -1580,7 +1603,7 @@ data.set("data_falta", dataFormatada);
 
         await scannerInstance.show(scannerDiv);
       } catch (ex) {
-        alert("Erro ao iniciar o leitor: " + ex.message);
+        alert("Erro ao iniciar leitor: " + ex.message);
         scannerDiv.style.display = "none";
       }
     }
