@@ -1,3 +1,4 @@
+
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -795,8 +796,6 @@
       <h1>TRANSFERÊNCIA ENTRE LOJAS</h1>
 
       <form id="transfer-form">
-        <input type="hidden" name="acao" value="transferencia">
-        
         <div class="form-group">
           <div class="question-title">Email da filial de origem:(Preenchimento automatico) <span class="required-star">*</span></div>
           <input type="email" name="email" id="email-trans" required readonly>
@@ -946,11 +945,11 @@
     }
 
     const funcionariosPorFilial = {
-      "ARTUR": ["LUCILENE", "POLIANA"],
-      "FLORIANO": ["IOLANDA", "MEIRE", "SARA"],
+      "ARTUR": ["LUCILENE", "POLIANA", "TAINARA"],
+      "FLORIANO": ["IOLANDA", "MEIRE", "SARA", "GABRYELLA"],
       "JOTA": ["BRUNO", "CARINA", "DENISE", "FABIOLA", "INGRID", "MARCOS", "RAYSSA", "VERA"],
-      "MODA": ["ANA CLARA", "DAIANE", "JAIRLY", "JÉSSICA", "MARCIA", "MARIA"],
-      "PONTO": ["DANIELA", "EVANEUZA", "ISADORA", "PAULA", "PRISCILA", "SANDY", "SÔNIA", "SUELI"]
+      "MODA": ["ANA CLARA", "DAIANE", "JOANA", "MARCIA", "MARIA"],
+      "PONTO": ["DANIELA", "EVANEUZA", "ISADORA", "PAULA", "PRISCILA", "SÔNIA", "SUELI"]
     };
 
     function atualizarFuncionarios() {
@@ -1239,42 +1238,31 @@ data.set("data_falta", dataFormatada);
         return;
       }
 
-      // Garante que o e-mail esteja preenchido ao trocar a filial de origem
-      if (!document.getElementById('email-trans').value) {
-        atualizarEmailTrans();
-      }
+      const formData = new FormData(form);
+      const data = new URLSearchParams(formData).toString();
 
-      const formData = new FormData(form);        // <-- igual aos outros forms
       document.getElementById('loading-overlay-trans').style.display = 'flex';
 
       fetch("https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec", {
         method: "POST",
-        body: formData
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: data
       })
-      .then(res => res.text())                     // <-- não força JSON
-      .then(text => {
+      .then(response => response.json())
+      .then(responseData => {
         document.getElementById('loading-overlay-trans').style.display = 'none';
 
-        // Tenta interpretar como JSON, mas funciona mesmo se vier texto
-        let data = null;
-        try { data = JSON.parse(text); } catch (e) {}
-
-        if (data && data.numeroTransferencia) {
+        if (responseData.numeroTransferencia) {
           mostrarMensagemSucessoTrans();
-          exibirNumeroTransferencia(data.numeroTransferencia);
-          setTimeout(limparFormularioTrans, 5000);
-        } else if (String(text).toUpperCase().includes("SUCESSO")) {
-          // fallback: servidor respondeu texto de sucesso
-          mostrarMensagemSucessoTrans();
-          document.getElementById('numero-transferencia').style.display = 'none';
+          exibirNumeroTransferencia(responseData.numeroTransferencia);
           setTimeout(limparFormularioTrans, 5000);
         } else {
-          mostrarMensagemErroTrans("Erro ao enviar: " + (text || "Servidor não retornou dados."));
+          mostrarMensagemErroTrans("Erro ao enviar: Resposta inválida do servidor.");
         }
       })
-      .catch(() => {
+      .catch(error => {
         document.getElementById('loading-overlay-trans').style.display = 'none';
-        mostrarMensagemErroTrans("Erro de comunicação com o servidor. Tente novamente.");
+        mostrarMensagemErroTrans("Erro ao enviar o formulário. Tente novamente.");
       });
     }
 
