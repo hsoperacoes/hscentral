@@ -924,7 +924,7 @@
   <footer>HS Operações © 2025 - Todos os direitos reservados</footer>
 
   <script>
-    Dynamsoft.DBR.BarcodeScanner.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMTA0NDIzNjk5LU1UQTBOREl6TmprNUxYZGxZaTFVY21saGJGQnliMm8iLCJtYWluU2VydmVyVVJMIjoiaHR0cHM6Ly9tZGxzLmR5bmFtc29mdG9ubGluZS5jb20iLCJvcmdhbml6YXRpb25JRCI6IjEwNDQyMzY5OSIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NkbHMuZHluYW1zb2Z0b25saW5lLmNvbSIsImNoZWNrQ29kZSI6MTEzNzY0MDQxN30";
+    Dynamsoft.DBR.BarcodeScanner.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMTA0MDgyMzg1LU1UQTBNRGd5TXpnMUxYZGxZaTFVY21saGJGQnliMm8iLCJtYWluU2VydmVyVVJMIjoiaHR0cHM6Ly9tZGxzLmR5bmFtc29mdG9ubGluZS5jb20iLCJvcmdhbml6YXRpb25JRCI6IjEwNDA4MjM4NSIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NkbHMuZHluYW1zb2Z0b25saW5lLmNvbSIsImNoZWNrQ29kZSI6LTE2MDA4MjQzNjB9";
 
     function mostrarSecao(secaoId) {
       const secoes = document.querySelectorAll(".section");
@@ -1201,7 +1201,7 @@ data.set("data_falta", dataFormatada);
       const filialOrigem = document.getElementById('filial-origem').value;
       const filialDestinoSelect = document.getElementById('filial-destino');
       const emailPorFilial = {
-        ARTUR: "heringarturmachado@gmail.com",
+        ARTUR: "hs.operacoes.loja@gmail.com",
         FLORIANO: "hs.uberlandia.floriano@gmail.com",
         JOTA: "brunohenzo09@gmail.com",
         MODA: "dlaire28@gmail.com",
