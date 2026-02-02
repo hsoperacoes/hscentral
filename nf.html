@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>GERENCIAL HS - Recebimento de Nota Fiscal</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
@@ -90,70 +90,6 @@
     .history li { padding: 6px 8px; border-bottom: 1px solid #222; cursor: pointer; }
     .history li:hover { background: #1d1d1d; }
 
-    /* ✅ scanner maior e melhor pra código de barras longo */
-    #scanner {
-      width: 100%;
-      max-width: 520px;
-      height: 360px;
-      margin: 10px auto;
-      position: relative;
-      display: none;
-      justify-content: center;
-      align-items: center;
-      background: #0b0b0c;
-      border: 1px solid #333;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-
-    #html5-reader {
-      width: 100%;
-      height: 100%;
-    }
-
-    /* ✅ NÃO CORTA O VÍDEO (isso era um dos motivos do “não lê”) */
-    #html5-reader video, #html5-reader canvas {
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: contain !important;
-      background: #000;
-    }
-
-    .scanner-close {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      z-index: 10;
-      background: rgba(2,6,23,.85);
-      border: 1px solid #111827;
-      color: #e5e7eb;
-      width: auto;
-      padding: 8px 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      margin-top: 0;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .scanner-close:hover{ background: rgba(17,24,39,.9); }
-
-    .scanner-status {
-      position: absolute;
-      left: 10px;
-      bottom: 10px;
-      z-index: 10;
-      background: rgba(0,0,0,.55);
-      border: 1px solid rgba(255,255,255,.12);
-      color: #e5e7eb;
-      padding: 8px 10px;
-      border-radius: 10px;
-      font-size: 12px;
-      max-width: calc(100% - 20px);
-      line-height: 1.35;
-    }
-    .scanner-status b { color: #bbf7d0; }
-
     footer {
       text-align:center; font-size:14px; color:#ccc;
       background:#2c2c2c; padding:15px;
@@ -173,7 +109,6 @@
       padding: 18px;
       backdrop-filter: blur(2px);
     }
-
     .recusa-card {
       width: 100%;
       max-width: 880px;
@@ -183,7 +118,6 @@
       box-shadow: 0 8px 30px rgba(0,0,0,.55);
       overflow: hidden;
     }
-
     .recusa-topo {
       display: flex;
       align-items: center;
@@ -193,7 +127,6 @@
       border-bottom: 1px solid #2a2a2f;
       background: linear-gradient(180deg, #141416, #0f0f12);
     }
-
     .recusa-titulo {
       display: flex;
       align-items: center;
@@ -203,7 +136,6 @@
       color: #ff3b3b;
       letter-spacing: .2px;
     }
-
     .recusa-btn-fechar {
       border: 1px solid #2a2a2f;
       background: transparent;
@@ -216,9 +148,7 @@
       margin-top: 0;
     }
     .recusa-btn-fechar:hover { background: rgba(255,255,255,.06); }
-
     .recusa-conteudo { padding: 16px; background: #0b0b0c; }
-
     .recusa-texto {
       white-space: pre-wrap;
       font-size: 16px;
@@ -229,13 +159,158 @@
       border: 1px solid #2a2a2f;
       background: #101012;
     }
-
     .recusa-rodape {
       padding: 14px 16px;
       border-top: 1px solid #2a2a2f;
       color: #b9b9c2;
       font-size: 13px;
       background: #0f0f12;
+    }
+
+    /* ===================== SCANNER FULLSCREEN (PORTRAIT) ===================== */
+    #scannerOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100000;
+      display: none;
+      background: rgba(0,0,0,.92);
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      backdrop-filter: blur(2px);
+    }
+
+    .scan-card {
+      width: min(520px, 96vw);
+      height: min(820px, 92vh);
+      background: #0b0b0c;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 18px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .scan-top {
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(20,20,22,.95), rgba(10,10,12,.95));
+    }
+    .scan-title {
+      display:flex; align-items:center; gap:10px;
+      font-weight: 900;
+      color: #e5e7eb;
+      font-size: 14px;
+      letter-spacing:.2px;
+    }
+    .scan-title i { color: #bbf7d0; }
+
+    .scan-actions { display:flex; gap:8px; align-items:center; }
+    .scan-btn {
+      width: auto !important;
+      padding: 10px 12px !important;
+      margin-top: 0 !important;
+      border-radius: 12px !important;
+      background: rgba(2,6,23,.88) !important;
+      border: 1px solid rgba(255,255,255,.14) !important;
+      color: #e5e7eb !important;
+      font-weight: 800 !important;
+      font-size: 12px !important;
+      cursor: pointer;
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+    }
+    .scan-btn:hover { filter: brightness(1.07); }
+    .scan-btn.primary {
+      background: rgba(103,58,183,.92) !important;
+      border-color: rgba(103,58,183,.55) !important;
+    }
+
+    .scan-body {
+      position: relative;
+      flex: 1;
+      padding: 10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .scan-frame {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 2px solid rgba(103,58,183,.6);
+      box-shadow: 0 14px 40px rgba(103,58,183,.12);
+      background: #000;
+    }
+
+    #html5-reader {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ✅ NÃO CORTA. SEM ISSO O CODE128 SOFRE MUITO */
+    #html5-reader video, #html5-reader canvas {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+      background: #000;
+    }
+
+    /* guia pra alinhar o código */
+    .scan-guide {
+      position: absolute;
+      left: 50%;
+      top: 56%;
+      transform: translate(-50%, -50%);
+      width: min(92%, 520px);
+      height: 22%;
+      border: 2px solid rgba(187,247,208,.55);
+      border-radius: 14px;
+      box-shadow: 0 0 0 2000px rgba(0,0,0,.10) inset;
+      pointer-events: none;
+    }
+    .scan-line {
+      position:absolute;
+      left: 8%;
+      right: 8%;
+      top: 50%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(187,247,208,.95), transparent);
+      box-shadow: 0 0 18px rgba(187,247,208,.35);
+      pointer-events: none;
+      animation: sweep 1.6s linear infinite;
+    }
+    @keyframes sweep {
+      0% { transform: translateY(-26px); opacity: .35; }
+      50% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(26px); opacity: .35; }
+    }
+
+    .scan-status {
+      padding: 10px 12px;
+      border-top: 1px solid rgba(255,255,255,.10);
+      background: rgba(10,10,12,.95);
+      font-size: 12px;
+      color: #cbd5e1;
+      line-height: 1.4;
+    }
+    .scan-status b { color:#bbf7d0; }
+
+    /* evita zoom/scroll do iOS atrapalhar */
+    input, button { touch-action: manipulation; }
+
+    @media (max-width: 420px){
+      .scan-card { height: 92vh; }
+      .scan-btn { padding: 9px 10px !important; }
     }
   </style>
 </head>
@@ -269,14 +344,6 @@
 
       <button id="btn-leitor-nf">📷 Ler Código de Barras</button>
 
-      <div id="scanner">
-        <button class="scanner-close" id="btn-fechar-scanner">
-          <i class="fas fa-times"></i> Fechar
-        </button>
-        <div id="html5-reader"></div>
-        <div class="scanner-status" id="scanner-status">Status: <b>pronto</b></div>
-      </div>
-
       <button id="btn-consultar-nf">Consultar</button>
       <div id="loading-nf" class="hidden">⏳ Consultando nota fiscal...</div>
       <div id="resultado-nf" class="result hidden"></div>
@@ -292,6 +359,7 @@
 
   <footer>HS Operações © 2025 - Todos os direitos reservados</footer>
 
+  <!-- OVERLAY RECUSA -->
   <div id="recusaOverlay">
     <div class="recusa-card" role="dialog" aria-modal="true">
       <div class="recusa-topo">
@@ -304,6 +372,35 @@
       <div class="recusa-rodape">
         Se houver confirmação da recusa, realize também a recusa no controle de transporte e na via física destinada ao escritório.
       </div>
+    </div>
+  </div>
+
+  <!-- ✅ SCANNER FULLSCREEN -->
+  <div id="scannerOverlay">
+    <div class="scan-card">
+      <div class="scan-top">
+        <div class="scan-title">
+          <i class="fas fa-barcode"></i>
+          Leitor de Código (Chave 44)
+        </div>
+        <div class="scan-actions">
+          <button class="scan-btn" id="btn-zoom-out" title="Diminuir zoom"><i class="fas fa-search-minus"></i></button>
+          <button class="scan-btn" id="btn-zoom-in" title="Aumentar zoom"><i class="fas fa-search-plus"></i></button>
+          <button class="scan-btn" id="btn-torch" title="Lanterna"><i class="fas fa-bolt"></i></button>
+          <button class="scan-btn primary" id="btn-fechar-scan"><i class="fas fa-times"></i> Fechar</button>
+        </div>
+      </div>
+
+      <div class="scan-body">
+        <div class="scan-frame">
+          <div id="html5-reader"></div>
+
+          <div class="scan-guide"></div>
+          <div class="scan-line"></div>
+        </div>
+      </div>
+
+      <div class="scan-status" id="scanStatus">Status: <b>pronto</b></div>
     </div>
   </div>
 
@@ -335,18 +432,25 @@
     });
   </script>
 
-  <!-- ✅ seu script continua (login/consulta/histórico) -->
+  <!-- ✅ seu sistema (login/consulta/histórico) -->
   <script src="script_nf.js?v=1.0.4"></script>
 
-  <!-- ✅ leitor Html5 + override total do botão -->
   <script>
-    let html5ScannerNF = null;
-    let scannerAberto = false;
-    let travadoNF = false;
+    let html5Scanner = null;
+    let scannerOpen = false;
+    let travado = false;
 
-    function setStatus_(txt){
-      const el = document.getElementById("scanner-status");
-      if(el) el.innerHTML = txt;
+    // zoom/torch (se suportado)
+    let currentTrack = null;
+    let zoomLevel = 1;
+    let zoomMin = 1;
+    let zoomMax = 1;
+    let torchOn = false;
+    let torchSupported = false;
+    let zoomSupported = false;
+
+    function status_(html){
+      document.getElementById("scanStatus").innerHTML = "Status: " + html;
     }
 
     function extrairChave44(texto){
@@ -364,107 +468,170 @@
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const o = ctx.createOscillator();
         const g = ctx.createGain();
-        o.type = "square";
-        o.frequency.value = 880;
+        o.type = "square"; o.frequency.value = 880;
         g.gain.value = 0.10;
         o.connect(g); g.connect(ctx.destination);
-        o.start();
-        setTimeout(()=>o.stop(), 120);
+        o.start(); setTimeout(()=>o.stop(), 120);
       }catch(e){}
       try{ if(navigator.vibrate) navigator.vibrate(60); }catch(e){}
     }
 
-    async function fecharScannerNF(){
-      scannerAberto = false;
-      const box = document.getElementById("scanner");
-      box.style.display = "none";
-      setStatus_('Status: <b>fechado</b>');
-
+    async function applyZoom_(z){
+      if(!currentTrack || !zoomSupported) return;
+      const constraints = { advanced: [{ zoom: z }] };
       try{
-        if(html5ScannerNF){
-          await html5ScannerNF.stop().catch(()=>{});
-          await html5ScannerNF.clear().catch(()=>{});
-          html5ScannerNF = null;
-        }
+        await currentTrack.applyConstraints(constraints);
+        zoomLevel = z;
+        status_(`<b>lendo…</b><br/>Zoom: ${zoomLevel.toFixed(1)}x`);
       }catch(e){}
     }
 
-    async function abrirScannerNF(){
-      const box = document.getElementById("scanner");
-      box.style.display = "flex";
-      scannerAberto = true;
-      travadoNF = false;
+    async function toggleTorch_(){
+      if(!currentTrack || !torchSupported) return;
+      try{
+        torchOn = !torchOn;
+        await currentTrack.applyConstraints({ advanced: [{ torch: torchOn }] });
+        status_(`<b>lendo…</b><br/>Lanterna: ${torchOn ? "ON" : "OFF"}`);
+      }catch(e){}
+    }
 
-      setStatus_('Status: <b>abrindo câmera…</b>');
+    async function fecharScanner(){
+      scannerOpen = false;
+      travado = false;
+      torchOn = false;
+      currentTrack = null;
+      zoomSupported = false;
+      torchSupported = false;
+
+      const ov = document.getElementById("scannerOverlay");
+      ov.style.display = "none";
+      document.body.style.overflow = "";
 
       try{
-        if(html5ScannerNF){
-          await html5ScannerNF.stop().catch(()=>{});
-          await html5ScannerNF.clear().catch(()=>{});
-          html5ScannerNF = null;
+        if(html5Scanner){
+          await html5Scanner.stop().catch(()=>{});
+          await html5Scanner.clear().catch(()=>{});
+          html5Scanner = null;
         }
       }catch(e){}
 
-      html5ScannerNF = new Html5Qrcode("html5-reader");
+      status_("<b>fechado</b>");
+    }
 
-      // ✅ FORÇA FORMATO (quando disponível)
-      let formatos = undefined;
+    async function abrirScanner(){
+      const ov = document.getElementById("scannerOverlay");
+      ov.style.display = "flex";
+      document.body.style.overflow = "hidden";
+
+      scannerOpen = true;
+      travado = false;
+      status_("<b>abrindo câmera…</b>");
+
+      try{
+        if(html5Scanner){
+          await html5Scanner.stop().catch(()=>{});
+          await html5Scanner.clear().catch(()=>{});
+          html5Scanner = null;
+        }
+      }catch(e){}
+
+      html5Scanner = new Html5Qrcode("html5-reader");
+
+      // tenta forçar suportar CODE_128
+      let formats = undefined;
       try{
         if(window.Html5QrcodeSupportedFormats){
-          formatos = [
+          formats = [
             Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.QR_CODE
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.EAN_13
           ];
         }
       }catch(e){}
 
+      // ✅ barra LONGA: largona e BAIXA
       const config = {
-        fps: 28,
-        qrbox: { width: 480, height: 200 },   // ✅ retangular pra Code128
-        aspectRatio: 1.777,
+        fps: 30,
+        qrbox: (view) => {
+          const w = Math.min(view.width, 520);
+          const h = Math.min(view.height, 820);
+          const boxW = Math.floor(w * 0.92);
+          const boxH = Math.floor(h * 0.22); // bem baixo (ideal Code128)
+          return { width: boxW, height: boxH };
+        },
+        aspectRatio: 0.75,      // puxa pra portrait
         disableFlip: true,
         experimentalFeatures: { useBarCodeDetectorIfSupported: true },
         rememberLastUsedCamera: true,
-        ...(formatos ? { formatsToSupport: formatos } : {})
+        ...(formats ? { formatsToSupport: formats } : {})
       };
 
-      setStatus_('Status: <b>procurando o código…</b><br/>Dica: aproxime e alinhe o código no centro.');
+      // ✅ constraints pra tentar melhorar nitidez no celular
+      const constraints = {
+        facingMode: "environment"
+      };
 
-      await html5ScannerNF.start(
-        { facingMode: "environment" },
+      status_("<b>procurando o código…</b><br/>Dica: aproxime e alinhe no retângulo.");
+
+      await html5Scanner.start(
+        constraints,
         config,
         async (decodedText) => {
-          if(!scannerAberto) return;
-          if(travadoNF) return;
+          if(!scannerOpen) return;
+          if(travado) return;
 
           const chave = extrairChave44(decodedText);
-          if(!chave) {
-            // só pra você ver que está “pegando algo”
-            setStatus_('Status: <b>lendo…</b><br/>Conteúdo detectado, procurando 44 dígitos…');
+          if(!chave){
+            status_("<b>lendo…</b><br/>Detectei algo, procurando 44 dígitos…");
             return;
           }
 
-          travadoNF = true;
-
-          // ✅ joga no campo
+          travado = true;
           document.getElementById("chave-nf").value = chave;
-          setStatus_('Status: <b>capturado!</b><br/>Chave 44 preenchida ✅');
-
+          status_("<b>capturado!</b><br/>Chave 44 preenchida ✅");
           beepOk();
-          await new Promise(r => setTimeout(r, 150));
-          await fecharScannerNF();
+
+          await new Promise(r => setTimeout(r, 200));
+          await fecharScanner();
         },
         () => {}
       );
+
+      // tenta pegar track para zoom/torch
+      try{
+        const tracks = html5Scanner.getState && html5Scanner.getState();
+        // fallback: pegar track via enumerate + getUserMedia seria pesado, então vamos pelo elemento video
+        setTimeout(async ()=>{
+          try{
+            const video = document.querySelector("#html5-reader video");
+            const stream = video && video.srcObject;
+            if(!stream) return;
+            const t = stream.getVideoTracks && stream.getVideoTracks()[0];
+            if(!t) return;
+
+            currentTrack = t;
+            const caps = currentTrack.getCapabilities ? currentTrack.getCapabilities() : {};
+            if(caps.zoom){
+              zoomSupported = true;
+              zoomMin = caps.zoom.min;
+              zoomMax = caps.zoom.max;
+              zoomLevel = Math.min(Math.max(1.5, zoomMin), zoomMax); // começa num zoom bom
+              await applyZoom_(zoomLevel);
+            }
+            if(caps.torch !== undefined){
+              torchSupported = true;
+            }
+          }catch(e){}
+        }, 400);
+      }catch(e){}
     }
 
-    async function toggleScannerNF(){
-      if(scannerAberto) return fecharScannerNF();
-      return abrirScannerNF();
+    async function toggleScanner(){
+      if(scannerOpen) return fecharScanner();
+      return abrirScanner();
     }
 
-    function resetarBotaoLeitor_(){
+    function rebindLeitor(){
       const btn = document.getElementById("btn-leitor-nf");
       if(!btn) return;
 
@@ -475,36 +642,52 @@
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
-        const alvo = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
-        if(alvo) alvo.textContent = "";
+
+        const err = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
+        if(err) err.textContent = "";
 
         try{
-          await toggleScannerNF();
-        }catch(err){
-          if(alvo) alvo.textContent = "Erro ao abrir câmera: " + (err?.message || err);
-          await fecharScannerNF();
+          await toggleScanner();
+        }catch(ex){
+          if(err) err.textContent = "Erro ao abrir câmera: " + (ex?.message || ex);
+          await fecharScanner();
         }
       }, true);
     }
 
     document.addEventListener("DOMContentLoaded", ()=>{
-      const btnFechar = document.getElementById("btn-fechar-scanner");
-      if(btnFechar){
-        btnFechar.addEventListener("click", async (e)=>{
-          e.preventDefault();
-          e.stopPropagation();
-          await fecharScannerNF();
-        });
-      }
+      document.getElementById("btn-fechar-scan").addEventListener("click", fecharScanner);
 
-      document.addEventListener("keydown", async (e)=>{
-        if(e.key === "Escape" && scannerAberto){
-          await fecharScannerNF();
-        }
+      document.addEventListener("keydown", (e)=>{
+        if(e.key === "Escape" && scannerOpen) fecharScanner();
       });
 
-      setTimeout(resetarBotaoLeitor_, 50);
-      setTimeout(resetarBotaoLeitor_, 250);
+      document.getElementById("btn-zoom-in").addEventListener("click", async ()=>{
+        if(!zoomSupported) return status_("<b>zoom não suportado</b>");
+        const step = 0.5;
+        const next = Math.min(zoomMax, zoomLevel + step);
+        await applyZoom_(next);
+      });
+
+      document.getElementById("btn-zoom-out").addEventListener("click", async ()=>{
+        if(!zoomSupported) return status_("<b>zoom não suportado</b>");
+        const step = 0.5;
+        const next = Math.max(zoomMin, zoomLevel - step);
+        await applyZoom_(next);
+      });
+
+      document.getElementById("btn-torch").addEventListener("click", async ()=>{
+        if(!torchSupported) return status_("<b>lanterna não suportada</b>");
+        await toggleTorch_();
+      });
+
+      // overlay click fora não fecha (pra não atrapalhar), mas pode fechar no botão
+      document.getElementById("scannerOverlay").addEventListener("click", (e)=>{
+        // não fecha ao clicar no fundo, evita toque acidental
+      });
+
+      setTimeout(rebindLeitor, 50);
+      setTimeout(rebindLeitor, 250);
     });
   </script>
 </body>
