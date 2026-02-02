@@ -90,6 +90,9 @@
     .history li { padding: 6px 8px; border-bottom: 1px solid #222; cursor: pointer; }
     .history li:hover { background: #1d1d1d; }
 
+    #loading-nf { margin-top: 10px; color: #9bdcff; font-style: italic; }
+    #erro-nf2, #erro-nf { margin-top: 8px; }
+
     footer {
       text-align:center; font-size:14px; color:#ccc;
       background:#2c2c2c; padding:15px;
@@ -252,12 +255,9 @@
       background: #000;
     }
 
-    #html5-reader {
-      width: 100%;
-      height: 100%;
-    }
+    #html5-reader { width: 100%; height: 100%; }
 
-    /* ✅ NÃO CORTA. SEM ISSO O CODE128 SOFRE MUITO */
+    /* ✅ não corta o vídeo (melhora MUITO Code128) */
     #html5-reader video, #html5-reader canvas {
       width: 100% !important;
       height: 100% !important;
@@ -265,7 +265,6 @@
       background: #000;
     }
 
-    /* guia pra alinhar o código */
     .scan-guide {
       position: absolute;
       left: 50%;
@@ -305,13 +304,7 @@
     }
     .scan-status b { color:#bbf7d0; }
 
-    /* evita zoom/scroll do iOS atrapalhar */
     input, button { touch-action: manipulation; }
-
-    @media (max-width: 420px){
-      .scan-card { height: 92vh; }
-      .scan-btn { padding: 9px 10px !important; }
-    }
   </style>
 </head>
 
@@ -323,7 +316,7 @@
   <img src="logo.png" alt="Logo HS" class="logo-topo" />
 
   <div class="form-container">
-
+    <!-- LOGIN FILIAL -->
     <div id="login-nf">
       <h2>Login da Filial</h2>
       <label for="codigo-nf">Código da Filial</label>
@@ -332,6 +325,7 @@
       <div id="erro-nf" style="color:#ff6b6b;margin-top:8px;"></div>
     </div>
 
+    <!-- TELA PRINCIPAL -->
     <div id="principal-nf" class="hidden">
       <div class="logout">
         <button id="btn-sair-nf">Sair</button>
@@ -394,7 +388,6 @@
       <div class="scan-body">
         <div class="scan-frame">
           <div id="html5-reader"></div>
-
           <div class="scan-guide"></div>
           <div class="scan-line"></div>
         </div>
@@ -405,8 +398,9 @@
   </div>
 
   <script>
-    // ✅ SEU APPWEB
-    window.URL_API = "https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec";
+    // ✅ SEU APPWEB (AGORA DO JEITO QUE O script_nf.js NORMALMENTE ESPERA)
+    const URL_API = "https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec";
+    window.URL_API = URL_API; // compat
     window.__HS_DISABLE_DYNAMSOFT__ = true;
 
     function abrirOverlayRecusa(mensagem) {
@@ -430,17 +424,61 @@
         if (e.key === 'Escape' && ov.style.display === 'flex') fecharOverlayRecusa();
       });
     });
+
+    // ✅ LOGOUT FORÇADO (pra voltar e trocar filial SEM travar)
+    function logoutNF_forcado(){
+      try{
+        // remove só chaves do NF, sem apagar outras coisas do HS Central
+        const toRemove = [];
+        for(let i=0; i<localStorage.length; i++){
+          const k = localStorage.key(i);
+          if(!k) continue;
+          const kl = k.toLowerCase();
+          if(
+            kl.startsWith("hs_nf") ||
+            kl.startsWith("hs-nf") ||
+            kl.startsWith("nf_") ||
+            kl.includes("nf_filial") ||
+            kl.includes("filial_nf") ||
+            kl.includes("hsnf")
+          ){
+            toRemove.push(k);
+          }
+        }
+        toRemove.forEach(k => localStorage.removeItem(k));
+      }catch(e){}
+
+      // volta telas
+      const login = document.getElementById("login-nf");
+      const principal = document.getElementById("principal-nf");
+      if(login) login.classList.remove("hidden");
+      if(principal) principal.classList.add("hidden");
+
+      // limpa campos
+      const chave = document.getElementById("chave-nf");
+      if(chave) chave.value = "";
+      const res = document.getElementById("resultado-nf");
+      if(res){ res.classList.add("hidden"); res.innerHTML = ""; }
+      const err = document.getElementById("erro-nf2");
+      if(err) err.textContent = "";
+      const err1 = document.getElementById("erro-nf");
+      if(err1) err1.textContent = "";
+
+      // garante foco
+      const cod = document.getElementById("codigo-nf");
+      if(cod) cod.focus();
+    }
   </script>
 
   <!-- ✅ seu sistema (login/consulta/histórico) -->
   <script src="script_nf.js?v=1.0.4"></script>
 
   <script>
+    // ========= Scanner =========
     let html5Scanner = null;
     let scannerOpen = false;
     let travado = false;
 
-    // zoom/torch (se suportado)
     let currentTrack = null;
     let zoomLevel = 1;
     let zoomMin = 1;
@@ -478,9 +516,8 @@
 
     async function applyZoom_(z){
       if(!currentTrack || !zoomSupported) return;
-      const constraints = { advanced: [{ zoom: z }] };
       try{
-        await currentTrack.applyConstraints(constraints);
+        await currentTrack.applyConstraints({ advanced: [{ zoom: z }] });
         zoomLevel = z;
         status_(`<b>lendo…</b><br/>Zoom: ${zoomLevel.toFixed(1)}x`);
       }catch(e){}
@@ -537,7 +574,6 @@
 
       html5Scanner = new Html5Qrcode("html5-reader");
 
-      // tenta forçar suportar CODE_128
       let formats = undefined;
       try{
         if(window.Html5QrcodeSupportedFormats){
@@ -549,29 +585,25 @@
         }
       }catch(e){}
 
-      // ✅ barra LONGA: largona e BAIXA
       const config = {
         fps: 30,
         qrbox: (view) => {
           const w = Math.min(view.width, 520);
           const h = Math.min(view.height, 820);
           const boxW = Math.floor(w * 0.92);
-          const boxH = Math.floor(h * 0.22); // bem baixo (ideal Code128)
+          const boxH = Math.floor(h * 0.22);
           return { width: boxW, height: boxH };
         },
-        aspectRatio: 0.75,      // puxa pra portrait
+        aspectRatio: 0.75,
         disableFlip: true,
         experimentalFeatures: { useBarCodeDetectorIfSupported: true },
         rememberLastUsedCamera: true,
         ...(formats ? { formatsToSupport: formats } : {})
       };
 
-      // ✅ constraints pra tentar melhorar nitidez no celular
-      const constraints = {
-        facingMode: "environment"
-      };
+      const constraints = { facingMode: "environment" };
 
-      status_("<b>procurando o código…</b><br/>Dica: aproxime e alinhe no retângulo.");
+      status_("<b>procurando o código…</b><br/>Aproxime e alinhe no retângulo.");
 
       await html5Scanner.start(
         constraints,
@@ -597,33 +629,29 @@
         () => {}
       );
 
-      // tenta pegar track para zoom/torch
-      try{
-        const tracks = html5Scanner.getState && html5Scanner.getState();
-        // fallback: pegar track via enumerate + getUserMedia seria pesado, então vamos pelo elemento video
-        setTimeout(async ()=>{
-          try{
-            const video = document.querySelector("#html5-reader video");
-            const stream = video && video.srcObject;
-            if(!stream) return;
-            const t = stream.getVideoTracks && stream.getVideoTracks()[0];
-            if(!t) return;
+      setTimeout(async ()=>{
+        try{
+          const video = document.querySelector("#html5-reader video");
+          const stream = video && video.srcObject;
+          if(!stream) return;
+          const t = stream.getVideoTracks && stream.getVideoTracks()[0];
+          if(!t) return;
 
-            currentTrack = t;
-            const caps = currentTrack.getCapabilities ? currentTrack.getCapabilities() : {};
-            if(caps.zoom){
-              zoomSupported = true;
-              zoomMin = caps.zoom.min;
-              zoomMax = caps.zoom.max;
-              zoomLevel = Math.min(Math.max(1.5, zoomMin), zoomMax); // começa num zoom bom
-              await applyZoom_(zoomLevel);
-            }
-            if(caps.torch !== undefined){
-              torchSupported = true;
-            }
-          }catch(e){}
-        }, 400);
-      }catch(e){}
+          currentTrack = t;
+          const caps = currentTrack.getCapabilities ? currentTrack.getCapabilities() : {};
+
+          if(caps.zoom){
+            zoomSupported = true;
+            zoomMin = caps.zoom.min;
+            zoomMax = caps.zoom.max;
+            zoomLevel = Math.min(Math.max(1.5, zoomMin), zoomMax);
+            await applyZoom_(zoomLevel);
+          }
+          if(caps.torch !== undefined){
+            torchSupported = true;
+          }
+        }catch(e){}
+      }, 400);
     }
 
     async function toggleScanner(){
@@ -631,21 +659,16 @@
       return abrirScanner();
     }
 
+    // ✅ garante que o botão leitor chama o scanner SEM quebrar o resto
     function rebindLeitor(){
       const btn = document.getElementById("btn-leitor-nf");
       if(!btn) return;
 
-      const clone = btn.cloneNode(true);
-      btn.parentNode.replaceChild(clone, btn);
-
-      clone.addEventListener("click", async (e)=>{
+      btn.onclick = null;
+      btn.addEventListener("click", async (e)=>{
         e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-
         const err = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
         if(err) err.textContent = "";
-
         try{
           await toggleScanner();
         }catch(ex){
@@ -656,8 +679,16 @@
     }
 
     document.addEventListener("DOMContentLoaded", ()=>{
-      document.getElementById("btn-fechar-scan").addEventListener("click", fecharScanner);
+      // ✅ logout funcional
+      const btnSair = document.getElementById("btn-sair-nf");
+      if(btnSair){
+        btnSair.addEventListener("click", (e)=>{
+          e.preventDefault();
+          logoutNF_forcado();
+        }, true);
+      }
 
+      document.getElementById("btn-fechar-scan").addEventListener("click", fecharScanner);
       document.addEventListener("keydown", (e)=>{
         if(e.key === "Escape" && scannerOpen) fecharScanner();
       });
@@ -665,25 +696,18 @@
       document.getElementById("btn-zoom-in").addEventListener("click", async ()=>{
         if(!zoomSupported) return status_("<b>zoom não suportado</b>");
         const step = 0.5;
-        const next = Math.min(zoomMax, zoomLevel + step);
-        await applyZoom_(next);
+        await applyZoom_(Math.min(zoomMax, zoomLevel + step));
       });
 
       document.getElementById("btn-zoom-out").addEventListener("click", async ()=>{
         if(!zoomSupported) return status_("<b>zoom não suportado</b>");
         const step = 0.5;
-        const next = Math.max(zoomMin, zoomLevel - step);
-        await applyZoom_(next);
+        await applyZoom_(Math.max(zoomMin, zoomLevel - step));
       });
 
       document.getElementById("btn-torch").addEventListener("click", async ()=>{
         if(!torchSupported) return status_("<b>lanterna não suportada</b>");
         await toggleTorch_();
-      });
-
-      // overlay click fora não fecha (pra não atrapalhar), mas pode fechar no botão
-      document.getElementById("scannerOverlay").addEventListener("click", (e)=>{
-        // não fecha ao clicar no fundo, evita toque acidental
       });
 
       setTimeout(rebindLeitor, 50);
