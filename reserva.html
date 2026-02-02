@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reserva de Peças - GERENCIAL HS</title>
+
+  <!-- Ícones -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <!-- Máscara de input -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/imask/6.4.3/imask.min.js"></script>
+
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background:#000;
+      color:#fff;
+      margin:0;
+      padding:0;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      min-height:100vh;
+    }
+
+    /* BOTÃO HOME PADRÃO PRETO */
+    .back-button {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #020617;
+      color: #e5e7eb;
+      border: 1px solid #111827;
+      padding: 10px 22px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 14px;
+      z-index: 1000;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+
+    .back-button:hover {
+      background-color: #111827;
+      transform: translateX(-50%) translateY(-1px);
+    }
+
+    /* LOGO — PADRÃO DOS OUTROS SITES */
+    .logo-topo{
+      display:block;
+      margin:100px auto 20px;
+      height:80px;
+      object-fit:contain;
+    }
+
+    @media (max-width: 768px){
+      .logo-topo{
+        margin-top:80px;
+        height:70px;
+      }
+    }
+
+    /* CARD PRINCIPAL */
+    .wrap{
+      width: 95%;
+      max-width:720px;
+      background:#1b1b1d;
+      border:1px solid #2b2b2e;
+      border-radius:12px;
+      padding:28px;
+      box-shadow: 0 0 24px rgba(0,0,0,.25 );
+      margin-bottom:40px;
+    }
+
+    h1 { margin:0 0 8px; font-size: 22px; }
+    .sub { margin:0 0 24px; color:#bdbdbd; }
+
+    .field{ margin-bottom:16px; }
+    label{
+      display:block;
+      margin-bottom:6px;
+      font-weight:600;
+      color:#d7d7d7;
+      font-size:14px;
+    }
+
+    input, select, textarea{
+      width:100%;
+      padding:12px;
+      background:#242427;
+      border:1px solid #3a3a40;
+      border-radius:8px;
+      color:#fff;
+      font-size:14px;
+    }
+
+    textarea{ min-height:120px; resize:vertical; }
+
+    .grid{
+      display:grid;
+      gap:12px;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .hint{
+      font-size:12px;
+      color:#9aa0a6;
+      margin-top:6px;
+    }
+
+    .info{
+      background:#202226;
+      border:1px solid #30343a;
+      border-radius:8px;
+      padding:12px;
+      margin-bottom:20px;
+    }
+
+    .info strong { color:#ff6b6b; }
+
+    .actions{ display:flex; gap:12px; margin-top:12px; }
+    button{
+      flex:1; padding:12px; border:0; border-radius:8px;
+      cursor:pointer; font-weight:700;
+    }
+    .primary{ background:#6d4aff; color:#fff; }
+    .secondary{ background:#3b3f46; color:#fff; }
+
+    .ok{
+      background:#113e1a; border:1px solid #2e7d32;
+      color:#c8f7cb; padding:12px; border-radius:8px;
+      margin-top:14px; display:none;
+    }
+    .err{
+      background:#3a1616; border:1px solid #b71c1c;
+      color:#ffcdd2; padding:12px; border-radius:8px;
+      margin-top:14px; display:none;
+    }
+
+    footer{
+      text-align:center; padding:16px 0;
+      font-size:14px; color:#ccc;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BOTÃO HOME -->
+  <a href="index.html" class="back-button">
+    <i class="fa-solid fa-arrow-left"></i> Voltar à Home
+  </a>
+
+  <!-- LOGO PADRÃO -->
+  <img src="logo.png" class="logo-topo" />
+
+  <div class="wrap">
+    <h1><i class="fa-solid fa-bookmark"></i> Reserva de Peças</h1>
+    <p class="sub">Preencha os dados abaixo para registrar a reserva.</p>
+
+    <div class="info">
+      <div>Data da reserva: <strong id="dataReservaLabel">--/--/----</strong></div>
+      <div>Data limite (2 dias úteis): <strong id="dataLimiteLabel">--/--/----</strong></div>
+    </div>
+
+    <form id="form-reserva">
+
+      <div class="field">
+        <label for="filial">Filial *</label>
+        <select id="filial" name="filial" required>
+          <option value="">Selecione</option>
+          <option value="ARTUR">ARTUR</option>
+          <option value="FLORIANO">FLORIANO</option>
+          <option value="JOTA">JOTA</option>
+          <option value="MODA">MODA</option>
+          <option value="PONTO">PONTO</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="funcionario">Funcionário *</label>
+        <select id="funcionario" name="funcionario" required>
+          <option value="">Carregando funcionários...</option>
+        </select>
+        <div class="hint" id="hint-func">Lista carregada da planilha.</div>
+      </div>
+
+      <div class="grid">
+        <div class="field">
+          <label for="data_reserva">Data da Reserva *</label>
+          <input type="text" id="data_reserva" name="data_reserva" readonly required />
+        </div>
+        <div class="field">
+          <label for="cliente">Cliente</label>
+          <input type="text" id="cliente" name="cliente" placeholder="Opcional" />
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="field">
+          <label for="celular">Celular *</label>
+          <input type="tel" id="celular" name="celular" placeholder="(DDD) XXXXX-XXXX" required />
+        </div>
+        <div class="field">
+          <label for="previewContagem">Total de itens</label>
+          <input type="text" id="previewContagem" value="0" readonly />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="pecas">Inclua as peças (uma por linha) *</label>
+        <textarea id="pecas" name="pecas" required></textarea>
+      </div>
+
+      <div class="actions">
+        <button type="reset" class="secondary" id="btnLimpar">Limpar</button>
+        <button type="submit" class="primary" id="btnEnviar">Enviar Reserva</button>
+      </div>
+
+      <div id="ok" class="ok"></div>
+      <div id="err" class="err"></div>
+
+      <input type="hidden" name="tipo" value="reserva" />
+
+    </form>
+  </div>
+
+  <footer>HS Operações © 2025 - Todos os direitos reservados</footer>
+
+  <!-- SCRIPT ORIGINAL (NÃO ALTEREI) -->
+  <script>
+    const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwUbsFzEiaBzI_q-WVWywEwWTBVl5eXfmVBN4McnnLNu-rTAnhc9BacOX2qCac8LlPReA/exec';
+
+    const FUNCIONARIOS_SHEET_URL =
+      'https://docs.google.com/spreadsheets/d/1PqDe40nKZbslvzJhJSRAP4naHeIp1uiu1xPk1nvssb4/gviz/tq?gid=1390331275';
+
+    let funcionariosPorFilial = {};
+    let statusFuncionarios = 'carregando';
+
+    async function carregarFuncionarios() {
+      try {
+        const resp = await fetch(FUNCIONARIOS_SHEET_URL);
+        const texto = await resp.text();
+
+        const matchJson = texto.match(/\{.*\}/s);
+        if (!matchJson) throw new Error("Formato inválido da planilha.");
+        const json = JSON.parse(matchJson[0]);
+        const rows = json.table.rows || [];
+
+        const mapa = {};
+        const headerRow = rows[0];
+
+        headerRow.c.forEach((cell, colIdx) => {
+          const nomeFilial = cell?.v?.trim();
+          if (!nomeFilial) return;
+
+          const chave = nomeFilial.split(" ")[0].toUpperCase();
+          const nomes = [];
+
+          for (let r = 1; r < rows.length; r++) {
+            const val = rows[r].c[colIdx]?.v;
+            if (val) nomes.push(String(val).trim());
+          }
+
+          mapa[chave] = nomes;
+        });
+
+        funcionariosPorFilial = mapa;
+        statusFuncionarios = 'ok';
+
+        document.getElementById("hint-func").textContent = "Funcionários carregados.";
+      } catch (e) {
+        statusFuncionarios = 'erro';
+        document.getElementById("hint-func").textContent = "Erro ao carregar funcionários.";
+      }
+    }
+
+    function formatarDataBR(d){
+      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    }
+
+    function calcularDataLimite2DiasUteis(base){
+      let data = new Date(base);
+      let add = 0;
+      while(add < 2){
+        data.setDate(data.getDate()+1);
+        if(data.getDay() !== 0 && data.getDay() !== 6) add++;
+      }
+      return data;
+    }
+
+    function initDatas(){
+      const hoje = new Date();
+      document.getElementById("data_reserva").value = formatarDataBR(hoje);
+      document.getElementById("dataReservaLabel").textContent = formatarDataBR(hoje);
+      document.getElementById("dataLimiteLabel").textContent = formatarDataBR(calcularDataLimite2DiasUteis(hoje));
+    }
+
+    document.getElementById("filial").addEventListener("change", e=>{
+      const lista = funcionariosPorFilial[e.target.value] || [];
+      const func = document.getElementById("funcionario");
+      func.innerHTML = '<option value="">Selecione</option>';
+      lista.forEach(nome=>{
+        const op = document.createElement("option");
+        op.value = nome;
+        op.textContent = nome;
+        func.appendChild(op);
+      });
+    });
+
+    document.getElementById("pecas").addEventListener("input", ()=>{
+      const qtd = document.getElementById("pecas").value
+        .split("\n").filter(l=>l.trim()!=="").length;
+      document.getElementById("previewContagem").value = qtd;
+    });
+
+    const form = document.getElementById("form-reserva");
+    const okMsg = document.getElementById("ok");
+    const errMsg = document.getElementById("err");
+    const btnEnviar = document.getElementById("btnEnviar");
+
+    form.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      okMsg.style.display="none";
+      errMsg.style.display="none";
+
+      btnEnviar.disabled = true;
+      btnEnviar.textContent = "Enviando...";
+
+      const fd = new FormData(form);
+
+      try{
+        const resp = await fetch(ENDPOINT,{method:"POST",body:fd});
+        const json = await resp.json();
+
+        if(!json.success) throw new Error(json.message);
+
+        okMsg.textContent = "Reserva registrada com sucesso!";
+        okMsg.style.display = "block";
+
+        form.reset();
+        document.getElementById("previewContagem").value=0;
+        initDatas();
+
+      } catch(err){
+        errMsg.textContent = "Erro: "+err.message;
+        errMsg.style.display="block";
+      }
+
+      btnEnviar.disabled = false;
+      btnEnviar.textContent = "Enviar Reserva";
+    });
+
+    document.getElementById("btnLimpar").addEventListener("click", ()=>{
+      setTimeout(()=>{
+        initDatas();
+        document.getElementById("previewContagem").value=0;
+        okMsg.style.display="none";
+        errMsg.style.display="none";
+      },0);
+    });
+
+    initDatas();
+    carregarFuncionarios();
+  </script>
+
+</body>
+</html>
