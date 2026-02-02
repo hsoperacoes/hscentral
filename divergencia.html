@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <title>HS Central — Divergência de NFs</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+
+    body{
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: #07090d;
+      color: #e9eefc;
+      display: grid;
+      place-items: start center;
+      padding: 48px 16px 32px;
+    }
+
+    .wrap{
+      width: 100%;
+      max-width: 920px;
+      background: #121826;
+      border: 1px solid #1f2a44;
+      border-radius: 18px;
+      padding: 28px 24px 18px;
+      box-shadow: 0 12px 36px rgba(0,0,0,.45);
+    }
+
+    .brand{
+      text-align: center;
+      margin: 8px 0 10px;
+    }
+
+    .brand img{
+      width: 110px;
+      height: auto;
+      filter: drop-shadow(0 4px 16px rgba(67,176,255,.28));
+      animation: breathe-logo 3s ease-in-out infinite;
+      transform-origin: center center;
+    }
+
+    h1{
+      margin: 4px 0 6px;
+      text-align: center;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: .3px;
+      animation: breathe-text 3s ease-in-out infinite;
+      animation-delay: .12s;
+    }
+
+    .subtitle{
+      text-align: center;
+      margin: 0 0 18px;
+      color: rgba(255,255,255,.68);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .toolbar{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin: 14px 0 18px;
+      flex-wrap: wrap;
+    }
+
+    .btn{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: #182033;
+      border: 1px solid #25314e;
+      color: #e9eefc;
+      padding: 12px 14px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .12s ease, box-shadow .2s ease, border-color .2s ease;
+      user-select: none;
+    }
+
+    .btn:hover{
+      transform: translateY(-1px);
+      box-shadow: 0 10px 30px rgba(67,176,255,.12);
+      border-color: #35508a;
+    }
+
+    .btn.primary{
+      background: linear-gradient(180deg, rgba(67,176,255,.22), rgba(67,176,255,.10));
+      border-color: rgba(67,176,255,.35);
+    }
+
+    .btn.primary:hover{
+      border-color: rgba(67,176,255,.55);
+      box-shadow: 0 12px 34px rgba(67,176,255,.14);
+    }
+
+    .card{
+      background: #182033;
+      border: 1px solid #25314e;
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.25);
+    }
+
+    .grid{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .grid-1{ grid-template-columns: 1fr; }
+
+    label{
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: rgba(255,255,255,.78);
+      margin: 0 0 6px;
+    }
+
+    input, select{
+      width: 100%;
+      padding: 12px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: #0c1116;
+      color: #e9eefc;
+      outline: none;
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+
+    input:focus, select:focus{
+      border-color: rgba(67,176,255,.55);
+      box-shadow: 0 0 0 3px rgba(67,176,255,.14);
+    }
+
+    input::placeholder{ color: rgba(255,255,255,.45); }
+
+    .hint{
+      margin-top: 6px;
+      font-size: 12px;
+      color: rgba(255,255,255,.58);
+    }
+
+    .row{
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .row > * { flex: 1; min-width: 220px; }
+
+    .loading{
+      display: none;
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(67,176,255,.25);
+      background: rgba(67,176,255,.08);
+      color: rgba(255,255,255,.88);
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .spinner{
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 3px solid rgba(255,255,255,.25);
+      border-top-color: rgba(67,176,255,.95);
+      display: inline-block;
+      vertical-align: -4px;
+      margin-right: 10px;
+      animation: spin 1s linear infinite;
+    }
+
+    footer{
+      width: 100%;
+      max-width: 920px;
+      margin-top: 18px;
+      text-align: center;
+      color: #a7b4d0;
+      background: #121826;
+      border: 1px solid #1f2a44;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+
+    @media (max-width: 760px){
+      .wrap{ padding: 22px 14px 12px; }
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    /* ===== Animações (HScentral2) ===== */
+    @keyframes breathe-logo {
+      0% { transform: scale(1); filter: drop-shadow(0 4px 16px rgba(67,176,255,.28)); }
+      50% { transform: scale(1.08); filter: drop-shadow(0 8px 28px rgba(67,176,255,.6)); }
+      100% { transform: scale(1); filter: drop-shadow(0 4px 16px rgba(67,176,255,.28)); }
+    }
+
+    @keyframes breathe-text {
+      0% { transform: translateY(0); text-shadow: 0 0 0 rgba(67,176,255,0.0); }
+      50% { transform: translateY(-2px); text-shadow: 0 0 16px rgba(67,176,255,0.55); }
+      100% { transform: translateY(0); text-shadow: 0 0 0 rgba(67,176,255,0.0); }
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="wrap">
+    <div class="brand">
+      <img src="logo.png" alt="HS Central">
+    </div>
+
+    <h1><i class="fa-solid fa-file-invoice-dollar"></i> Divergência de NFs</h1>
+    <p class="subtitle">
+      Preencha os dados abaixo para registrar divergências de recebimento.
+    </p>
+
+    <div class="toolbar">
+      <!-- Ajuste o href depois quando mexermos no index -->
+      <a class="btn" href="index.html"><i class="fa-solid fa-arrow-left"></i> Voltar à Home</a>
+      <button class="btn primary" id="btnDivTop" type="button" onclick="document.getElementById('btnDiv').click()">
+        <i class="fa-solid fa-paper-plane"></i> Enviar
+      </button>
+    </div>
+
+    <section class="card">
+      <form id="formulario-divergencia" onsubmit="enviarFormularioDivergencia(event)">
+        <div class="grid">
+          <div>
+            <label>Filial</label>
+            <select name="filial" required>
+              <option value="">Selecione uma filial</option>
+              <option value="ARTUR">ARTUR</option>
+              <option value="FLORIANO">FLORIANO</option>
+              <option value="JOTA">JOTA</option>
+              <option value="MODA">MODA</option>
+              <option value="PONTO">PONTO</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Transportadora</label>
+            <select name="transportadora" id="transportadora-div" required>
+              <option value="BRASPRESS">BRASPRESS</option>
+              <option value="OUTROS">OUTROS</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="outrosTransportadoraDiv" style="display:none; margin-top:14px;">
+          <label for="outraTransportadoraDiv">Qual é a transportadora?</label>
+          <input type="text" id="outraTransportadoraDiv" name="outraTransportadora" placeholder="Ex: Jadlog, Total Express...">
+          <div class="hint">Preencha somente se selecionou “OUTROS”.</div>
+        </div>
+
+        <div style="margin-top:14px;" class="grid">
+          <div>
+            <label for="dataRecebimentoDiv">Data de Recebimento</label>
+            <input type="date" id="dataRecebimentoDiv" name="dataRecebimento" required>
+          </div>
+
+          <div>
+            <label for="notaFiscalDiv">Número da Nota Fiscal</label>
+            <input type="text" id="notaFiscalDiv" name="notaFiscal" required placeholder="Ex: 12345">
+          </div>
+        </div>
+
+        <div style="margin-top:14px;" class="grid">
+          <div>
+            <label for="serieNotaDiv">Série da Nota Fiscal</label>
+            <input type="text" id="serieNotaDiv" name="serieNota" required placeholder="Ex: 1">
+          </div>
+
+          <div>
+            <label>Divergência</label>
+            <select name="divergencia" required>
+              <option value="">Selecione uma opção</option>
+              <option value="MERCADORIA PASSANDO">MERCADORIA PASSANDO</option>
+              <option value="MERCADORIA FALTANDO">MERCADORIA FALTANDO</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;" class="grid">
+          <div>
+            <label for="referenciaDiv">Referência</label>
+            <input type="text" id="referenciaDiv" name="referencia" maxlength="4" required placeholder="Ex: 4F87">
+          </div>
+
+          <div>
+            <label for="corDiv">Cor</label>
+            <input type="text" id="corDiv" name="cor" maxlength="6" required placeholder="Ex: HNJEN">
+          </div>
+        </div>
+
+        <div style="margin-top:14px;" class="grid">
+          <div>
+            <label for="tamanhoDiv">Tamanho</label>
+            <input type="text" id="tamanhoDiv" name="tamanho" maxlength="3" required placeholder="Ex: P / M / G">
+          </div>
+
+          <div>
+            <label for="quantidadeDiv">Quantidade</label>
+            <input type="number" id="quantidadeDiv" name="quantidade" required placeholder="Ex: 1" min="1">
+          </div>
+        </div>
+
+        <div style="margin-top:16px;" class="row">
+          <button class="btn primary" id="btnDiv" type="submit">
+            <i class="fa-solid fa-paper-plane"></i> Enviar Divergência
+          </button>
+          <button class="btn" type="reset" onclick="resetExtrasDiv()">
+            <i class="fa-solid fa-eraser"></i> Limpar
+          </button>
+        </div>
+
+        <div id="loadingMessageDiv" class="loading">
+          <span class="spinner"></span> Enviando... Por favor, aguarde.
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <footer>HS Operações © 2025 — Todos os direitos reservados</footer>
+
+  <script>
+    // ====== CONFIG ======
+    const URL_DIVERGENCIA = "https://script.google.com/macros/s/AKfycbw5xq6i5Qoc0s3f-ZaQ6FCZdsjXrC_my8d0tmgr756hWZQqT9Olu9DjsGOYwTlvnBQA/exec";
+
+    let isSubmittingDiv = false;
+
+    // toggle OUTROS
+    document.getElementById('transportadora-div').addEventListener('change', function() {
+      const outrosDiv = document.getElementById('outrosTransportadoraDiv');
+      const input = document.getElementById('outraTransportadoraDiv');
+
+      if (this.value === 'OUTROS') {
+        outrosDiv.style.display = 'block';
+        input.required = true;
+        setTimeout(() => input.focus(), 50);
+      } else {
+        outrosDiv.style.display = 'none';
+        input.required = false;
+        input.value = '';
+      }
+    });
+
+    function setLoadingDiv(isLoading) {
+      const btn = document.getElementById("btnDiv");
+      const btnTop = document.getElementById("btnDivTop");
+      const loading = document.getElementById("loadingMessageDiv");
+
+      if (isLoading) {
+        btn.disabled = true;
+        btnTop.disabled = true;
+        loading.style.display = "block";
+      } else {
+        btn.disabled = false;
+        btnTop.disabled = false;
+        loading.style.display = "none";
+      }
+    }
+
+    function resetExtrasDiv() {
+      document.getElementById('outrosTransportadoraDiv').style.display = 'none';
+      document.getElementById('outraTransportadoraDiv').required = false;
+      document.getElementById('outraTransportadoraDiv').value = '';
+      document.getElementById('transportadora-div').value = 'BRASPRESS';
+    }
+
+    function enviarFormularioDivergencia(event) {
+      event.preventDefault();
+      if (isSubmittingDiv) return;
+
+      isSubmittingDiv = true;
+      setLoadingDiv(true);
+
+      const form = document.getElementById("formulario-divergencia");
+      const formData = new FormData(form);
+
+      fetch(URL_DIVERGENCIA, {
+        method: "POST",
+        body: formData
+      })
+      .then(r => r.json())
+      .then(() => {
+        alert("SUA DIVERGÊNCIA FOI ENVIADA COM SUCESSO, AGRADECEMOS SEU APOIO");
+        form.reset();
+        resetExtrasDiv();
+      })
+      .catch(() => {
+        alert("Erro ao enviar o formulário. Tente novamente.");
+      })
+      .finally(() => {
+        setTimeout(() => {
+          isSubmittingDiv = false;
+          setLoadingDiv(false);
+        }, 120);
+      });
+    }
+  </script>
+</body>
+</html>
