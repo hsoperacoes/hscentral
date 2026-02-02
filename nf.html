@@ -6,8 +6,6 @@
   <title>GERENCIAL HS - Recebimento de Nota Fiscal</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-
-  <!-- ✅ Html5Qrcode (substitui Dynamsoft) -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
@@ -92,23 +90,33 @@
     .history li { padding: 6px 8px; border-bottom: 1px solid #222; cursor: pointer; }
     .history li:hover { background: #1d1d1d; }
 
-    /* ✅ mantém o mesmo container e tamanho do scanner */
+    /* ✅ scanner maior e melhor pra código de barras longo */
     #scanner {
-      width: 100%; max-width: 420px; height: 280px;
-      margin: 10px auto; position: relative; display: none;
-      justify-content: center; align-items: center; background: #111;
-      border: 1px solid #333; border-radius: 8px;
+      width: 100%;
+      max-width: 520px;
+      height: 360px;
+      margin: 10px auto;
+      position: relative;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      background: #0b0b0c;
+      border: 1px solid #333;
+      border-radius: 10px;
       overflow: hidden;
     }
 
-    #html5-reader{
+    #html5-reader {
       width: 100%;
       height: 100%;
     }
-    #html5-reader video, #html5-reader canvas{
+
+    /* ✅ NÃO CORTA O VÍDEO (isso era um dos motivos do “não lê”) */
+    #html5-reader video, #html5-reader canvas {
       width: 100% !important;
       height: 100% !important;
-      object-fit: cover;
+      object-fit: contain !important;
+      background: #000;
     }
 
     .scanner-close {
@@ -129,6 +137,22 @@
       gap: 6px;
     }
     .scanner-close:hover{ background: rgba(17,24,39,.9); }
+
+    .scanner-status {
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      z-index: 10;
+      background: rgba(0,0,0,.55);
+      border: 1px solid rgba(255,255,255,.12);
+      color: #e5e7eb;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      max-width: calc(100% - 20px);
+      line-height: 1.35;
+    }
+    .scanner-status b { color: #bbf7d0; }
 
     footer {
       text-align:center; font-size:14px; color:#ccc;
@@ -191,9 +215,7 @@
       width: auto;
       margin-top: 0;
     }
-    .recusa-btn-fechar:hover {
-      background: rgba(255,255,255,.06);
-    }
+    .recusa-btn-fechar:hover { background: rgba(255,255,255,.06); }
 
     .recusa-conteudo { padding: 16px; background: #0b0b0c; }
 
@@ -219,7 +241,6 @@
 </head>
 
 <body>
-
   <a href="index.html" class="back-button">
     <i class="fas fa-arrow-left"></i> Voltar à Home
   </a>
@@ -228,7 +249,6 @@
 
   <div class="form-container">
 
-    <!-- LOGIN FILIAL -->
     <div id="login-nf">
       <h2>Login da Filial</h2>
       <label for="codigo-nf">Código da Filial</label>
@@ -237,7 +257,6 @@
       <div id="erro-nf" style="color:#ff6b6b;margin-top:8px;"></div>
     </div>
 
-    <!-- TELA PRINCIPAL -->
     <div id="principal-nf" class="hidden">
       <div class="logout">
         <button id="btn-sair-nf">Sair</button>
@@ -255,6 +274,7 @@
           <i class="fas fa-times"></i> Fechar
         </button>
         <div id="html5-reader"></div>
+        <div class="scanner-status" id="scanner-status">Status: <b>pronto</b></div>
       </div>
 
       <button id="btn-consultar-nf">Consultar</button>
@@ -272,18 +292,15 @@
 
   <footer>HS Operações © 2025 - Todos os direitos reservados</footer>
 
-  <!-- OVERLAY RECUSA -->
   <div id="recusaOverlay">
     <div class="recusa-card" role="dialog" aria-modal="true">
       <div class="recusa-topo">
         <div class="recusa-titulo">🚫 NOTA MARCADA PARA RECUSA</div>
         <button class="recusa-btn-fechar" id="btn-fechar-recusa">Fechar</button>
       </div>
-
       <div class="recusa-conteudo">
         <div class="recusa-texto" id="recusaTexto"></div>
       </div>
-
       <div class="recusa-rodape">
         Se houver confirmação da recusa, realize também a recusa no controle de transporte e na via física destinada ao escritório.
       </div>
@@ -291,10 +308,8 @@
   </div>
 
   <script>
-    // ✅ SEU APPWEB (fica disponível pro script_nf.js)
+    // ✅ SEU APPWEB
     window.URL_API = "https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec";
-
-    // ✅ trava geral pra evitar qualquer init Dynamsoft vindo do script_nf.js
     window.__HS_DISABLE_DYNAMSOFT__ = true;
 
     function abrirOverlayRecusa(mensagem) {
@@ -304,13 +319,11 @@
       ov.style.display = 'flex';
       document.body.style.overflow = 'hidden';
     }
-
     function fecharOverlayRecusa() {
       const ov = document.getElementById('recusaOverlay');
       ov.style.display = 'none';
       document.body.style.overflow = '';
     }
-
     document.addEventListener('DOMContentLoaded', () => {
       const btn = document.getElementById('btn-fechar-recusa');
       const ov = document.getElementById('recusaOverlay');
@@ -322,14 +335,19 @@
     });
   </script>
 
-  <!-- ✅ SEU SCRIPT ORIGINAL (login/consulta/histórico/recusa etc.) -->
+  <!-- ✅ seu script continua (login/consulta/histórico) -->
   <script src="script_nf.js?v=1.0.4"></script>
 
-  <!-- ✅ LEITOR HTML5 EMBUTIDO + OVERRIDE TOTAL DO BOTÃO (mata o Dynamsoft do script_nf.js) -->
+  <!-- ✅ leitor Html5 + override total do botão -->
   <script>
     let html5ScannerNF = null;
     let scannerAberto = false;
     let travadoNF = false;
+
+    function setStatus_(txt){
+      const el = document.getElementById("scanner-status");
+      if(el) el.innerHTML = txt;
+    }
 
     function extrairChave44(texto){
       const only = String(texto || "").replace(/\D/g, "");
@@ -360,6 +378,7 @@
       scannerAberto = false;
       const box = document.getElementById("scanner");
       box.style.display = "none";
+      setStatus_('Status: <b>fechado</b>');
 
       try{
         if(html5ScannerNF){
@@ -376,7 +395,8 @@
       scannerAberto = true;
       travadoNF = false;
 
-      // sempre garante que não tem instância antiga
+      setStatus_('Status: <b>abrindo câmera…</b>');
+
       try{
         if(html5ScannerNF){
           await html5ScannerNF.stop().catch(()=>{});
@@ -387,14 +407,29 @@
 
       html5ScannerNF = new Html5Qrcode("html5-reader");
 
-      // ✅ melhora leitura de código de barras (44 dígitos)
+      // ✅ FORÇA FORMATO (quando disponível)
+      let formatos = undefined;
+      try{
+        if(window.Html5QrcodeSupportedFormats){
+          formatos = [
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.QR_CODE
+          ];
+        }
+      }catch(e){}
+
       const config = {
-        fps: 20,
-        qrbox: { width: 380, height: 190 },   // mais “retangular”
+        fps: 28,
+        qrbox: { width: 480, height: 200 },   // ✅ retangular pra Code128
         aspectRatio: 1.777,
+        disableFlip: true,
         experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-        rememberLastUsedCamera: true
+        rememberLastUsedCamera: true,
+        ...(formatos ? { formatsToSupport: formatos } : {})
       };
+
+      setStatus_('Status: <b>procurando o código…</b><br/>Dica: aproxime e alinhe o código no centro.');
 
       await html5ScannerNF.start(
         { facingMode: "environment" },
@@ -404,13 +439,20 @@
           if(travadoNF) return;
 
           const chave = extrairChave44(decodedText);
-          if(!chave) return;
+          if(!chave) {
+            // só pra você ver que está “pegando algo”
+            setStatus_('Status: <b>lendo…</b><br/>Conteúdo detectado, procurando 44 dígitos…');
+            return;
+          }
 
           travadoNF = true;
+
+          // ✅ joga no campo
           document.getElementById("chave-nf").value = chave;
+          setStatus_('Status: <b>capturado!</b><br/>Chave 44 preenchida ✅');
 
           beepOk();
-          await new Promise(r => setTimeout(r, 120));
+          await new Promise(r => setTimeout(r, 150));
           await fecharScannerNF();
         },
         () => {}
@@ -426,19 +468,19 @@
       const btn = document.getElementById("btn-leitor-nf");
       if(!btn) return;
 
-      // ✅ CLONE = remove TODOS os listeners que o script_nf.js colocou
       const clone = btn.cloneNode(true);
       btn.parentNode.replaceChild(clone, btn);
 
-      // ✅ agora o click é só nosso (Html5)
       clone.addEventListener("click", async (e)=>{
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
+        const alvo = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
+        if(alvo) alvo.textContent = "";
+
         try{
           await toggleScannerNF();
         }catch(err){
-          const alvo = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
           if(alvo) alvo.textContent = "Erro ao abrir câmera: " + (err?.message || err);
           await fecharScannerNF();
         }
@@ -446,7 +488,6 @@
     }
 
     document.addEventListener("DOMContentLoaded", ()=>{
-      // botão fechar scanner
       const btnFechar = document.getElementById("btn-fechar-scanner");
       if(btnFechar){
         btnFechar.addEventListener("click", async (e)=>{
@@ -456,18 +497,15 @@
         });
       }
 
-      // ESC fecha scanner
       document.addEventListener("keydown", async (e)=>{
         if(e.key === "Escape" && scannerAberto){
           await fecharScannerNF();
         }
       });
 
-      // ✅ faz o reset depois do script_nf.js já ter feito os binds dele
       setTimeout(resetarBotaoLeitor_, 50);
-      setTimeout(resetarBotaoLeitor_, 250); // reforço (caso script demore)
+      setTimeout(resetarBotaoLeitor_, 250);
     });
   </script>
-
 </body>
 </html>
