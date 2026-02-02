@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cadastro de Folgas - GERENCIAL HS</title>
+
+  <!-- Ícones -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <!-- Seu tema global (mesmo usado nas outras telas) -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Ajustes visuais específicos desta tela -->
+  <style>
+    body { background: #050509; }
+
+    .section {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 16px 32px;
+      min-height: 100vh;
+    }
+
+    .form-container {
+      width: 100%;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .logo {
+      display: block;
+      margin: 0 auto 12px;
+      max-width: 80px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .top-nav {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin: 24px 0 8px;
+    }
+
+    .back-button {
+      position: static !important;
+      left: auto;
+      top: auto;
+      transform: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: 999px;
+      border: 1px solid #1f2937;
+      background: #111827;
+      color: #e5e7eb;
+      font-size: 0.9rem;
+      text-decoration: none;
+      box-shadow: 0 10px 40px rgba(15, 23, 42, 0.6);
+    }
+
+    .back-button i { font-size: 0.85rem; }
+
+    .back-button:hover { background: #1f2937; }
+  </style>
+</head>
+<body>
+
+  <div class="top-nav">
+    <a href="index.html" class="back-button show">
+      <i class="fas fa-arrow-left"></i> Voltar à Home
+    </a>
+  </div>
+
+  <div id="folgas" class="section active">
+    <div class="form-container">
+      <img src="logo.png" alt="Logo" class="logo">
+      <h2>Cadastro de Folga Funcionários</h2>
+
+      <!-- ✅ mantém seu endpoint de folgas (GS SEPARADO) -->
+      <form id="form-folgas" method="POST"
+            action="https://script.google.com/macros/s/AKfycbwh-YUwL2o3_i-bfcV9RMzLcoI98vyyGwEXf4LHlG5KJ59gIAlUe1_VVlFQMBqU6PwR/exec">
+
+        <div class="form-group">
+          <label for="filial-folgas">Filial</label>
+          <select id="filial-folgas" name="filial" required>
+            <option value="">Selecione uma filial</option>
+            <option value="ARTUR">ARTUR</option>
+            <option value="FLORIANO">FLORIANO</option>
+            <option value="JOTA">JOTA</option>
+            <option value="MODA">MODA</option>
+            <option value="PONTO">PONTO</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="funcionario-folgas">Funcionário</label>
+          <select id="funcionario-folgas" name="funcionario" required>
+            <option value="">Carregando lista de funcionários...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="dataTrabalho-folgas">Dia Trabalhado</label>
+          <input type="date" id="dataTrabalho-folgas" name="dataTrabalho" required>
+        </div>
+
+        <div class="form-group">
+          <label for="motivo-folgas">Motivo da Folga</label>
+          <select id="motivo-folgas" name="motivo" required>
+            <option value="">Selecione um motivo</option>
+            <option value="DOMINGO">DOMINGO</option>
+            <option value="FERIADO">FERIADO</option>
+            <option value="OUTROS">OUTROS</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="motivoOutros-folgas" style="display: none;">
+          <label for="outrosMotivo-folgas">Especificar o Motivo</label>
+          <input
+            type="text"
+            id="outrosMotivo-folgas"
+            name="outrosMotivo"
+            placeholder="Escreva o motivo">
+        </div>
+
+        <div class="form-group">
+          <label for="dataFolga-folgas">Data da Folga</label>
+          <input type="date" id="dataFolga-folgas" name="dataFolga" required>
+        </div>
+
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+  </div>
+
+  <footer>HS Operações © 2025 - Todos os direitos reservados</footer>
+
+  <script>
+    window.Dynamsoft = window.Dynamsoft || {};
+    Dynamsoft.DBR = Dynamsoft.DBR || {};
+    Dynamsoft.DBR.BarcodeScanner = Dynamsoft.DBR.BarcodeScanner || {};
+  </script>
+
+  <script>
+    (function () {
+      // ========= FUNCIONÁRIOS (ABA FUNCIONÁRIOS) =========
+      // ✅ usa o GID da sua aba FUNCIONÁRIOS (o mesmo que você já usa e funciona)
+      const FUNCIONARIOS_GVIZ_URL =
+        'https://docs.google.com/spreadsheets/d/1PqDe40nKZbslvzJhJSRAP4naHeIp1uiu1xPk1nvssb4/gviz/tq?tqx=out:json&gid=1390331275';
+
+      const filialSel       = document.getElementById('filial-folgas');
+      const funcSel         = document.getElementById('funcionario-folgas');
+      const motivoSel       = document.getElementById('motivo-folgas');
+      const dataTrabInp     = document.getElementById('dataTrabalho-folgas');
+      const dataFolgaInp    = document.getElementById('dataFolga-folgas');
+      const motivoOutrosDiv = document.getElementById('motivoOutros-folgas');
+      const outrosMotivoInp = document.getElementById('outrosMotivo-folgas');
+      const formFolgas      = document.getElementById('form-folgas');
+      const btnSubmit       = formFolgas ? formFolgas.querySelector('button[type="submit"]') : null;
+
+      let funcionariosPorFilial = {};
+
+      async function carregarFuncionarios() {
+        try {
+          funcSel.innerHTML = '<option value="">Carregando funcionários...</option>';
+
+          const resp = await fetch(FUNCIONARIOS_GVIZ_URL);
+          const texto = await resp.text();
+
+          // pega o JSON do wrapper da GVIZ de forma bem tolerante
+          const matchJson = texto.match(/\{.*\}/s);
+          if (!matchJson) throw new Error('Resposta da planilha em formato inesperado.');
+
+          const json = JSON.parse(matchJson[0]);
+          const rows = (json.table && json.table.rows) ? json.table.rows : [];
+          if (!rows.length) throw new Error('Nenhuma linha na aba FUNCIONÁRIOS.');
+
+          // ✅ aqui a primeira linha vira “cabeçalho” (igual no seu HTML de falta)
+          const headerRow = rows[0];
+          const mapa = {};
+
+          (headerRow.c || []).forEach((cell, colIdx) => {
+            const headerVal = cell && cell.v ? String(cell.v).trim() : '';
+            if (!headerVal) return;
+
+            // pega só a primeira palavra (ARTUR / FLORIANO / etc) quando vier "ARTUR MALHAS"
+            const chave = headerVal.split(' ')[0].toUpperCase();
+
+            const nomes = [];
+            for (let r = 1; r < rows.length; r++) {
+              const linha = rows[r];
+              if (!linha || !linha.c) continue;
+              const c = linha.c[colIdx];
+              const val = c && c.v ? String(c.v).trim() : '';
+              if (val) nomes.push(val);
+            }
+
+            mapa[chave] = nomes;
+          });
+
+          funcionariosPorFilial = mapa;
+          atualizarSelectFuncionarios();
+        } catch (e) {
+          console.error('Erro ao carregar funcionários:', e);
+          funcSel.innerHTML = '<option value="">Erro ao carregar funcionários</option>';
+        }
+      }
+
+      function atualizarSelectFuncionarios() {
+        const filial = (filialSel.value || '').trim().toUpperCase();
+        funcSel.innerHTML = '<option value="">Selecione um funcionário</option>';
+
+        const lista = funcionariosPorFilial[filial] || [];
+        lista.forEach(nome => {
+          const opt = document.createElement('option');
+          opt.value = nome;
+          opt.textContent = nome;
+          funcSel.appendChild(opt);
+        });
+      }
+
+      // ========= REGRAS MOTIVO/DATAS =========
+      function verificarMotivo() {
+        const motivo = motivoSel.value;
+
+        if (!dataTrabInp.value) {
+          alert("Selecione primeiro o 'Dia Trabalhado'!");
+          motivoSel.value = '';
+          return;
+        }
+
+        const dataTrabalho = new Date(dataTrabInp.value + 'T00:00:00');
+        const maxDate = new Date(dataTrabalho);
+
+        if (motivo === "DOMINGO") {
+          maxDate.setDate(dataTrabalho.getDate() + 7);
+        } else if (motivo === "FERIADO" || motivo === "OUTROS") {
+          maxDate.setDate(dataTrabalho.getDate() + 60);
+        }
+
+        dataFolgaInp.min = dataTrabalho.toISOString().split('T')[0];
+        dataFolgaInp.max = maxDate.toISOString().split('T')[0];
+
+        motivoOutrosDiv.style.display = (motivo === "OUTROS") ? "block" : "none";
+        outrosMotivoInp.required = (motivo === "OUTROS");
+      }
+
+      // ========= ENVIO (SEM “SUCESSO FANTASMA”) =========
+      function configurarEnvio() {
+        if (!formFolgas) return;
+
+        formFolgas.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          if (btnSubmit) btnSubmit.disabled = true;
+
+          try {
+            const formData = new FormData(formFolgas);
+
+            const resp = await fetch(formFolgas.action, {
+              method: "POST",
+              body: formData
+            });
+
+            const texto = await resp.text();
+            console.log("Resposta App Web (folgas):", texto);
+
+            // Só confirma se o GS realmente respondeu SUCESSO
+            const ok = String(texto || "").toUpperCase().includes("SUCESSO");
+            if (!ok) {
+              alert("Não confirmado pelo servidor.\n\nResposta: " + texto);
+              return;
+            }
+
+            alert("Folga cadastrada com sucesso!");
+            formFolgas.reset();
+            funcSel.innerHTML = '<option value="">Selecione um funcionário</option>';
+            motivoOutrosDiv.style.display = "none";
+          } catch (err) {
+            console.error(err);
+            alert("Erro ao enviar os dados!");
+          } finally {
+            if (btnSubmit) btnSubmit.disabled = false;
+          }
+        });
+      }
+
+      // ========= INIT =========
+      if (filialSel) filialSel.addEventListener('change', atualizarSelectFuncionarios);
+      if (motivoSel) motivoSel.addEventListener('change', verificarMotivo);
+      if (dataTrabInp) {
+        dataTrabInp.addEventListener('change', () => {
+          if (motivoSel.value) verificarMotivo();
+        });
+      }
+
+      carregarFuncionarios();  // carrega ao abrir
+      configurarEnvio();
+    })();
+  </script>
+</body>
+</html>
