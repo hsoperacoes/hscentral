@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gerador de Código de Barras - GERENCIAL HS</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #000;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* BOTÃO HOME PADRÃO PRETO */
+    .back-button {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #020617;
+      color: #e5e7eb;
+      border: 1px solid #111827;
+      padding: 10px 22px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 14px;
+      z-index: 1000;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+
+    .back-button i {
+      margin-right: 6px;
+    }
+
+    .back-button:hover {
+      background-color: #111827;
+      transform: translateX(-50%) translateY(-1px);
+    }
+
+    .page-wrapper {
+      width: 100%;
+      padding: 90px 16px 32px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .form-container {
+      width: 100%;
+      max-width: 900px;
+      background: #1e1e1e;
+      padding: 32px 28px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      color: white;
+    }
+
+    .logo {
+      display: block;
+      margin: 0 auto 16px;
+      max-width: 80px;
+    }
+
+    h1, h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #fff;
+    }
+
+    .gerador-section .form-container {
+      background-color: #1e1e1e;
+      color: white;
+      max-width: 900px;
+    }
+
+    .input-area, .output-area {
+      background: #1e1e1e;
+      color: white;
+      margin-top: 10px;
+    }
+
+    .input-area textarea {
+      width: 100%;
+      min-height: 150px;
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      background-color: #2a2a2a;
+      color: white;
+      resize: vertical;
+      font-size: 14px;
+    }
+
+    .input-area textarea:focus {
+      outline: none;
+      border-color: #673ab7;
+      box-shadow: 0 0 0 2px rgba(103, 58, 183, 0.2);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .controls button {
+      flex: 1;
+      min-width: 140px;
+      padding: 10px 14px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: background-color 0.3s;
+    }
+
+    .controls button:nth-child(1) { background-color: #4CAF50; color: #fff; }
+    .controls button:nth-child(1):hover { background-color: #45a049; }
+
+    .controls button:nth-child(2) { background-color: #f44336; color: #fff; }
+    .controls button:nth-child(2):hover { background-color: #d32f2f; }
+
+    .controls button:nth-child(3) { background-color: #ff9800; color: #fff; }
+    .controls button:nth-child(3):hover { background-color: #e68a00; }
+
+    .controls button:nth-child(4) { background-color: #2196F3; color: #fff; }
+    .controls button:nth-child(4):hover { background-color: #0b7dda; }
+
+    .example-title {
+      color: #ccc;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    .barcode-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .barcode-item {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      padding: 10px;
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    svg text {
+      fill: white !important;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 13px;
+      color: #ccc;
+      padding: 10px 0 18px;
+    }
+
+    @media print {
+      .back-button,
+      .input-area,
+      .controls,
+      .example-title,
+      button {
+        display: none !important;
+      }
+
+      body {
+        background: #fff;
+        color: #000;
+      }
+
+      .page-wrapper {
+        padding: 0;
+      }
+
+      .form-container {
+        box-shadow: none;
+        background: none;
+        padding: 0;
+      }
+
+      .output-area h2 {
+        margin-bottom: 10px;
+      }
+
+      .barcode-container {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin: 0;
+      }
+
+      .barcode-item {
+        margin: 0;
+        padding: 5px;
+        box-shadow: none;
+        background: none;
+        break-inside: avoid;
+        page-break-inside: avoid;
+        border: none;
+      }
+
+      svg {
+        background: none;
+      }
+
+      svg text {
+        fill: black !important;
+        font-size: 14px !important;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .page-wrapper {
+        padding: 80px 10px 24px;
+      }
+
+      .form-container {
+        padding: 24px 18px;
+      }
+
+      h1 {
+        font-size: 20px;
+      }
+
+      .controls {
+        flex-direction: column;
+      }
+
+      .controls button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- BOTÃO HOME PRETO PADRÃO -->
+  <a href="index.html" class="back-button">
+    <i class="fas fa-arrow-left"></i> Voltar à Home
+  </a>
+
+  <div class="page-wrapper">
+    <div id="gerador" class="gerador-section">
+      <div class="form-container">
+        <img src="logo.png" alt="Logo" class="logo">
+        <h1>Gerador de Códigos de Barras em Lote - EAN13</h1>
+
+        <div class="input-area">
+          <h2>Cole seus códigos (um por linha):</h2>
+          <textarea
+            id="codigos-barras"
+            placeholder="Cole aqui vários códigos EAN13, um por linha&#10;Exemplo:&#10;7891000315507&#10;7891910000197&#10;7891234567890"></textarea>
+
+          <div class="controls">
+            <button onclick="gerarTodosBarras()">Gerar Códigos</button>
+            <button onclick="limparTudoBarras()">Limpar Tudo</button>
+            <button onclick="copiarCodigosBarras()">Copiar Códigos</button>
+            <button onclick="window.print()">Imprimir Códigos</button>
+          </div>
+
+          <div class="example-title">Exemplos (não são apagados ao limpar):</div>
+        </div>
+
+        <div class="output-area">
+          <h2>Códigos Gerados:</h2>
+          <div id="barcodes" class="barcode-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>HS Operações © 2025 - Todos os direitos reservados</footer>
+
+  <script>
+    // ------ LÓGICA EAN13 (MESMA DO INDEX GIGANTE) ------
+
+    function calculateChecksum(code) {
+      let sum = 0;
+      for (let i = 0; i < 12; i++) {
+        const digit = parseInt(code[i]);
+        sum += (i % 2 === 0) ? digit * 1 : digit * 3;
+      }
+      return (10 - (sum % 10)) % 10;
+    }
+
+    function generateEAN13(code, skipValidation = false) {
+      if (!/^\d{12,13}$/.test(code)) {
+        throw new Error(`Código inválido: "${code}" - Deve conter 12 ou 13 dígitos`);
+      }
+
+      if (code.length === 12) {
+        code += calculateChecksum(code);
+      } else if (!skipValidation && calculateChecksum(code.substring(0, 12)) != code[12]) {
+        throw new Error(`Dígito verificador inválido para código: "${code}"`);
+      }
+
+      const patterns = {
+        L: ["0001101","0011001","0010011","0111101","0100011","0110001","0101111","0111011","0110111","0001011"],
+        G: ["0100111","0110011","0011011","0100001","0011101","0111001","0000101","0010001","0001001","0010111"],
+        R: ["1110010","1100110","1101100","1000010","1011100","1001110","1010000","1000100","1001000","1110100"]
+      };
+
+      const structure = ["LLLLLL","LLGLGG","LLGGLG","LLGGGL","LGLLGG","LGGLLG","LGGGLL","LGLGLG","LGLGGL","LGGLGL"];
+      const firstDigit = parseInt(code[0]);
+      const pattern = structure[firstDigit];
+
+      let barcode = "101";
+      for (let i = 1; i <= 6; i++) {
+        const digit = parseInt(code[i]);
+        barcode += patterns[pattern[i - 1]][digit];
+      }
+
+      barcode += "01010";
+
+      for (let i = 7; i <= 12; i++) {
+        const digit = parseInt(code[i]);
+        barcode += patterns.R[digit];
+      }
+
+      barcode += "101";
+
+      return {
+        code: code,
+        binary: barcode
+      };
+    }
+
+    function renderBarcode(barcodeData, container) {
+      const binary = barcodeData.binary;
+      const code = barcodeData.code;
+      const width = 2;
+      const height = 60;
+      const margin = 10;
+      const fontSize = 14;
+
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      const totalWidth = (binary.length * width) + (margin * 2);
+      const totalHeight = height + fontSize + 15;
+
+      svg.setAttribute("width", totalWidth);
+      svg.setAttribute("height", totalHeight);
+      svg.setAttribute("class", "barcode-svg");
+
+      let x = margin;
+      for (let i = 0; i < binary.length; i++) {
+        if (binary[i] === '1') {
+          const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          rect.setAttribute("x", x);
+          rect.setAttribute("y", margin);
+          rect.setAttribute("width", width);
+          rect.setAttribute("height", height);
+          rect.setAttribute("fill", "#000");
+          svg.appendChild(rect);
+        }
+        x += width;
+      }
+
+      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      text.setAttribute("x", totalWidth / 2);
+      text.setAttribute("y", totalHeight - 5);
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("font-size", fontSize);
+      text.setAttribute("font-family", "monospace");
+      text.setAttribute("fill", "white");
+      text.textContent = code;
+      svg.appendChild(text);
+
+      const item = document.createElement("div");
+      item.className = "barcode-item";
+      item.appendChild(svg);
+      container.appendChild(item);
+    }
+
+    function gerarTodosBarras() {
+      const input = document.getElementById("codigos-barras").value.trim();
+      const container = document.getElementById("barcodes");
+      container.innerHTML = '';
+
+      if (!input) {
+        alert("Por favor, cole alguns códigos EAN13 no campo de texto.");
+        return;
+      }
+
+      const codigos = input.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+      let successCount = 0;
+      let errorCount = 0;
+      const errorMessages = [];
+
+      codigos.forEach((codigo, index) => {
+        try {
+          const barcode = generateEAN13(codigo, true); // igual ao index gigante
+          renderBarcode(barcode, container);
+          successCount++;
+        } catch (error) {
+          errorCount++;
+          errorMessages.push(`Linha ${index + 1}: ${error.message}`);
+          const errorDiv = document.createElement("div");
+          errorDiv.className = "barcode-item no-print";
+          errorDiv.style.color = "red";
+          errorDiv.textContent = `Erro: ${codigo} - ${error.message}`;
+          container.appendChild(errorDiv);
+        }
+      });
+
+      if (errorCount > 0) {
+        alert(`Foram gerados ${successCount} códigos com sucesso.\n\nErros encontrados (${errorCount}):\n${errorMessages.join('\n')}`);
+      } else if (successCount > 0) {
+        alert(`Todos os ${successCount} códigos foram gerados com sucesso!`);
+      }
+    }
+
+    function limparTudoBarras() {
+      document.getElementById("codigos-barras").value = '';
+      document.getElementById("barcodes").innerHTML = '';
+    }
+
+    function copiarCodigosBarras() {
+      const input = document.getElementById("codigos-barras");
+      input.focus();
+      input.select();
+      document.execCommand('copy');
+      alert("Códigos copiados para a área de transferência!");
+    }
+  </script>
+</body>
+</html>
