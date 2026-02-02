@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Contagem de Sacola - GERENCIAL HS</title>
+
+  <!-- Ícones -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <!-- Tema global -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Ajustes visuais específicos desta tela -->
+  <style>
+    body {
+      background: #050509;
+    }
+
+    .section {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 16px 32px;
+      min-height: 100vh;
+    }
+
+    .form-container {
+      width: 100%;
+      max-width: 760px;   /* mesma largura dos outros cards */
+      margin: 0 auto;
+    }
+
+    .logo {
+      display: block;
+      margin: 0 auto 12px;
+      max-width: 80px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    /* Barra superior com botão de voltar (padrão falta/folgas) */
+    .top-nav {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin: 24px 0 8px;
+    }
+
+    .back-button {
+      position: static !important;
+      left: auto;
+      top: auto;
+      transform: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: 999px;
+      border: 1px solid #1f2937;
+      background: #111827;
+      color: #e5e7eb;
+      font-size: 0.9rem;
+      text-decoration: none;
+      box-shadow: 0 10px 40px rgba(15, 23, 42, 0.6);
+    }
+
+    .back-button i {
+      font-size: 0.85rem;
+    }
+
+    .back-button:hover {
+      background: #1f2937;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #grupo-tamanho-g {
+      display: none; /* começa escondido */
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Botão de voltar à Home no padrão novo -->
+  <div class="top-nav">
+    <a href="index.html" class="back-button show">
+      <i class="fas fa-arrow-left"></i> Voltar à Home
+    </a>
+  </div>
+
+  <div id="sacola" class="section active">
+    <div class="form-container">
+      <img src="logo.png" alt="Logo" class="logo">
+      <h2>Contagem de Sacola</h2>
+
+      <form id="form-sacola">
+        <div class="form-group">
+          <label for="filial">Filial <span class="required-star">*</span></label>
+          <select id="filial" name="filial" required>
+            <option value="">Selecione uma filial</option>
+            <option value="ARTUR">ARTUR</option>
+            <option value="FLORIANO">FLORIANO</option>
+            <option value="JOTA">JOTA</option>
+            <option value="MODA">MODA</option>
+            <option value="PONTO">PONTO</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="data-contagem">Data da Contagem <span class="required-star">*</span></label>
+          <input type="text" id="data-contagem" name="data_contagem" readonly required>
+        </div>
+
+        <div class="form-group">
+          <label for="sacola-p">Sacola P <span class="required-star">*</span></label>
+          <input type="number" id="sacola-p" name="sacola_p" placeholder="Quantidade" min="0" required>
+        </div>
+
+        <div class="form-group">
+          <label for="envelope-p">Envelope P <span class="required-star">*</span></label>
+          <input type="number" id="envelope-p" name="envelope_p" placeholder="Quantidade" min="0" required>
+        </div>
+
+        <div class="form-group">
+          <label for="sacola-m">Sacola M <span class="required-star">*</span></label>
+          <input type="number" id="sacola-m" name="sacola_m" placeholder="Quantidade" min="0" required>
+        </div>
+
+        <div class="form-group">
+          <label for="envelope-m">Envelope M <span class="required-star">*</span></label>
+          <input type="number" id="envelope-m" name="envelope_m" placeholder="Quantidade" min="0" required>
+        </div>
+
+        <div class="form-group checkbox-label">
+          <input type="checkbox" id="mostrar-g" onclick="toggleCamposG()">
+          <label for="mostrar-g">Possui Sacola e Envelope G</label>
+        </div>
+
+        <div id="grupo-tamanho-g">
+          <div class="form-group">
+            <label for="sacola-g">Sacola G <span class="required-star">*</span></label>
+            <input type="number" id="sacola-g" name="sacola_g" placeholder="Quantidade" min="0">
+          </div>
+          <div class="form-group">
+            <label for="envelope-g">Envelope G <span class="required-star">*</span></label>
+            <input type="number" id="envelope-g" name="envelope_g" placeholder="Quantidade" min="0">
+          </div>
+        </div>
+
+        <button type="submit" id="btn-enviar">Enviar</button>
+      </form>
+    </div>
+  </div>
+
+  <footer>HS Operações © 2025 - Todos os direitos reservados</footer>
+
+  <!-- JS específico dessa tela (mesmo fluxo do index grandão) -->
+  <script>
+    function toggleCamposG() {
+      const grupoG = document.getElementById("grupo-tamanho-g");
+      const checkbox = document.getElementById("mostrar-g");
+      grupoG.style.display = checkbox.checked ? "block" : "none";
+    }
+
+    function getDataHoraAtualBR() {
+      const agora = new Date();
+      return agora.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    }
+
+    function preencherDataSacola() {
+      const campo = document.getElementById("data-contagem");
+      if (campo) {
+        campo.value = getDataHoraAtualBR();
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      // já preenche a data/hora ao abrir a tela
+      preencherDataSacola();
+
+      const form = document.getElementById("form-sacola");
+      const botao = document.getElementById("btn-enviar");
+
+      form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+
+        const checkboxG = document.getElementById("mostrar-g");
+        const sacolaG = document.getElementById("sacola-g");
+        const envelopeG = document.getElementById("envelope-g");
+
+        // mesma validação do index
+        if (checkboxG.checked) {
+          if (sacolaG.value === "" || envelopeG.value === "") {
+            alert("Preencha os campos de Sacola G e Envelope G.");
+            return;
+          }
+        }
+
+        botao.disabled = true;
+
+        // atualiza de novo a data/hora no momento do envio
+        preencherDataSacola();
+
+        const formData = new FormData(form);
+
+        try {
+          const response = await fetch(
+            "https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec",
+            {
+              method: "POST",
+              body: formData
+            }
+          );
+
+          const resText = await response.text();
+          console.log("Resposta Apps Script:", resText);
+
+          alert("Contagem registrada com sucesso!");
+          form.reset();
+          toggleCamposG(); // volta a esconder G
+          preencherDataSacola(); // coloca nova data/hora
+        } catch (err) {
+          alert("Erro ao registrar os dados. Tente novamente.");
+          console.error("Erro:", err);
+        } finally {
+          botao.disabled = false;
+        }
+      });
+    });
+  </script>
+</body>
+</html>
