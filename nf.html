@@ -1,353 +1,319 @@
-/*************************************************
- * GERENCIAL HS - Recebimento de Nota Fiscal
- * ✅ Scanner: Html5Qrcode (substitui Dynamsoft)
- * ✅ Login filial + histórico local
- * ✅ Consulta NF + overlay recusa (se API retornar)
- *************************************************/
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GERENCIAL HS - Recebimento de Nota Fiscal</title>
 
-const APP_NF_VERSION = "2.0.0";
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
-// ✅ TROQUE AQUI PELO SEU WEB APP (Apps Script)
-const URL_API = "https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec";
+  <!-- ✅ Html5Qrcode (substitui Dynamsoft) -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
 
-// ===== elementos =====
-const elLogin = document.getElementById("login-nf");
-const elPrincipal = document.getElementById("principal-nf");
-
-const inpCodigo = document.getElementById("codigo-nf");
-const btnEntrar = document.getElementById("btn-entrar-nf");
-const btnSair = document.getElementById("btn-sair-nf");
-const erroLogin = document.getElementById("erro-nf");
-
-const inpChave = document.getElementById("chave-nf");
-const btnLeitor = document.getElementById("btn-leitor-nf");
-const btnConsultar = document.getElementById("btn-consultar-nf");
-
-const elScanner = document.getElementById("scanner");
-const elScannerView = document.getElementById("scanner-view");
-const elScannerHint = document.getElementById("scanner-hint");
-const btnFecharScanner = document.getElementById("btn-fechar-scanner");
-
-const elLoading = document.getElementById("loading-nf");
-const elResultado = document.getElementById("resultado-nf");
-const elErro2 = document.getElementById("erro-nf2");
-
-const listaHistorico = document.getElementById("historicoLista-nf");
-const btnLimparHist = document.getElementById("btn-limpar-nf");
-
-// ===== estado =====
-let filialAtual = "";
-let html5 = null;
-let travadoLeitura = false;
-
-// ===== storage keys =====
-const LS_FILIAL = "hs_nf_filial";
-const LS_HIST_PREFIX = "hs_nf_hist_"; // + filial
-
-// ===== helpers =====
-function onlyDigits(s){ return String(s || "").replace(/\D/g, ""); }
-
-function extrairChave44(texto){
-  const only = onlyDigits(texto);
-  if (only.length < 44) return "";
-  for (let i=0; i<=only.length-44; i++){
-    const cand = only.slice(i, i+44);
-    if (/^\d{44}$/.test(cand)) return cand;
-  }
-  return "";
-}
-
-function setHidden(el, hidden){
-  if(!el) return;
-  el.classList.toggle("hidden", !!hidden);
-}
-
-function setScannerVisible(on){
-  elScanner.style.display = on ? "flex" : "none";
-}
-
-function beepOk(){
-  try{
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    const ctx = new AudioContext();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.type = "square";
-    o.frequency.value = 880;
-    g.gain.value = 0.08;
-    o.connect(g); g.connect(ctx.destination);
-    o.start();
-    setTimeout(()=>{ o.stop(); ctx.close(); }, 110);
-  }catch(e){}
-  try{ if(navigator.vibrate) navigator.vibrate(50); }catch(e){}
-}
-
-function getHistKey_(){ return LS_HIST_PREFIX + (filialAtual || ""); }
-
-function loadHistorico_(){
-  const key = getHistKey_();
-  try{
-    const arr = JSON.parse(localStorage.getItem(key) || "[]");
-    return Array.isArray(arr) ? arr : [];
-  }catch(e){
-    return [];
-  }
-}
-
-function saveHistorico_(arr){
-  const key = getHistKey_();
-  localStorage.setItem(key, JSON.stringify(arr || []));
-}
-
-function addHistorico_(chave){
-  const ch = onlyDigits(chave);
-  if(ch.length !== 44) return;
-
-  const hist = loadHistorico_();
-  const novo = [ch, ...hist.filter(x => x !== ch)].slice(0, 30);
-  saveHistorico_(novo);
-  renderHistorico_();
-}
-
-function renderHistorico_(){
-  const hist = loadHistorico_();
-  listaHistorico.innerHTML = "";
-
-  if(hist.length === 0){
-    const li = document.createElement("li");
-    li.textContent = "Sem histórico ainda.";
-    li.style.color = "#9aa0a6";
-    li.style.cursor = "default";
-    listaHistorico.appendChild(li);
-    return;
-  }
-
-  hist.forEach(ch => {
-    const li = document.createElement("li");
-    li.textContent = ch;
-    li.title = "Clique para usar esta chave";
-    li.addEventListener("click", () => {
-      inpChave.value = ch;
-      inpChave.focus();
-    });
-    listaHistorico.appendChild(li);
-  });
-}
-
-function showResult_(html){
-  elResultado.innerHTML = html || "";
-  setHidden(elResultado, false);
-}
-
-function clearResult_(){
-  setHidden(elResultado, true);
-  elResultado.innerHTML = "";
-}
-
-async function apiGet_(params){
-  const qs = new URLSearchParams(params || {});
-  qs.set("v", APP_NF_VERSION);
-  qs.set("t", Date.now().toString());
-  const url = `${URL_API}?${qs.toString()}`;
-  const resp = await fetch(url);
-  return await resp.json();
-}
-
-// ===== login =====
-function entrar_(){
-  const f = (inpCodigo.value || "").trim();
-  erroLogin.textContent = "";
-
-  if(!f){
-    erroLogin.textContent = "Digite o código da filial.";
-    return;
-  }
-
-  filialAtual = f;
-  localStorage.setItem(LS_FILIAL, f);
-
-  setHidden(elLogin, true);
-  setHidden(elPrincipal, false);
-
-  renderHistorico_();
-}
-
-function sair_(){
-  if(!confirm("Deseja sair?")) return;
-  pararScanner_();
-  localStorage.removeItem(LS_FILIAL);
-  location.reload();
-}
-
-// ===== scanner (Html5Qrcode) =====
-async function iniciarScanner_(){
-  if(!window.Html5Qrcode){
-    alert("Biblioteca do scanner não carregou.");
-    return;
-  }
-
-  // se já existe, para
-  await pararScanner_();
-
-  // preparar view
-  elScannerView.innerHTML = `<div id="html5-nf44" style="width:100%;"></div>`;
-  elScannerHint.textContent = "Aponte para o código de barras da NF. Ao ler, fecha automaticamente.";
-
-  setScannerVisible(true);
-  travadoLeitura = false;
-
-  html5 = new Html5Qrcode("html5-nf44");
-
-  const config = {
-    fps: 14,
-    qrbox: { width: 320, height: 220 },
-    experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-    rememberLastUsedCamera: true
-  };
-
-  try{
-    await html5.start(
-      { facingMode: "environment" },
-      config,
-      async (decodedText) => {
-        if(travadoLeitura) return;
-
-        const chave = extrairChave44(decodedText);
-        if(!chave) return;
-
-        travadoLeitura = true;
-
-        inpChave.value = chave;
-        beepOk();
-
-        // fecha automático
-        await new Promise(r => setTimeout(r, 120));
-        await pararScanner_();
-      },
-      () => {}
-    );
-  }catch(e){
-    console.error(e);
-    alert("Não consegui iniciar a câmera. Verifique permissão do navegador.");
-    setScannerVisible(false);
-  }
-}
-
-async function pararScanner_(){
-  try{
-    if(html5){
-      await html5.stop().catch(()=>{});
-      await html5.clear().catch(()=>{});
-      html5 = null;
-    }
-  }catch(e){}
-  setScannerVisible(false);
-  elScannerView.innerHTML = "";
-  travadoLeitura = false;
-}
-
-function fecharScannerClick_(){
-  pararScanner_();
-}
-
-// ===== consulta NF =====
-async function consultar_(){
-  elErro2.textContent = "";
-  clearResult_();
-
-  const chave = onlyDigits(inpChave.value);
-  if(chave.length !== 44){
-    elErro2.textContent = "A chave deve ter 44 dígitos.";
-    return;
-  }
-  if(!URL_API || URL_API === "COLE_AQUI_SUA_URL_DO_APPS_SCRIPT"){
-    elErro2.textContent = "URL_API não configurada no script_nf.js.";
-    return;
-  }
-
-  setHidden(elLoading, false);
-
-  try{
-    // ✅ aqui você mantém o mesmo contrato que seu backend já usava
-    // Ajuste o nome do api/params se no seu GAS for diferente.
-    const data = await apiGet_({
-      api: "consultarNotaFiscal",
-      filial: filialAtual,
-      chave: chave
-    });
-
-    if(!data || data.success === false){
-      throw new Error(data?.message || "Falha ao consultar a nota.");
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #000;
+      color: #fff;
+      margin: 0; padding: 0;
+      display: flex; flex-direction: column; align-items: center;
+      min-height: 100vh;
     }
 
-    addHistorico_(chave);
-
-    // ✅ se backend marcar recusa
-    if(data.recusa === true && typeof abrirOverlayRecusa === "function"){
-      abrirOverlayRecusa(data.motivoRecusa || data.mensagemRecusa || "Nota marcada para recusa.");
+    /* BOTÃO HOME PADRÃO PRETO */
+    .back-button {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #020617;
+      color: #e5e7eb;
+      border: 1px solid #111827;
+      padding: 10px 22px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 14px;
+      z-index: 2000;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+    .back-button i { margin-right: 6px; }
+    .back-button:hover {
+      background-color: #111827;
+      transform: translateX(-50%) translateY(-1px);
     }
 
-    // ✅ render básico (ajusta pro seu retorno real se quiser)
-    // Se seu backend retorna: { numeroNF, valorTotal, quantidadeTotal, emitente, ... }
-    const numero = data.numeroNF ?? data.nf ?? "—";
-    const valor  = data.valorTotal ?? data.vNF ?? "—";
-    const qtd    = data.quantidadeTotal ?? data.qtdTotal ?? "—";
-    const emit   = data.emitente ?? data.nomeEmitente ?? "—";
+    .logo-topo {
+      width: 100px;
+      height: auto;
+      margin: 90px 0 10px;
+    }
 
-    showResult_(`
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div><b>Número NF:</b> ${numero}</div>
-        <div><b>Emitente:</b> ${emit}</div>
-        <div><b>Quantidade total:</b> ${qtd}</div>
-        <div><b>Valor total:</b> ${valor}</div>
+    .form-container {
+      max-width: 600px; width: 95%;
+      background: #1e1e1e; padding: 30px; border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.3); color: #fff; margin: 20px auto;
+    }
+
+    .form-container h2 { text-align: center; color: #fff; margin-bottom: 20px; }
+
+    input, button {
+      width: 100%; padding: 12px; font-size: 14px;
+      border: 1px solid #444; border-radius: 4px;
+      background-color: #2a2a2a; color: #fff;
+    }
+
+    button { border: none; background-color: #673ab7; cursor: pointer; font-weight: 600; margin-top: 10px; }
+    button:hover { background-color: #5e35b1; }
+
+    .hidden { display: none; }
+
+    .logout { text-align: right; margin-bottom: 10px; }
+    .logout button {
+      background-color: #5f6368;
+      width: auto;
+      padding: 8px 16px;
+    }
+
+    .result { background: #111; border: 1px solid #333; padding: 12px; border-radius: 6px; }
+
+    .history {
+      margin-top: 20px;
+      background: #141414;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .history ul { list-style: none; padding: 0; margin: 0; }
+    .history li { padding: 6px 8px; border-bottom: 1px solid #222; cursor: pointer; }
+    .history li:hover { background: #1d1d1d; }
+
+    /* ✅ Scanner (mesma área, só que agora com Html5Qrcode) */
+    #scanner {
+      width: 100%;
+      max-width: 420px;
+      margin: 10px auto;
+      display: none;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      padding: 10px;
+    }
+
+    #scanner-view {
+      width: 100%;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    #scanner video, #scanner canvas {
+      width: 100% !important;
+      height: auto !important;
+      border-radius: 8px;
+    }
+
+    .scanner-hint {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #cbd5e1;
+      background: rgba(31,41,55,.55);
+      border: 1px solid #374151;
+      padding: 10px 12px;
+      border-radius: 8px;
+    }
+
+    footer {
+      text-align:center; font-size:14px; color:#ccc;
+      background:#2c2c2c; padding:15px;
+      border-radius:6px; margin: 20px auto;
+      max-width: 900px; width: 100%;
+    }
+
+    /* ===================== OVERLAY RECUSA ===================== */
+    #recusaOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.88);
+      z-index: 99999;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      backdrop-filter: blur(2px);
+    }
+
+    .recusa-card {
+      width: 100%;
+      max-width: 880px;
+      border: 1px solid #2a2a2f;
+      border-radius: 18px;
+      background: #0b0b0c;
+      box-shadow: 0 8px 30px rgba(0,0,0,.55);
+      overflow: hidden;
+    }
+
+    .recusa-topo {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid #2a2a2f;
+      background: linear-gradient(180deg, #141416, #0f0f12);
+    }
+
+    .recusa-titulo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 900;
+      color: #ff3b3b;
+      letter-spacing: .2px;
+    }
+
+    .recusa-btn-fechar {
+      border: 1px solid #2a2a2f;
+      background: transparent;
+      color: #fff;
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 800;
+    }
+    .recusa-btn-fechar:hover {
+      background: rgba(255,255,255,.06);
+    }
+
+    .recusa-conteudo { padding: 16px; background: #0b0b0c; }
+
+    .recusa-texto {
+      white-space: pre-wrap;
+      font-size: 16px;
+      line-height: 1.55;
+      color: #fff;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid #2a2a2f;
+      background: #101012;
+    }
+
+    .recusa-rodape {
+      padding: 14px 16px;
+      border-top: 1px solid #2a2a2f;
+      color: #b9b9c2;
+      font-size: 13px;
+      background: #0f0f12;
+    }
+  </style>
+</head>
+
+<body>
+
+  <a href="index.html" class="back-button">
+    <i class="fas fa-arrow-left"></i> Voltar à Home
+  </a>
+
+  <img src="logo.png" alt="Logo HS" class="logo-topo" />
+
+  <div class="form-container">
+
+    <!-- LOGIN FILIAL -->
+    <div id="login-nf">
+      <h2>Login da Filial</h2>
+      <label for="codigo-nf">Código da Filial</label>
+      <input type="text" id="codigo-nf" placeholder="Digite o código da sua filial" />
+      <button id="btn-entrar-nf">Entrar</button>
+      <div id="erro-nf" style="color:#ff6b6b;margin-top:8px;"></div>
+    </div>
+
+    <!-- TELA PRINCIPAL -->
+    <div id="principal-nf" class="hidden">
+      <div class="logout">
+        <button id="btn-sair-nf">Sair</button>
       </div>
-    `);
 
-  }catch(err){
-    elErro2.textContent = err.message || String(err);
-  }finally{
-    setHidden(elLoading, true);
-  }
-}
+      <h2>Consulta de Nota Fiscal</h2>
 
-// ===== binds =====
-document.addEventListener("DOMContentLoaded", () => {
-  // restaura filial
-  const f = localStorage.getItem(LS_FILIAL);
-  if(f){
-    filialAtual = f;
-    setHidden(elLogin, true);
-    setHidden(elPrincipal, false);
-    renderHistorico_();
-  }
+      <label for="chave-nf">Chave de Acesso (44 dígitos)</label>
+      <input type="text" id="chave-nf" placeholder="Digite a chave completa" maxlength="44" />
 
-  btnEntrar.addEventListener("click", entrar_);
-  btnSair.addEventListener("click", sair_);
+      <button id="btn-leitor-nf">📷 Ler Código de Barras</button>
 
-  btnLeitor.addEventListener("click", iniciarScanner_);
-  btnFecharScanner.addEventListener("click", fecharScannerClick_);
+      <!-- ✅ Scanner Html5Qrcode -->
+      <div id="scanner">
+        <div id="scanner-view"></div>
+        <div class="scanner-hint">Aponte para o código de barras. Ao ler a chave (44 dígitos), ele fecha automático.</div>
+      </div>
 
-  btnConsultar.addEventListener("click", consultar_);
+      <button id="btn-consultar-nf">Consultar</button>
+      <div id="loading-nf" class="hidden">⏳ Consultando nota fiscal...</div>
+      <div id="resultado-nf" class="result hidden"></div>
+      <div id="erro-nf2" style="color: #ff6b6b; margin-top: 8px;"></div>
 
-  btnLimparHist.addEventListener("click", () => {
-    if(!confirm("Limpar histórico local desta filial?")) return;
-    saveHistorico_([]);
-    renderHistorico_();
-  });
+      <div class="history">
+        <h3>Histórico da Filial</h3>
+        <ul id="historicoLista-nf"></ul>
+        <button id="btn-limpar-nf">🗑 Limpar Histórico Local</button>
+      </div>
+    </div>
+  </div>
 
-  // Enter no campo chave = consultar
-  inpChave.addEventListener("keydown", (e) => {
-    if(e.key === "Enter"){
-      e.preventDefault();
-      consultar_();
+  <footer>HS Operações © 2025 - Todos os direitos reservados</footer>
+
+  <!-- OVERLAY RECUSA -->
+  <div id="recusaOverlay">
+    <div class="recusa-card" role="dialog" aria-modal="true">
+      <div class="recusa-topo">
+        <div class="recusa-titulo">🚫 NOTA MARCADA PARA RECUSA</div>
+        <button class="recusa-btn-fechar" id="btn-fechar-recusa">Fechar</button>
+      </div>
+
+      <div class="recusa-conteudo">
+        <div class="recusa-texto" id="recusaTexto"></div>
+      </div>
+
+      <div class="recusa-rodape">
+        Se houver confirmação da recusa, realize também a recusa no controle de transporte e na via física destinada ao escritório.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function abrirOverlayRecusa(mensagem) {
+      const ov = document.getElementById('recusaOverlay');
+      const tx = document.getElementById('recusaTexto');
+      tx.textContent = (mensagem || '').toString().trim();
+      ov.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
     }
-  });
 
-  // Enter no login = entrar
-  inpCodigo.addEventListener("keydown", (e) => {
-    if(e.key === "Enter"){
-      e.preventDefault();
-      entrar_();
+    function fecharOverlayRecusa() {
+      const ov = document.getElementById('recusaOverlay');
+      ov.style.display = 'none';
+      document.body.style.overflow = '';
     }
-  });
-});
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('btn-fechar-recusa');
+      const ov = document.getElementById('recusaOverlay');
+
+      btn.addEventListener('click', fecharOverlayRecusa);
+      ov.addEventListener('click', (e) => { if (e.target === ov) fecharOverlayRecusa(); });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && ov.style.display === 'flex') fecharOverlayRecusa();
+      });
+    });
+  </script>
+
+  <!-- ✅ seu JS normal -->
+  <script src="script_nf.js?v=2.0.1"></script>
+
+</body>
+</html>
