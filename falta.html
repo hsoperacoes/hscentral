@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cadastro de Falta - GERENCIAL HS</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    :root { color-scheme: dark; }
+
+    body {
+      background: #0e0e0f;
+      color: #fff;
+      margin: 0;
+      padding: 24px;
+      font-family: Arial, sans-serif;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 auto 14px;
+      max-width: 760px;
+    }
+
+    .home-btn {
+      background:#2f3542;
+      color:#fff;
+      border:0;
+      border-radius:10px;
+      padding:10px 14px;
+      cursor:pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .home-btn:hover { filter:brightness(1.1); }
+
+    .section.active { display: flex; justify-content: center; }
+
+    .form-container {
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+      background:#1b1b1d;
+      border:1px solid #2b2b2e;
+      border-radius:12px;
+      padding:28px;
+      box-shadow: 0 0 24px rgba(0,0,0,.25 );
+    }
+
+    .form-container h2 { text-align: center; margin-bottom: 16px; }
+
+    .form-container .logo {
+      display:block;
+      margin: 0 auto 12px;
+      max-height: 60px;
+    }
+
+    .form-group { margin-bottom: 14px; }
+
+    .form-group label {
+      display:block;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .form-group select,
+    .form-group input,
+    .form-group textarea {
+      width:100%;
+      padding:10px 12px;
+      border-radius:8px;
+      border:1px solid #3a3a40;
+      background:#242427;
+      color:#fff;
+      font-size:14px;
+    }
+
+    button[type="submit"] {
+      width:100%;
+      padding:12px 16px;
+      border:0;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:700;
+      background:#6d4aff;
+      color:#fff;
+      margin-top:8px;
+    }
+
+    button[type="submit"]:hover { filter:brightness(1.05); }
+
+    footer {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 12px;
+      color: #9aa0a6;
+    }
+
+    .required-star { color: #ff6b6b; }
+
+    .mini-status {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #9aa0a6;
+    }
+
+    .mini-status.erro {
+      color: #ff6b6b;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <a href="index.html" class="home-btn">
+      <i class="fas fa-arrow-left"></i>
+      <span>Voltar à Home</span>
+    </a>
+  </div>
+
+  <div id="falta" class="section active">
+    <div class="form-container">
+      <img src="logo.png" alt="Logo" class="logo">
+      <h2>Cadastro de Falta</h2>
+
+      <form id="form-falta">
+        <div class="form-group">
+          <label for="filial-falta">Filial <span class="required-star">*</span></label>
+          <select id="filial-falta" name="filial" required>
+            <option value="">Selecione uma filial</option>
+            <option value="ARTUR">ARTUR</option>
+            <option value="FLORIANO">FLORIANO</option>
+            <option value="JOTA">JOTA</option>
+            <option value="MODA">MODA</option>
+            <option value="PONTO">PONTO</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="funcionario-falta">Funcionário <span class="required-star">*</span></label>
+          <select id="funcionario-falta" name="funcionario" required disabled>
+            <option value="">Carregando funcionários...</option>
+          </select>
+          <div id="status-func" class="mini-status">Buscando funcionários na planilha...</div>
+        </div>
+
+        <div class="form-group">
+          <label for="data-falta">Data da Falta <span class="required-star">*</span></label>
+          <input type="date" id="data-falta" name="data_falta" required>
+        </div>
+
+        <div class="form-group">
+          <label for="motivo-falta">Motivo <span class="required-star">*</span></label>
+          <select id="motivo-falta" name="motivo" required>
+            <option value="">Selecione um motivo</option>
+            <option value="ATESTADO MÉDICO">ATESTADO MÉDICO</option>
+            <option value="FALTA INJUSTIFICADA">FALTA INJUSTIFICADA</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="dias-afastamento-container" style="display: none;">
+          <label for="observacao-falta">Dias de afastamento (caso atestado)</label>
+          <textarea id="observacao-falta" name="observacao" rows="4" placeholder="Ex: 3 DIAS 12/04 A 14/04"></textarea>
+        </div>
+
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+  </div>
+
+  <footer>HS Operações © 2025 - Todos os direitos reservados</footer>
+
+  <script>
+    window.Dynamsoft = window.Dynamsoft || {};
+    Dynamsoft.DBR = Dynamsoft.DBR || {};
+    Dynamsoft.DBR.BarcodeScanner = Dynamsoft.DBR.BarcodeScanner || {};
+  </script>
+
+  <script src="./script.js"></script>
+
+  <script>
+    // ✅ LINK DO SEU GS (APP WEB)
+    const APP_WEB_URL =
+      'https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec';
+
+    let funcionariosPorFilial = {}; // vem do GS
+
+    async function carregarFuncionarios() {
+      const status = document.getElementById('status-func');
+      const funcSel = document.getElementById('funcionario-falta');
+
+      try {
+        // cache buster pra evitar pegar resposta antiga
+        const url = `${APP_WEB_URL}?api=funcionarios&_ts=${Date.now()}`;
+
+        const resp = await fetch(url, {
+          method: 'GET',
+          cache: 'no-store'
+        });
+
+        const text = await resp.text();
+
+        // Se retornou HTML (tela de login/perm), não vai ser JSON
+        if (text.trim().startsWith('<')) {
+          throw new Error(
+            'O App Web não retornou JSON. Provável: implantação não atualizada ou acesso não está como "Qualquer pessoa".'
+          );
+        }
+
+        const json = JSON.parse(text);
+
+        if (!json || !json.success) {
+          throw new Error(json?.message || 'Resposta inválida do servidor.');
+        }
+
+        funcionariosPorFilial = json.funcionarios || {};
+
+        if (!Object.keys(funcionariosPorFilial).length) {
+          throw new Error('Servidor respondeu OK, mas não veio nenhum funcionário.');
+        }
+
+        status.textContent = 'Funcionários carregados com sucesso.';
+        status.classList.remove('erro');
+
+        // libera select (vai preencher quando escolher a filial)
+        funcSel.disabled = false;
+
+        // Se já tiver filial selecionada, preenche agora
+        const filialSel = document.getElementById('filial-falta');
+        if (filialSel && filialSel.value) {
+          preencherFuncionariosSelect(filialSel, funcSel);
+        }
+
+      } catch (e) {
+        console.error('Erro ao carregar funcionários via GS:', e);
+        status.textContent = 'ERRO ao carregar funcionários: ' + (e.message || e);
+        status.classList.add('erro');
+
+        // mantém travado pra não usar lista errada
+        funcSel.innerHTML = '<option value="">Não foi possível carregar</option>';
+        funcSel.disabled = true;
+      }
+    }
+
+    function preencherFuncionariosSelect(filialSel, funcSel, funcionarioParam) {
+      const filial = (filialSel.value || '').trim().toUpperCase();
+
+      funcSel.innerHTML = '<option value="">Selecione um funcionário</option>';
+
+      const lista = (funcionariosPorFilial && funcionariosPorFilial[filial])
+        ? funcionariosPorFilial[filial]
+        : [];
+
+      lista.forEach(nome => {
+        const opt = document.createElement('option');
+        opt.value = nome;
+        opt.textContent = nome;
+        funcSel.appendChild(opt);
+      });
+
+      if (funcionarioParam) {
+        const existe = lista.includes(funcionarioParam);
+        if (!existe && funcionarioParam.trim()) {
+          const extra = document.createElement('option');
+          extra.value = funcionarioParam;
+          extra.textContent = funcionarioParam + ' (não listado)';
+          funcSel.appendChild(extra);
+        }
+        funcSel.value = funcionarioParam;
+      }
+    }
+
+    function atualizarVisibilidadeDiasAfastamento() {
+      const motivoSel = document.getElementById('motivo-falta');
+      const container = document.getElementById('dias-afastamento-container');
+      if (!motivoSel || !container) return;
+      container.style.display = motivoSel.value === 'ATESTADO MÉDICO' ? 'block' : 'none';
+    }
+
+    function aplicarParametrosURL() {
+      const params = new URLSearchParams(window.location.search);
+
+      const filialParam      = params.get('filial');
+      const funcionarioParam = params.get('funcionario');
+      const dataParam        = params.get('data_falta');
+      const motivoParam      = params.get('motivo');
+      const obsParam         = params.get('observacao');
+
+      const filialSel = document.getElementById('filial-falta');
+      const funcSel   = document.getElementById('funcionario-falta');
+      const dataInp   = document.getElementById('data-falta');
+      const motivoSel = document.getElementById('motivo-falta');
+      const obsText   = document.getElementById('observacao-falta');
+
+      if (filialParam && filialSel) filialSel.value = filialParam.toUpperCase();
+      if (dataParam && dataInp) dataInp.value = dataParam;
+
+      if (motivoParam && motivoSel) {
+        motivoSel.value = motivoParam;
+        atualizarVisibilidadeDiasAfastamento();
+      }
+
+      if (obsParam && obsText) {
+        obsText.value = decodeURIComponent(obsParam.replace(/\+/g, ' '));
+      }
+
+      // Só preenche funcionário após os dados terem carregado e a filial estar setada
+      if (filialSel && funcSel && filialSel.value && !funcSel.disabled) {
+        preencherFuncionariosSelect(filialSel, funcSel, funcionarioParam);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const filialSel = document.getElementById('filial-falta');
+      const funcSel   = document.getElementById('funcionario-falta');
+      const motivoSel = document.getElementById('motivo-falta');
+      const formFalta = document.getElementById('form-falta');
+      const diasContainer = document.getElementById('dias-afastamento-container');
+      const submitButtonFalta = formFalta.querySelector('button[type="submit"]');
+
+      if (motivoSel) motivoSel.addEventListener('change', atualizarVisibilidadeDiasAfastamento);
+
+      if (filialSel && funcSel) {
+        filialSel.addEventListener('change', () => {
+          if (funcSel.disabled) return; // ainda não carregou do GS
+          preencherFuncionariosSelect(filialSel, funcSel);
+        });
+      }
+
+      formFalta.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        submitButtonFalta.disabled = true;
+
+        const dataInput = document.getElementById('data-falta');
+        const val = dataInput.value;
+        if (!val) {
+          alert("Informe a Data da Falta.");
+          submitButtonFalta.disabled = false;
+          return;
+        }
+
+        const formData = new FormData(formFalta);
+
+        // yyyy-mm-dd -> dd/mm/yyyy
+        const [yyyy, mm, dd] = val.split('-');
+        const dataFormatada = `${dd}/${mm}/${yyyy}`;
+        formData.set('data_falta', dataFormatada);
+
+        try {
+          const resp = await fetch(APP_WEB_URL, { method: 'POST', body: formData });
+          const texto = await resp.text();
+          console.log('Resposta App Web:', texto);
+          alert("Falta cadastrada com sucesso!");
+          formFalta.reset();
+          diasContainer.style.display = 'none';
+        } catch (err) {
+          console.error(err);
+          alert("Erro ao registrar a falta. Tente novamente.");
+        } finally {
+          submitButtonFalta.disabled = false;
+        }
+      });
+
+      // 1) carrega funcionários do GS
+      // 2) aplica parâmetros de URL (se tiver)
+      carregarFuncionarios().then(() => {
+        aplicarParametrosURL();
+      });
+    });
+  </script>
+</body>
+</html>
