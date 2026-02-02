@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HS Central</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: #07090d;
+      color: #e9eefc;
+      display: grid;
+      place-items: start center;
+      padding: 48px 16px 32px;
+    }
+
+    .wrap {
+      width: 100%;
+      max-width: 920px;
+      background: #121826;
+      border: 1px solid #1f2a44;
+      border-radius: 18px;
+      padding: 28px 24px 18px;
+      box-shadow: 0 12px 36px rgba(0,0,0,.45);
+    }
+
+    .brand {
+      text-align: center;
+      margin: 8px 0 10px;
+    }
+
+    .brand img {
+      width: 110px;
+      filter: drop-shadow(0 4px 16px rgba(67,176,255,.28));
+      animation: breathe-logo 3s ease-in-out infinite;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 800;
+      animation: breathe-text 3s ease-in-out infinite;
+    }
+
+    .list {
+      display: grid;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #182033;
+      border: 1px solid #25314e;
+      border-radius: 14px;
+      padding: 16px 18px;
+      color: #e9eefc;
+      text-decoration: none;
+      font-weight: 600;
+      transition: .15s;
+    }
+
+    .item:hover {
+      transform: translateY(-2px);
+      border-color: #35508a;
+      box-shadow: 0 10px 30px rgba(67,176,255,.12);
+    }
+
+    footer {
+      width: 100%;
+      max-width: 920px;
+      margin-top: 18px;
+      text-align: center;
+      background: #121826;
+      border: 1px solid #1f2a44;
+      border-radius: 12px;
+      padding: 10px;
+      font-size: 12px;
+      color: #a7b4d0;
+    }
+
+    /* ===== Overlay em desenvolvimento ===== */
+
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #07090d;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+
+    .overlay.active { display: flex; }
+
+    .dev-box {
+      background: #121826;
+      border: 1px solid #25314e;
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+      max-width: 400px;
+    }
+
+    .btn-voltar {
+      margin-top: 20px;
+      background: #4CAF50;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    @keyframes breathe-logo {
+      0%{transform:scale(1)}
+      50%{transform:scale(1.08)}
+      100%{transform:scale(1)}
+    }
+
+    @keyframes breathe-text {
+      0%{transform:translateY(0)}
+      50%{transform:translateY(-2px)}
+      100%{transform:translateY(0)}
+    }
+  </style>
+</head>
+
+<body>
+  <main class="wrap">
+    <div class="brand">
+      <img src="logo.png" alt="HS Central">
+    </div>
+
+    <h1>HS Central</h1>
+
+    <nav class="list">
+      <a class="item" href="folgas.html"><i class="fa-regular fa-calendar-plus"></i> CADASTRO DE FOLGAS</a>
+      <a class="item" href="falta.html"><i class="fa-regular fa-calendar-minus"></i> CADASTRO DE FALTA</a>
+      <a class="item" href="sacola.html"><i class="fa-solid fa-lock"></i> CONTAGEM DE SACOLA</a>
+
+      <!-- ✅ AGORA ABRE O NOVO divergencia.html -->
+      <a class="item" href="divergencia.html">
+        <i class="fa-solid fa-file-invoice-dollar"></i> DIVERGÊNCIA DE NFS
+      </a>
+
+      <a class="item" href="transferencia.html"><i class="fa-solid fa-right-left"></i> TRANSFERÊNCIA ENTRE LOJAS</a>
+      <a class="item" href="gerador.html"><i class="fa-solid fa-barcode"></i> GERADOR DE CÓDIGOS</a>
+      <a class="item" href="nf.html"><i class="fa-regular fa-clipboard"></i> RECEBIMENTO DE NOTA FISCAL</a>
+
+      <!-- ❌ continua em desenvolvimento -->
+      <a class="item" onclick="mostrarEmDesenvolvimento()">
+        <i class="fa-regular fa-bookmark"></i> RESERVA DE PEÇAS
+      </a>
+    </nav>
+  </main>
+
+  <footer>HS Operações © 2025 — Todos os direitos reservados</footer>
+
+  <!-- overlay -->
+  <div id="overlayDev" class="overlay">
+    <div class="dev-box">
+      <h2>🚧 Em desenvolvimento</h2>
+      <p>Esta funcionalidade estará disponível em breve.</p>
+      <button class="btn-voltar" onclick="fecharDev()">Voltar</button>
+    </div>
+  </div>
+
+  <script>
+    function mostrarEmDesenvolvimento(){
+      document.getElementById("overlayDev").classList.add("active");
+    }
+    function fecharDev(){
+      document.getElementById("overlayDev").classList.remove("active");
+    }
+  </script>
+
+</body>
+</html>
