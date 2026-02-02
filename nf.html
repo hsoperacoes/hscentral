@@ -1,261 +1,447 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GERENCIAL HS - Recebimento de Nota Fiscal</title>
 
-<title>GERENCIAL HS - Recebimento de Nota Fiscal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <!-- ✅ NOVO LEITOR (substitui Dynamsoft) -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
 
-<!-- ✅ NOVO LEITOR -->
-<script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #000;
+      color: #fff;
+      margin: 0; padding: 0;
+      display: flex; flex-direction: column; align-items: center;
+      min-height: 100vh;
+    }
 
-<style>
-*{box-sizing:border-box}
-body{
-  font-family:Arial,sans-serif;
-  background:#000;color:#fff;margin:0;padding:0;
-  display:flex;flex-direction:column;align-items:center;min-height:100vh;
-}
+    /* BOTÃO HOME PADRÃO PRETO */
+    .back-button {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #020617;
+      color: #e5e7eb;
+      border: 1px solid #111827;
+      padding: 10px 22px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 14px;
+      z-index: 2000;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+    .back-button i { margin-right: 6px; }
+    .back-button:hover {
+      background-color: #111827;
+      transform: translateX(-50%) translateY(-1px);
+    }
 
-.back-button{
-  position:fixed;top:20px;left:50%;transform:translateX(-50%);
-  background:#020617;color:#e5e7eb;border:1px solid #111827;
-  padding:10px 22px;border-radius:999px;text-decoration:none;
-}
-.back-button:hover{background:#111827}
+    .logo-topo {
+      width: 100px;
+      height: auto;
+      margin: 90px 0 10px;
+    }
 
-.logo-topo{width:100px;margin:90px 0 10px}
+    .form-container {
+      max-width: 600px; width: 95%;
+      background: #1e1e1e; padding: 30px; border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.3); color: #fff; margin: 20px auto;
+    }
 
-.form-container{
-  max-width:620px;width:95%;
-  background:#1e1e1e;padding:30px;border-radius:8px;
-  box-shadow:0 2px 10px rgba(0,0,0,.3);margin:20px auto;
-}
+    .form-container h2 { text-align: center; color: #fff; margin-bottom: 20px; }
 
-input,button{
-  width:100%;padding:12px;border-radius:4px;
-  background:#2a2a2a;border:1px solid #444;color:#fff;font-size:14px;
-}
+    input, button {
+      width: 100%; padding: 12px; font-size: 14px;
+      border: 1px solid #444; border-radius: 4px;
+      background-color: #2a2a2a; color: #fff;
+    }
 
-button{background:#673ab7;border:none;font-weight:600}
-button:hover{background:#5e35b1}
+    button { border: none; background-color: #673ab7; cursor: pointer; font-weight: 600; margin-top: 10px; }
+    button:hover { background-color: #5e35b1; }
 
-.hidden{display:none}
+    .hidden { display: none; }
 
-.history{
-  margin-top:18px;background:#141414;padding:10px;border-radius:8px
-}
-.history li{
-  padding:6px;border-bottom:1px solid #222;cursor:pointer
-}
+    .logout { text-align: right; margin-bottom: 10px; }
+    .logout button {
+      background-color: #5f6368;
+      width: auto;
+      padding: 8px 16px;
+      margin-top: 0;
+    }
 
-/* scanner mantém MESMO estilo antigo */
-#scanner{
-  display:none;margin-top:12px;background:#111;border-radius:8px;padding:10px
-}
-#reader video,#reader canvas{
-  width:100%!important;border-radius:8px
-}
+    .result { background: #111; border: 1px solid #333; padding: 12px; border-radius: 6px; }
 
-footer{
-  text-align:center;font-size:13px;color:#ccc;
-  background:#2c2c2c;padding:15px;margin-top:auto;width:100%
-}
-</style>
+    .history {
+      margin-top: 20px;
+      background: #141414;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .history ul { list-style: none; padding: 0; margin: 0; }
+    .history li { padding: 6px 8px; border-bottom: 1px solid #222; cursor: pointer; }
+    .history li:hover { background: #1d1d1d; }
+
+    /* ✅ mantém o MESMO container e tamanho do scanner */
+    #scanner {
+      width: 100%; max-width: 420px; height: 280px;
+      margin: 10px auto; position: relative; display: none;
+      justify-content: center; align-items: center; background: #111;
+      border: 1px solid #333; border-radius: 8px;
+      overflow: hidden;
+    }
+
+    /* área interna do html5-qrcode */
+    #html5-reader{
+      width: 100%;
+      height: 100%;
+    }
+    #html5-reader video, #html5-reader canvas{
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover;
+    }
+
+    /* botão fechar scanner (opcional, discreto) */
+    .scanner-close {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 10;
+      background: rgba(2,6,23,.85);
+      border: 1px solid #111827;
+      color: #e5e7eb;
+      width: auto;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      margin-top: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .scanner-close:hover{ background: rgba(17,24,39,.9); }
+
+    footer {
+      text-align:center; font-size:14px; color:#ccc;
+      background:#2c2c2c; padding:15px;
+      border-radius:6px; margin: 20px auto;
+      max-width: 900px; width: 100%;
+    }
+
+    /* ===================== OVERLAY RECUSA ===================== */
+    #recusaOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.88);
+      z-index: 99999;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      backdrop-filter: blur(2px);
+    }
+
+    .recusa-card {
+      width: 100%;
+      max-width: 880px;
+      border: 1px solid #2a2a2f;
+      border-radius: 18px;
+      background: #0b0b0c;
+      box-shadow: 0 8px 30px rgba(0,0,0,.55);
+      overflow: hidden;
+    }
+
+    .recusa-topo {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid #2a2a2f;
+      background: linear-gradient(180deg, #141416, #0f0f12);
+    }
+
+    .recusa-titulo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 900;
+      color: #ff3b3b;
+      letter-spacing: .2px;
+    }
+
+    .recusa-btn-fechar {
+      border: 1px solid #2a2a2f;
+      background: transparent;
+      color: #fff;
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 800;
+      width: auto;
+      margin-top: 0;
+    }
+    .recusa-btn-fechar:hover {
+      background: rgba(255,255,255,.06);
+    }
+
+    .recusa-conteudo { padding: 16px; background: #0b0b0c; }
+
+    .recusa-texto {
+      white-space: pre-wrap;
+      font-size: 16px;
+      line-height: 1.55;
+      color: #fff;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid #2a2a2f;
+      background: #101012;
+    }
+
+    .recusa-rodape {
+      padding: 14px 16px;
+      border-top: 1px solid #2a2a2f;
+      color: #b9b9c2;
+      font-size: 13px;
+      background: #0f0f12;
+    }
+  </style>
 </head>
 
 <body>
 
-<a href="index.html" class="back-button"><i class="fas fa-arrow-left"></i> Voltar à Home</a>
+  <a href="index.html" class="back-button">
+    <i class="fas fa-arrow-left"></i> Voltar à Home
+  </a>
 
-<img src="logo.png" class="logo-topo"/>
+  <img src="logo.png" alt="Logo HS" class="logo-topo" />
 
-<div class="form-container">
+  <div class="form-container">
 
-<!-- LOGIN -->
-<div id="login">
-  <h2>Login da Filial</h2>
-  <input id="codigo" placeholder="Código da filial"/>
-  <button onclick="entrar()">Entrar</button>
-</div>
+    <!-- LOGIN FILIAL -->
+    <div id="login-nf">
+      <h2>Login da Filial</h2>
+      <label for="codigo-nf">Código da Filial</label>
+      <input type="text" id="codigo-nf" placeholder="Digite o código da sua filial" />
+      <button id="btn-entrar-nf">Entrar</button>
+      <div id="erro-nf" style="color:#ff6b6b;margin-top:8px;"></div>
+    </div>
 
-<!-- PRINCIPAL -->
-<div id="principal" class="hidden">
+    <!-- TELA PRINCIPAL -->
+    <div id="principal-nf" class="hidden">
+      <div class="logout">
+        <button id="btn-sair-nf">Sair</button>
+      </div>
 
-  <button onclick="sair()" style="background:#5f6368;margin-bottom:10px">Sair</button>
+      <h2>Consulta de Nota Fiscal</h2>
 
-  <h2>Consulta de Nota Fiscal</h2>
+      <label for="chave-nf">Chave de Acesso (44 dígitos)</label>
+      <input type="text" id="chave-nf" placeholder="Digite a chave completa" maxlength="44" />
 
-  <input id="chave" maxlength="44" placeholder="Chave de acesso 44 dígitos"/>
+      <button id="btn-leitor-nf">📷 Ler Código de Barras</button>
 
-  <button onclick="toggleScanner()">📷 Ler Código</button>
+      <!-- ✅ scanner mantém o mesmo bloco -->
+      <div id="scanner">
+        <button class="scanner-close" id="btn-fechar-scanner">
+          <i class="fas fa-times"></i> Fechar
+        </button>
+        <div id="html5-reader"></div>
+      </div>
 
-  <div id="scanner">
-    <div id="reader"></div>
-    <button style="margin-top:8px;background:#374151" onclick="trocarCamera()">Trocar câmera</button>
+      <button id="btn-consultar-nf">Consultar</button>
+      <div id="loading-nf" class="hidden">⏳ Consultando nota fiscal...</div>
+      <div id="resultado-nf" class="result hidden"></div>
+      <div id="erro-nf2" style="color: #ff6b6b; margin-top: 8px;"></div>
+
+      <div class="history">
+        <h3>Histórico da Filial</h3>
+        <ul id="historicoLista-nf"></ul>
+        <button id="btn-limpar-nf">🗑 Limpar Histórico Local</button>
+      </div>
+    </div>
   </div>
 
-  <button onclick="consultar()">Consultar</button>
+  <footer>HS Operações © 2025 - Todos os direitos reservados</footer>
 
-  <div id="resultado" style="margin-top:12px"></div>
+  <!-- OVERLAY RECUSA -->
+  <div id="recusaOverlay">
+    <div class="recusa-card" role="dialog" aria-modal="true">
+      <div class="recusa-topo">
+        <div class="recusa-titulo">🚫 NOTA MARCADA PARA RECUSA</div>
+        <button class="recusa-btn-fechar" id="btn-fechar-recusa">Fechar</button>
+      </div>
 
-  <div class="history">
-    <h3>Histórico</h3>
-    <ul id="hist"></ul>
+      <div class="recusa-conteudo">
+        <div class="recusa-texto" id="recusaTexto"></div>
+      </div>
+
+      <div class="recusa-rodape">
+        Se houver confirmação da recusa, realize também a recusa no controle de transporte e na via física destinada ao escritório.
+      </div>
+    </div>
   </div>
 
-</div>
-</div>
+  <script>
+    /***************************************************
+      ✅ SEU APPWEB (global) — fica disponível pro script_nf.js
+    ***************************************************/
+    window.URL_API = "https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec";
 
-<footer>HS Operações © 2025</footer>
+    function abrirOverlayRecusa(mensagem) {
+      const ov = document.getElementById('recusaOverlay');
+      const tx = document.getElementById('recusaTexto');
+      tx.textContent = (mensagem || '').toString().trim();
+      ov.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
 
-<script>
-/***************************************************
-  ✅ SEU APPWEB JÁ CONFIGURADO
-***************************************************/
-const URL_API =
-"https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec";
+    function fecharOverlayRecusa() {
+      const ov = document.getElementById('recusaOverlay');
+      ov.style.display = 'none';
+      document.body.style.overflow = '';
+    }
 
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('btn-fechar-recusa');
+      const ov = document.getElementById('recusaOverlay');
 
-/***************************************************
-  LOGIN + HISTÓRICO (mantido)
-***************************************************/
-let filial="";
-const LS_FILIAL="hs_nf_filial";
+      btn.addEventListener('click', fecharOverlayRecusa);
+      ov.addEventListener('click', (e) => { if (e.target === ov) fecharOverlayRecusa(); });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && ov.style.display === 'flex') fecharOverlayRecusa();
+      });
+    });
+  </script>
 
-function entrar(){
-  filial=document.getElementById("codigo").value.trim();
-  if(!filial)return alert("Informe a filial");
-  localStorage.setItem(LS_FILIAL,filial);
-  document.getElementById("login").classList.add("hidden");
-  document.getElementById("principal").classList.remove("hidden");
-  renderHist();
-}
+  <!-- ✅ LEITOR NOVO (inline) — sem script separado pro scanner -->
+  <script>
+    let html5ScannerNF = null;
+    let scannerAberto = false;
+    let travadoNF = false;
 
-function sair(){
-  localStorage.removeItem(LS_FILIAL);
-  location.reload();
-}
+    function extrairChave44(texto){
+      const only = String(texto || "").replace(/\D/g, "");
+      if (only.length < 44) return "";
+      for (let i=0; i<=only.length-44; i++){
+        const cand = only.slice(i, i+44);
+        if (/^\d{44}$/.test(cand)) return cand;
+      }
+      return "";
+    }
 
-function keyHist(){return "hist_"+filial}
+    function beepOk(){
+      try{
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "square";
+        o.frequency.value = 880;
+        g.gain.value = 0.10;
+        o.connect(g); g.connect(ctx.destination);
+        o.start();
+        setTimeout(()=>o.stop(), 120);
+      }catch(e){}
+      try{ if(navigator.vibrate) navigator.vibrate(60); }catch(e){}
+    }
 
-function renderHist(){
-  const ul=document.getElementById("hist");
-  ul.innerHTML="";
-  const arr=JSON.parse(localStorage.getItem(keyHist())||"[]");
-  arr.forEach(c=>{
-    const li=document.createElement("li");
-    li.textContent=c;
-    li.onclick=()=>document.getElementById("chave").value=c;
-    ul.appendChild(li);
-  });
-}
+    async function abrirScannerNF(){
+      const box = document.getElementById("scanner");
+      const readerId = "html5-reader";
 
-function addHist(c){
-  let arr=JSON.parse(localStorage.getItem(keyHist())||"[]");
-  arr=arr.filter(x=>x!==c);
-  arr.unshift(c);
-  arr=arr.slice(0,25);
-  localStorage.setItem(keyHist(),JSON.stringify(arr));
-}
+      box.style.display = "flex";
+      scannerAberto = true;
+      travadoNF = false;
 
+      // garante limpa (caso tenha algo preso)
+      await fecharScannerNF(true);
 
-/***************************************************
-  CONSULTA (mesma lógica)
-***************************************************/
-async function consultar(){
-  const chave=document.getElementById("chave").value.replace(/\D/g,"");
-  if(chave.length!==44)return alert("Chave inválida");
+      html5ScannerNF = new Html5Qrcode(readerId);
 
-  const r=await fetch(`${URL_API}?chave=${chave}&filial=${filial}`);
-  const j=await r.json();
+      // config mais forte pra código de barras (melhora leitura)
+      const config = {
+        fps: 18,
+        qrbox: { width: 360, height: 180 },
+        aspectRatio: 1.777,
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        rememberLastUsedCamera: true
+      };
 
-  document.getElementById("resultado").innerHTML=
-  `<b>NF:</b> ${j.data.numeroNF}<br>
-   <b>Valor:</b> ${j.data.valorTotal}<br>
-   <b>Qtd:</b> ${j.data.quantidadeTotal}`;
+      await html5ScannerNF.start(
+        { facingMode: "environment" },
+        config,
+        async (decodedText) => {
+          if(!scannerAberto) return;
+          if(travadoNF) return;
 
-  addHist(chave);
-  renderHist();
-}
+          const chave = extrairChave44(decodedText);
+          if(!chave) return;
 
+          travadoNF = true;
+          document.getElementById("chave-nf").value = chave;
 
-/***************************************************
-  SCANNER NOVO (Html5Qrcode)
-***************************************************/
-let html5=null;
-let cameraId=null;
+          beepOk();
+          await new Promise(r => setTimeout(r, 120));
+          await fecharScannerNF();
+        },
+        () => {}
+      );
+    }
 
-async function toggleScanner(){
-  if(html5)return pararScanner();
-  iniciarScanner();
-}
+    async function fecharScannerNF(silencioso){
+      const box = document.getElementById("scanner");
+      if(!silencioso){
+        box.style.display = "none";
+        scannerAberto = false;
+      }
 
-async function iniciarScanner(){
-  document.getElementById("scanner").style.display="block";
+      try{
+        if(html5ScannerNF){
+          await html5ScannerNF.stop().catch(()=>{});
+          await html5ScannerNF.clear().catch(()=>{});
+          html5ScannerNF = null;
+        }
+      }catch(e){}
+    }
 
-  html5=new Html5Qrcode("reader");
-
-  const cams=await Html5Qrcode.getCameras();
-  cameraId=cams[0]?.id;
-
-  await html5.start(
-    {deviceId:{exact:cameraId}},
-    {
-      fps:25,
-      qrbox:{width:350,height:180},
-      experimentalFeatures:{useBarCodeDetectorIfSupported:true}
-    },
-    (txt)=>{
-      const only=txt.replace(/\D/g,"");
-      if(only.length>=44){
-        document.getElementById("chave").value=only.slice(0,44);
-        beep();
-        pararScanner();
+    async function toggleScannerNF(){
+      if(scannerAberto){
+        await fecharScannerNF();
+      }else{
+        await abrirScannerNF();
       }
     }
-  );
-}
 
-async function pararScanner(){
-  await html5.stop();
-  await html5.clear();
-  html5=null;
-  document.getElementById("scanner").style.display="none";
-}
+    document.addEventListener("DOMContentLoaded", ()=>{
+      const btnLeitor = document.getElementById("btn-leitor-nf");
+      const btnFechar = document.getElementById("btn-fechar-scanner");
 
-async function trocarCamera(){
-  const cams=await Html5Qrcode.getCameras();
-  if(cams.length<2)return;
-  const idx=cams.findIndex(c=>c.id===cameraId);
-  cameraId=cams[(idx+1)%cams.length].id;
-  await pararScanner();
-  iniciarScanner();
-}
+      if(btnLeitor) btnLeitor.addEventListener("click", toggleScannerNF);
+      if(btnFechar) btnFechar.addEventListener("click", async (e)=>{ e.preventDefault(); await fecharScannerNF(); });
 
-function beep(){
-  const ctx=new(window.AudioContext||window.webkitAudioContext)();
-  const o=ctx.createOscillator();const g=ctx.createGain();
-  o.connect(g);g.connect(ctx.destination);
-  g.gain.value=.12;o.start();setTimeout(()=>o.stop(),120);
-}
+      // fecha no ESC se estiver aberto
+      document.addEventListener("keydown", async (e)=>{
+        if(e.key === "Escape" && scannerAberto){
+          await fecharScannerNF();
+        }
+      });
+    });
+  </script>
 
-
-/***************************************************
-  AUTO LOGIN
-***************************************************/
-window.onload=()=>{
-  const f=localStorage.getItem(LS_FILIAL);
-  if(f){
-    filial=f;
-    document.getElementById("login").classList.add("hidden");
-    document.getElementById("principal").classList.remove("hidden");
-    renderHist();
-  }
-}
-</script>
+  <!-- ✅ seu JS original continua intacto (login/consulta/histórico/recusa) -->
+  <script src="script_nf.js?v=1.0.4"></script>
 
 </body>
 </html>
