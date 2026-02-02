@@ -7,7 +7,7 @@
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
-  <!-- ✅ NOVO LEITOR (substitui Dynamsoft) -->
+  <!-- ✅ Html5Qrcode (substitui Dynamsoft) -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
@@ -21,7 +21,6 @@
       min-height: 100vh;
     }
 
-    /* BOTÃO HOME PADRÃO PRETO */
     .back-button {
       position: fixed;
       top: 20px;
@@ -93,7 +92,7 @@
     .history li { padding: 6px 8px; border-bottom: 1px solid #222; cursor: pointer; }
     .history li:hover { background: #1d1d1d; }
 
-    /* ✅ mantém o MESMO container e tamanho do scanner */
+    /* ✅ mantém o mesmo container e tamanho do scanner */
     #scanner {
       width: 100%; max-width: 420px; height: 280px;
       margin: 10px auto; position: relative; display: none;
@@ -102,7 +101,6 @@
       overflow: hidden;
     }
 
-    /* área interna do html5-qrcode */
     #html5-reader{
       width: 100%;
       height: 100%;
@@ -113,7 +111,6 @@
       object-fit: cover;
     }
 
-    /* botão fechar scanner (opcional, discreto) */
     .scanner-close {
       position: absolute;
       top: 8px;
@@ -253,7 +250,6 @@
 
       <button id="btn-leitor-nf">📷 Ler Código de Barras</button>
 
-      <!-- ✅ scanner mantém o mesmo bloco -->
       <div id="scanner">
         <button class="scanner-close" id="btn-fechar-scanner">
           <i class="fas fa-times"></i> Fechar
@@ -295,10 +291,11 @@
   </div>
 
   <script>
-    /***************************************************
-      ✅ SEU APPWEB (global) — fica disponível pro script_nf.js
-    ***************************************************/
+    // ✅ SEU APPWEB (fica disponível pro script_nf.js)
     window.URL_API = "https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec";
+
+    // ✅ trava geral pra evitar qualquer init Dynamsoft vindo do script_nf.js
+    window.__HS_DISABLE_DYNAMSOFT__ = true;
 
     function abrirOverlayRecusa(mensagem) {
       const ov = document.getElementById('recusaOverlay');
@@ -317,7 +314,6 @@
     document.addEventListener('DOMContentLoaded', () => {
       const btn = document.getElementById('btn-fechar-recusa');
       const ov = document.getElementById('recusaOverlay');
-
       btn.addEventListener('click', fecharOverlayRecusa);
       ov.addEventListener('click', (e) => { if (e.target === ov) fecharOverlayRecusa(); });
       document.addEventListener('keydown', (e) => {
@@ -326,7 +322,10 @@
     });
   </script>
 
-  <!-- ✅ LEITOR NOVO (inline) — sem script separado pro scanner -->
+  <!-- ✅ SEU SCRIPT ORIGINAL (login/consulta/histórico/recusa etc.) -->
+  <script src="script_nf.js?v=1.0.4"></script>
+
+  <!-- ✅ LEITOR HTML5 EMBUTIDO + OVERRIDE TOTAL DO BOTÃO (mata o Dynamsoft do script_nf.js) -->
   <script>
     let html5ScannerNF = null;
     let scannerAberto = false;
@@ -357,23 +356,41 @@
       try{ if(navigator.vibrate) navigator.vibrate(60); }catch(e){}
     }
 
+    async function fecharScannerNF(){
+      scannerAberto = false;
+      const box = document.getElementById("scanner");
+      box.style.display = "none";
+
+      try{
+        if(html5ScannerNF){
+          await html5ScannerNF.stop().catch(()=>{});
+          await html5ScannerNF.clear().catch(()=>{});
+          html5ScannerNF = null;
+        }
+      }catch(e){}
+    }
+
     async function abrirScannerNF(){
       const box = document.getElementById("scanner");
-      const readerId = "html5-reader";
-
       box.style.display = "flex";
       scannerAberto = true;
       travadoNF = false;
 
-      // garante limpa (caso tenha algo preso)
-      await fecharScannerNF(true);
+      // sempre garante que não tem instância antiga
+      try{
+        if(html5ScannerNF){
+          await html5ScannerNF.stop().catch(()=>{});
+          await html5ScannerNF.clear().catch(()=>{});
+          html5ScannerNF = null;
+        }
+      }catch(e){}
 
-      html5ScannerNF = new Html5Qrcode(readerId);
+      html5ScannerNF = new Html5Qrcode("html5-reader");
 
-      // config mais forte pra código de barras (melhora leitura)
+      // ✅ melhora leitura de código de barras (44 dígitos)
       const config = {
-        fps: 18,
-        qrbox: { width: 360, height: 180 },
+        fps: 20,
+        qrbox: { width: 380, height: 190 },   // mais “retangular”
         aspectRatio: 1.777,
         experimentalFeatures: { useBarCodeDetectorIfSupported: true },
         rememberLastUsedCamera: true
@@ -400,48 +417,57 @@
       );
     }
 
-    async function fecharScannerNF(silencioso){
-      const box = document.getElementById("scanner");
-      if(!silencioso){
-        box.style.display = "none";
-        scannerAberto = false;
-      }
-
-      try{
-        if(html5ScannerNF){
-          await html5ScannerNF.stop().catch(()=>{});
-          await html5ScannerNF.clear().catch(()=>{});
-          html5ScannerNF = null;
-        }
-      }catch(e){}
+    async function toggleScannerNF(){
+      if(scannerAberto) return fecharScannerNF();
+      return abrirScannerNF();
     }
 
-    async function toggleScannerNF(){
-      if(scannerAberto){
-        await fecharScannerNF();
-      }else{
-        await abrirScannerNF();
-      }
+    function resetarBotaoLeitor_(){
+      const btn = document.getElementById("btn-leitor-nf");
+      if(!btn) return;
+
+      // ✅ CLONE = remove TODOS os listeners que o script_nf.js colocou
+      const clone = btn.cloneNode(true);
+      btn.parentNode.replaceChild(clone, btn);
+
+      // ✅ agora o click é só nosso (Html5)
+      clone.addEventListener("click", async (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        try{
+          await toggleScannerNF();
+        }catch(err){
+          const alvo = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
+          if(alvo) alvo.textContent = "Erro ao abrir câmera: " + (err?.message || err);
+          await fecharScannerNF();
+        }
+      }, true);
     }
 
     document.addEventListener("DOMContentLoaded", ()=>{
-      const btnLeitor = document.getElementById("btn-leitor-nf");
+      // botão fechar scanner
       const btnFechar = document.getElementById("btn-fechar-scanner");
+      if(btnFechar){
+        btnFechar.addEventListener("click", async (e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+          await fecharScannerNF();
+        });
+      }
 
-      if(btnLeitor) btnLeitor.addEventListener("click", toggleScannerNF);
-      if(btnFechar) btnFechar.addEventListener("click", async (e)=>{ e.preventDefault(); await fecharScannerNF(); });
-
-      // fecha no ESC se estiver aberto
+      // ESC fecha scanner
       document.addEventListener("keydown", async (e)=>{
         if(e.key === "Escape" && scannerAberto){
           await fecharScannerNF();
         }
       });
+
+      // ✅ faz o reset depois do script_nf.js já ter feito os binds dele
+      setTimeout(resetarBotaoLeitor_, 50);
+      setTimeout(resetarBotaoLeitor_, 250); // reforço (caso script demore)
     });
   </script>
-
-  <!-- ✅ seu JS original continua intacto (login/consulta/histórico/recusa) -->
-  <script src="script_nf.js?v=1.0.4"></script>
 
 </body>
 </html>
