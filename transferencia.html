@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Transferência Entre Lojas - GERENCIAL HS</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #000;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* BOTÃO HOME PADRÃO PRETO */
+    .back-button {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #020617;
+      color: #e5e7eb;
+      border: 1px solid #111827;
+      padding: 10px 22px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 14px;
+      z-index: 1000;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+
+    .back-button i {
+      margin-right: 6px;
+    }
+
+    .back-button:hover {
+      background-color: #111827;
+      transform: translateX(-50%) translateY(-1px);
+    }
+
+    .page-wrapper {
+      width: 100%;
+      padding: 90px 16px 32px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .form-container {
+      width: 100%;
+      max-width: 700px;
+      background: #1e1e1e;
+      padding: 32px 28px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+    }
+
+    .logo {
+      display: block;
+      margin: 0 auto 16px;
+      max-width: 80px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 22px;
+      margin-bottom: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .question-title {
+      font-weight: 600;
+      color: #e5e5e5;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      background-color: #2a2a2a;
+      color: #fff;
+      font-size: 14px;
+    }
+
+    textarea {
+      min-height: 140px;
+      resize: vertical;
+      line-height: 1.4;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #673ab7;
+      box-shadow: 0 0 0 2px rgba(103, 58, 183, 0.2);
+    }
+
+    input[readonly] {
+      color: #bbb;
+    }
+
+    .required-star {
+      color: #ea4335;
+    }
+
+    .barcode-count {
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 6px;
+      color: #e5e5e5;
+    }
+
+    .count-number {
+      color: #ea4335;
+    }
+
+    .submit-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .submit-button,
+    .clear-button {
+      flex: 1;
+      border: none;
+      border-radius: 4px;
+      padding: 11px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .submit-button {
+      background-color: #673ab7;
+      color: #fff;
+    }
+
+    .submit-button:hover {
+      background-color: #5e35b1;
+    }
+
+    .clear-button {
+      background-color: #5f6368;
+      color: #fff;
+    }
+
+    .clear-button:hover {
+      background-color: #3c4043;
+    }
+
+    #success-message-trans,
+    #error-message-trans {
+      display: none;
+      padding: 12px;
+      margin-top: 16px;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    #success-message-trans {
+      background-color: #e8f5e8;
+      color: #137333;
+      border: 1px solid #ceead6;
+    }
+
+    #error-message-trans {
+      background-color: #fce8e6;
+      color: #d93025;
+      border: 1px solid #f9dedc;
+    }
+
+    #numero-transferencia {
+      display: none;
+      margin-top: 18px;
+      font-size: 16px;
+      text-align: center;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 13px;
+      color: #ccc;
+      padding: 10px 0 18px;
+    }
+
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 2000;
+    }
+
+    .loading-content h3 {
+      margin-bottom: 4px;
+    }
+
+    .spinner {
+      border: 4px solid transparent;
+      border-top: 4px solid #fff;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 2s linear infinite;
+      margin-bottom: 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      .page-wrapper {
+        padding: 80px 10px 24px;
+      }
+
+      .form-container {
+        padding: 24px 18px;
+      }
+
+      h1 {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- BOTÃO HOME PRETO PADRÃO -->
+  <a href="index.html" class="back-button">
+    <i class="fas fa-arrow-left"></i> Voltar à Home
+  </a>
+
+  <div class="page-wrapper">
+    <div class="form-container">
+      <img src="logo.png" alt="Logo" class="logo">
+      <h1>TRANSFERÊNCIA ENTRE LOJAS</h1>
+
+      <form id="transfer-form">
+        <div class="form-group">
+          <div class="question-title">
+            Email da filial de origem (preenchimento automático) <span class="required-star">*</span>
+          </div>
+          <input type="email" name="email" id="email-trans" required readonly>
+        </div>
+
+        <div class="form-group">
+          <div class="question-title">FILIAL ORIGEM <span class="required-star">*</span></div>
+          <select name="filialOrigem" id="filial-origem" required onchange="atualizarEmailTrans()">
+            <option value="" disabled selected>Selecione</option>
+            <option value="ARTUR">ARTUR</option>
+            <option value="FLORIANO">FLORIANO</option>
+            <option value="JOTA">JOTA</option>
+            <option value="MODA">MODA</option>
+            <option value="PONTO">PONTO</option>
+            <option value="JA">JA</option>
+            <option value="JE">JE</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <div class="question-title">FILIAL DESTINO <span class="required-star">*</span></div>
+          <select name="filialDestino" id="filial-destino" required>
+            <option value="" disabled selected>Selecione</option>
+            <option value="ARTUR">ARTUR</option>
+            <option value="FLORIANO">FLORIANO</option>
+            <option value="JOTA">JOTA</option>
+            <option value="MODA">MODA</option>
+            <option value="PONTO">PONTO</option>
+            <option value="JA">JA</option>
+            <option value="JE">JE</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <div class="question-title">
+            MERCADORIAS QUE ESTÃO SAINDO <span class="required-star">*</span>
+          </div>
+          <textarea
+            name="mercadorias"
+            id="mercadorias-trans"
+            placeholder="Inclua aqui os códigos de barras (um por linha)."
+            required
+          ></textarea>
+        </div>
+
+        <div id="barcode-count-trans" class="barcode-count">
+          Total de itens: <span id="total-itens-trans" class="count-number">0</span>
+        </div>
+
+        <div id="success-message-trans">
+          Transferência enviada com sucesso!
+        </div>
+        <div id="error-message-trans"></div>
+
+        <div class="submit-buttons">
+          <button type="reset" class="clear-button">Limpar formulário</button>
+          <button type="submit" class="submit-button" id="submit-button-trans">Enviar</button>
+        </div>
+      </form>
+
+      <div id="numero-transferencia">
+        Número da transferência: <strong id="transfer-id"></strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loading-overlay-trans">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <h3>Processando sua transferência...</h3>
+      <p>Aguarde enquanto enviamos os dados.</p>
+    </div>
+  </div>
+
+  <footer>HS Operações © 2025 - Todos os direitos reservados</footer>
+
+ <script>
+  // App Web Principal (retorna numeroTransferencia)
+  const APPWEB_URL = "https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec";
+
+  // App Web Secundário (envia ao WhatsApp)
+  const APPWEB_WHATSAPP_URL = "https://script.google.com/macros/s/AKfycbwUbsFzEiaBzI_q-WVWywEwWTBVl5eXfmVBN4McnnLNu-rTAnhc9BacOX2qCac8LlPReA/exec";
+
+  // LISTA CERTA DE E-MAILS
+  const emailsDestinoPorFilial = {
+    ARTUR: "heringarturmachado@gmail.com",
+    FLORIANO: "hs.uberlandia.floriano@gmail.com",
+    JOTA: "brunohenzo09@gmail.com",
+    MODA: "dlaire28@gmail.com",
+    PONTO: "soniameiry@gmail.com",
+    JA: "jaugustocoliveira@terra.com.br",
+    JE: "jeoliveira1966@gmail.com"
+  };
+
+  function atualizarEmailTrans() {
+    const filialOrigem = document.getElementById('filial-origem').value;
+    const emailInput = document.getElementById('email-trans');
+    const filialDestinoSelect = document.getElementById('filial-destino');
+
+    emailInput.value = emailsDestinoPorFilial[filialOrigem] || "";
+
+    Array.from(filialDestinoSelect.options).forEach(opt => {
+      if (!opt.value) return;
+      opt.disabled = opt.value === filialOrigem;
+    });
+
+    if (filialDestinoSelect.value === filialOrigem) {
+      filialDestinoSelect.value = "";
+    }
+  }
+
+  function contarLinhasTrans() {
+    const mercadorias = document.getElementById('mercadorias-trans').value;
+    const linhas = mercadorias.split('\n').filter(l => l.trim() !== '');
+    document.getElementById('total-itens-trans').textContent = linhas.length;
+  }
+
+  document.getElementById('mercadorias-trans').addEventListener('input', contarLinhasTrans);
+
+  document.getElementById('transfer-form').addEventListener('submit', function (event) {
+    event.preventDefault();
+    enviarFormularioTrans();
+  });
+
+  function limparCamposTrans() {
+    document.getElementById('filial-origem').value = '';
+    document.getElementById('filial-destino').value = '';
+    document.getElementById('mercadorias-trans').value = '';
+    document.getElementById('email-trans').value = '';
+    document.getElementById('total-itens-trans').textContent = '0';
+  }
+
+  function enviarFormularioTrans() {
+    const form = document.getElementById('transfer-form');
+    if (!form.checkValidity()) {
+      mostrarMensagemErroTrans("Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    const formData = new FormData(form);
+    const data = new URLSearchParams(formData).toString();
+
+    const overlay = document.getElementById('loading-overlay-trans');
+    const submitButton = document.getElementById('submit-button-trans');
+
+    overlay.style.display = 'flex';
+    submitButton.disabled = true;
+
+    // 1ª requisição → salvar na planilha
+    fetch(APPWEB_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: data
+    })
+    .then(r => r.json())
+    .then(json => {
+      if (!json || !json.numeroTransferencia) {
+        throw new Error("Resposta inválida do servidor principal");
+      }
+
+      exibirNumeroTransferencia(json.numeroTransferencia);
+      mostrarMensagemSucessoTrans();
+
+      // 2ª requisição → WhatsApp
+      return fetch(APPWEB_WHATSAPP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: data
+      });
+    })
+    .then(() => {
+      overlay.style.display = 'none';
+      submitButton.disabled = false;
+      limparCamposTrans();
+    })
+    .catch(err => {
+      overlay.style.display = 'none';
+      submitButton.disabled = false;
+      mostrarMensagemErroTrans("Erro no envio. Confira sua conexão e tente novamente.");
+      console.error(err);
+    });
+  }
+
+  function mostrarMensagemSucessoTrans() {
+    document.getElementById('success-message-trans').style.display = 'block';
+    document.getElementById('error-message-trans').style.display = 'none';
+  }
+
+  function mostrarMensagemErroTrans(msg) {
+    document.getElementById('success-message-trans').style.display = 'none';
+    const e = document.getElementById('error-message-trans');
+    e.style.display = 'block';
+    e.textContent = msg;
+  }
+
+  function exibirNumeroTransferencia(numero) {
+    const bloco = document.getElementById('numero-transferencia');
+    document.getElementById('transfer-id').textContent = numero;
+    bloco.style.display = 'block';
+  }
+</script>
+
+</body>
+</html>
