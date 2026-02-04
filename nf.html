@@ -79,6 +79,14 @@
 
     .result { background: #111; border: 1px solid #333; padding: 12px; border-radius: 6px; }
 
+    /* ✅ WRAP pra não estourar */
+    .mono-wrap{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      overflow-wrap: anywhere;
+      word-break: break-all;
+      line-height: 1.35;
+    }
+
     .history {
       margin-top: 20px;
       background: #141414;
@@ -89,8 +97,14 @@
     .history ul { list-style: none; padding: 0; margin: 0; }
     .history li { padding: 8px 8px; border-bottom: 1px solid #222; cursor: pointer; display:flex; justify-content:space-between; gap:10px; align-items:center; }
     .history li:hover { background: #1d1d1d; }
-    .hist-left{display:flex; flex-direction:column; gap:2px}
-    .hist-key{font-weight:800; color:#22c55e; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+    .hist-left{display:flex; flex-direction:column; gap:2px; min-width: 0;}
+    .hist-key{
+      font-weight:800;
+      color:#22c55e;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      overflow-wrap:anywhere;
+      word-break:break-all;
+    }
     .hist-sub{font-size:12px; color:#cbd5e1}
     .hist-date{font-size:11px; color:#94a3b8; white-space:nowrap}
 
@@ -260,8 +274,6 @@
     }
 
     #html5-reader { width: 100%; height: 100%; }
-
-    /* ✅ não corta o vídeo */
     #html5-reader video, #html5-reader canvas {
       width: 100% !important;
       height: 100% !important;
@@ -405,8 +417,8 @@
     // ================== CONFIG ==================
     const URL_API = "https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec";
     const LS_FILIAL = "hs_nf_filial";
-    const LS_HIST_PREFIX = "hs_nf_hist_"; // por filial
-    const APP_VER = "nf-html-singlefile-1.0.0";
+    const LS_HIST_PREFIX = "hs_nf_hist_";
+    const APP_VER = "nf-html-singlefile-1.0.1";
 
     // ================== HELPERS UI ==================
     function $(id){ return document.getElementById(id); }
@@ -457,6 +469,59 @@
       return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
     }
 
+    function normalizeNumber_(val){
+      if(val === null || val === undefined) return null;
+      if(typeof val === "number" && isFinite(val)) return val;
+      const s = String(val).trim();
+      if(!s) return null;
+
+      // remove moeda e espaços
+      let t = s.replace(/[^\d.,-]/g, "");
+
+      // se tem vírgula e ponto, assume padrão BR: 1.234,56
+      if(t.includes(",") && t.includes(".")){
+        t = t.replace(/\./g,"").replace(",",".");
+      } else if(t.includes(",") && !t.includes(".")){
+        // 123,45 -> 123.45
+        t = t.replace(",",".");
+      }
+      const n = Number(t);
+      return isFinite(n) ? n : null;
+    }
+
+    // ✅ busca recursiva por chaves (case-insensitive)
+    function findByKey_(obj, keyNames){
+      const targets = (keyNames||[]).map(k => String(k).toLowerCase());
+      const seen = new Set();
+
+      function walk(node){
+        if(node === null || node === undefined) return undefined;
+        if(typeof node !== "object") return undefined;
+        if(seen.has(node)) return undefined;
+        seen.add(node);
+
+        for(const k of Object.keys(node)){
+          const kl = k.toLowerCase();
+          if(targets.includes(kl)) return node[k];
+        }
+        for(const k of Object.keys(node)){
+          const v = node[k];
+          const got = walk(v);
+          if(got !== undefined) return got;
+        }
+        return undefined;
+      }
+      return walk(obj);
+    }
+
+    function pickFirst_(obj, keyGroups){
+      for(const keys of keyGroups){
+        const v = findByKey_(obj, keys);
+        if(v !== undefined && v !== null && String(v).trim() !== "") return v;
+      }
+      return undefined;
+    }
+
     function beepOk(){
       try{
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -489,15 +554,10 @@
 
     function addHist_(filial, item){
       const arr = loadHist_(filial);
-
-      // dedupe por chave
       const chave = String(item?.chave || "");
       const filtered = arr.filter(x => String(x?.chave||"") !== chave);
-
       filtered.unshift(item);
-      // limita tamanho
-      const finalArr = filtered.slice(0, 50);
-      saveHist_(filial, finalArr);
+      saveHist_(filial, filtered.slice(0, 50));
       renderHist_();
     }
 
@@ -547,17 +607,13 @@
     }
 
     function logoutNF(){
-      // ✅ NÃO apaga histórico
       localStorage.removeItem(LS_FILIAL);
-
-      // limpa UI
       $('codigo-nf').value = "";
       $('chave-nf').value = "";
       $('erro-nf').textContent = "";
       $('erro-nf2').textContent = "";
       setHidden($('resultado-nf'), true);
       $('resultado-nf').innerHTML = "";
-
       showLogin_();
       $('codigo-nf').focus();
     }
@@ -571,10 +627,7 @@
 
       const resp = await fetch(u.toString(), { method: "GET" });
       const text = await resp.text();
-
-      // tenta JSON
       try{ return JSON.parse(text); }catch(e){
-        // se GAS retornar texto
         return { success:false, message:"Retorno não-JSON do servidor", raw:text };
       }
     }
@@ -587,16 +640,35 @@
       const ok = !!resp?.success;
       const msg = String(resp?.message || (ok ? "OK" : "Erro"));
 
-      // tenta extrair payload “real” em várias chaves comuns (compat)
-      const data = resp?.data || resp?.resultado || resp?.nf || resp || {};
+      // base: pode vir em resp.data/resp.nf/resp.resultado...
+      const base = resp?.data ?? resp?.nf ?? resp?.resultado ?? resp ?? {};
 
-      const numeroNF = data.numeroNF ?? data.numero ?? data.nNF ?? "";
-      const emitente = data.emitente ?? data.nomeEmitente ?? data.razaoEmitente ?? "";
-      const valorTotal = data.valorTotal ?? data.vNF ?? data.valor ?? "";
-      const qtdTotal = data.quantidadeTotal ?? data.qtdTotal ?? data.qtd ?? data.quantidade ?? "";
+      // ✅ tenta achar número NF, emitente, valor total e quantidade total em QUALQUER lugar
+      const numeroNF = pickFirst_(base, [
+        ["numeroNF","numero","nnf","nNF"],
+        ["numero_da_nf","numnf"]
+      ]);
 
-      const valorFmt = valorTotal !== "" ? formatMoneyBR(valorTotal) : "-";
-      const qtdFmt = (qtdTotal !== "" && qtdTotal !== null && qtdTotal !== undefined) ? `Qtd: ${qtdTotal}` : "";
+      const emitente = pickFirst_(base, [
+        ["emitente","nomeEmitente","razaoEmitente","emit_nome","xnome","xNome"],
+        ["fornecedor","razaoSocial","razao_social"]
+      ]);
+
+      const valorRaw = pickFirst_(base, [
+        ["vNF","valorTotal","valor_total","valor","total","valorNota","valor_nota"],
+        ["totalNF","total_nf"]
+      ]);
+
+      const qtdRaw = pickFirst_(base, [
+        ["quantidadeTotal","qtdTotal","qtd_total","quantidade","qtd","totalItens","qtdItens","qtd_itens","itensTotal"],
+        ["qComTotal","qcomtotal"]
+      ]);
+
+      const valorNum = normalizeNumber_(valorRaw);
+      const qtdNum = normalizeNumber_(qtdRaw);
+
+      const valorFmt = (valorNum !== null) ? formatMoneyBR(valorNum) : "-";
+      const qtdFmt = (qtdNum !== null) ? `Qtd: ${qtdNum}` : "";
 
       box.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
@@ -608,11 +680,11 @@
 
         <div style="color:#cbd5e1;line-height:1.55">
           <div><b>Filial:</b> ${filial || "-"}</div>
-          <div><b>Chave:</b> ${chave || "-"}</div>
+          <div><b>Chave:</b> <span class="mono-wrap">${chave || "-"}</span></div>
           ${numeroNF ? `<div><b>Número NF:</b> ${numeroNF}</div>` : ``}
           ${emitente ? `<div><b>Emitente:</b> ${emitente}</div>` : ``}
           <div><b>Valor total:</b> ${valorFmt}</div>
-          <div><b>Quantidade total:</b> ${qtdTotal !== "" ? qtdTotal : "-"}</div>
+          <div><b>Quantidade total:</b> ${(qtdNum !== null) ? qtdNum : "-"}</div>
         </div>
 
         <div style="margin-top:10px;color:${ok ? "#9bdcff" : "#ff6b6b"};font-size:13px">
@@ -620,7 +692,7 @@
         </div>
       `;
 
-      // overlay recusa (se vier do GAS)
+      // overlay recusa
       if(resp?.motivoRecusa || resp?.recusa || resp?.recusaMensagem){
         const m = resp.motivoRecusa || resp.recusaMensagem || resp.recusa;
         abrirOverlayRecusa(m);
@@ -659,13 +731,11 @@
       setHidden($('loading-nf'), false);
 
       try{
-        // ✅ aqui mantém seu padrão: api=consultarNotaFiscal (se no GAS for outro, troque só esse string)
         const resp = await apiGet_({
           api: "consultarNotaFiscal",
           filial: filial,
           chave: chave
         });
-
         renderResultadoNF(resp, filial, chave);
       }catch(err){
         $('erro-nf2').textContent = "Erro ao consultar: " + (err?.message || err);
@@ -804,7 +874,6 @@
         () => {}
       );
 
-      // tenta habilitar zoom/torch se suportado
       setTimeout(async ()=>{
         try{
           const video = document.querySelector("#html5-reader video");
@@ -835,9 +904,8 @@
       return abrirScanner();
     }
 
-    // ================== BINDS (SEM script_nf.js) ==================
+    // ================== BINDS ==================
     document.addEventListener("DOMContentLoaded", ()=>{
-      // restaura filial
       const savedFilial = localStorage.getItem(LS_FILIAL);
       if(savedFilial){
         showPrincipal_();
@@ -905,7 +973,6 @@
         renderHist_();
       });
 
-      // Enter pra consultar
       $('chave-nf').addEventListener("keydown", (e)=>{
         if(e.key === "Enter"){
           e.preventDefault();
@@ -913,6 +980,16 @@
         }
       });
     });
+
+    function showLogin_(){
+      setHidden($('login-nf'), false);
+      setHidden($('principal-nf'), true);
+    }
+    function showPrincipal_(){
+      setHidden($('login-nf'), true);
+      setHidden($('principal-nf'), false);
+      renderHist_();
+    }
   </script>
 </body>
 </html>
