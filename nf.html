@@ -6,7 +6,6 @@
   <title>GERENCIAL HS - Recebimento de Nota Fiscal</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <!-- ✅ SOMENTE HTML5QRCODE -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
@@ -78,29 +77,7 @@
       margin-top: 0;
     }
 
-    .result {
-      background: #111;
-      border: 1px solid #333;
-      padding: 12px;
-      border-radius: 6px;
-      margin-top: 10px;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-      line-height: 1.45;
-    }
-
-    .result .linha { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; }
-    .result .k { color:#cbd5e1; font-weight:700; }
-    .result .v { color:#fff; font-weight:900; }
-    .pill {
-      display:inline-flex; align-items:center; gap:8px;
-      padding:6px 10px; border-radius:999px; font-weight:900; font-size:12px;
-      border:1px solid rgba(255,255,255,.12);
-      margin-top:10px;
-      background: rgba(255,255,255,.06);
-    }
-    .pill.ok { border-color: rgba(34,197,94,.35); background: rgba(34,197,94,.12); color:#bbf7d0; }
-    .pill.bad { border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.12); color:#fecaca; }
+    .result { background: #111; border: 1px solid #333; padding: 12px; border-radius: 6px; }
 
     .history {
       margin-top: 20px;
@@ -109,28 +86,9 @@
       border-radius: 8px;
     }
 
-    .history .top {
-      display:flex; justify-content:space-between; align-items:center; gap:10px;
-      margin-bottom:8px;
-    }
-    .history h3 { margin:0; font-size:14px; color:#e5e7eb; }
-    .history small { color:#9ca3af; }
-
     .history ul { list-style: none; padding: 0; margin: 0; }
-    .history li {
-      padding: 8px 10px;
-      border-bottom: 1px solid #222;
-      cursor: pointer;
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
+    .history li { padding: 6px 8px; border-bottom: 1px solid #222; cursor: pointer; }
     .history li:hover { background: #1d1d1d; }
-    .history .nfmini { color:#e5e7eb; font-weight:800; }
-    .history .datamini { color:#9ca3af; font-size:12px; }
-    .history .valmini { color:#bbf7d0; font-weight:900; }
 
     #loading-nf { margin-top: 10px; color: #9bdcff; font-style: italic; }
     #erro-nf2, #erro-nf { margin-top: 8px; }
@@ -376,7 +334,7 @@
       <h2>Consulta de Nota Fiscal</h2>
 
       <label for="chave-nf">Chave de Acesso (44 dígitos)</label>
-      <input type="text" id="chave-nf" placeholder="Digite a chave completa" maxlength="44" inputmode="numeric" />
+      <input type="text" id="chave-nf" placeholder="Digite a chave completa" maxlength="44" />
 
       <button id="btn-leitor-nf">📷 Ler Código de Barras</button>
 
@@ -386,10 +344,7 @@
       <div id="erro-nf2" style="color: #ff6b6b; margin-top: 8px;"></div>
 
       <div class="history">
-        <div class="top">
-          <h3>Histórico da Filial</h3>
-          <small id="hist-info">—</small>
-        </div>
+        <h3>Histórico da Filial</h3>
         <ul id="historicoLista-nf"></ul>
         <button id="btn-limpar-nf">🗑 Limpar Histórico Local</button>
       </div>
@@ -398,7 +353,7 @@
 
   <footer>HS Operações © 2025 - Todos os direitos reservados</footer>
 
-  <!-- OVERLAY RECUSA (mantido) -->
+  <!-- OVERLAY RECUSA -->
   <div id="recusaOverlay">
     <div class="recusa-card" role="dialog" aria-modal="true">
       <div class="recusa-topo">
@@ -414,7 +369,7 @@
     </div>
   </div>
 
-  <!-- ✅ SCANNER FULLSCREEN (Html5Qrcode) -->
+  <!-- ✅ SCANNER FULLSCREEN -->
   <div id="scannerOverlay">
     <div class="scan-card">
       <div class="scan-top">
@@ -443,27 +398,11 @@
   </div>
 
   <script>
-    // ✅ SEU APPWEB (NÃO ALTERAR)
+    // ✅ SEU APPWEB (AGORA DO JEITO QUE O script_nf.js NORMALMENTE ESPERA)
     const URL_API = "https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec";
+    window.URL_API = URL_API; // compat
+    window.__HS_DISABLE_DYNAMSOFT__ = true;
 
-    const FILIAIS_VALIDAS = ["293","488","287","288","761"];
-
-    // ====== Estado ======
-    let filialAtual = "";
-    let scannerOpen = false;
-    let travadoScan = false;
-
-    let html5Scanner = null;
-
-    let currentTrack = null;
-    let zoomLevel = 1;
-    let zoomMin = 1;
-    let zoomMax = 1;
-    let torchOn = false;
-    let torchSupported = false;
-    let zoomSupported = false;
-
-    // ====== Recusa overlay (mantido) ======
     function abrirOverlayRecusa(mensagem) {
       const ov = document.getElementById('recusaOverlay');
       const tx = document.getElementById('recusaTexto');
@@ -476,8 +415,78 @@
       ov.style.display = 'none';
       document.body.style.overflow = '';
     }
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('btn-fechar-recusa');
+      const ov = document.getElementById('recusaOverlay');
+      btn.addEventListener('click', fecharOverlayRecusa);
+      ov.addEventListener('click', (e) => { if (e.target === ov) fecharOverlayRecusa(); });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && ov.style.display === 'flex') fecharOverlayRecusa();
+      });
+    });
 
-    // ====== Helpers ======
+    // ✅ LOGOUT FORÇADO (pra voltar e trocar filial SEM travar)
+    function logoutNF_forcado(){
+      try{
+        // remove só chaves do NF, sem apagar outras coisas do HS Central
+        const toRemove = [];
+        for(let i=0; i<localStorage.length; i++){
+          const k = localStorage.key(i);
+          if(!k) continue;
+          const kl = k.toLowerCase();
+          if(
+            kl.startsWith("hs_nf") ||
+            kl.startsWith("hs-nf") ||
+            kl.startsWith("nf_") ||
+            kl.includes("nf_filial") ||
+            kl.includes("filial_nf") ||
+            kl.includes("hsnf")
+          ){
+            toRemove.push(k);
+          }
+        }
+        toRemove.forEach(k => localStorage.removeItem(k));
+      }catch(e){}
+
+      // volta telas
+      const login = document.getElementById("login-nf");
+      const principal = document.getElementById("principal-nf");
+      if(login) login.classList.remove("hidden");
+      if(principal) principal.classList.add("hidden");
+
+      // limpa campos
+      const chave = document.getElementById("chave-nf");
+      if(chave) chave.value = "";
+      const res = document.getElementById("resultado-nf");
+      if(res){ res.classList.add("hidden"); res.innerHTML = ""; }
+      const err = document.getElementById("erro-nf2");
+      if(err) err.textContent = "";
+      const err1 = document.getElementById("erro-nf");
+      if(err1) err1.textContent = "";
+
+      // garante foco
+      const cod = document.getElementById("codigo-nf");
+      if(cod) cod.focus();
+    }
+  </script>
+
+  <!-- ✅ seu sistema (login/consulta/histórico) -->
+  <script src="script_nf.js?v=1.0.4"></script>
+
+  <script>
+    // ========= Scanner =========
+    let html5Scanner = null;
+    let scannerOpen = false;
+    let travado = false;
+
+    let currentTrack = null;
+    let zoomLevel = 1;
+    let zoomMin = 1;
+    let zoomMax = 1;
+    let torchOn = false;
+    let torchSupported = false;
+    let zoomSupported = false;
+
     function status_(html){
       document.getElementById("scanStatus").innerHTML = "Status: " + html;
     }
@@ -505,206 +514,6 @@
       try{ if(navigator.vibrate) navigator.vibrate(60); }catch(e){}
     }
 
-    function keyHist_(filial){
-      return `HS_NF_HIST_${String(filial||"").trim()}`;
-    }
-
-    function getHist_(filial){
-      try{
-        const raw = localStorage.getItem(keyHist_(filial));
-        const arr = raw ? JSON.parse(raw) : [];
-        return Array.isArray(arr) ? arr : [];
-      }catch(e){
-        return [];
-      }
-    }
-
-    function setHist_(filial, arr){
-      try{
-        localStorage.setItem(keyHist_(filial), JSON.stringify(arr || []));
-      }catch(e){}
-    }
-
-    function addHist_(filial, item){
-      const arr = getHist_(filial);
-      // dedup por chave
-      const chave = String(item?.chave||"").trim();
-      const sem = arr.filter(x => String(x?.chave||"").trim() !== chave);
-      sem.unshift(item);
-      setHist_(filial, sem.slice(0, 30));
-    }
-
-    function formatLinhaResultado_(chave, data){
-      const numeroNF = data?.numeroNF ?? "-";
-      const valorTotal = data?.valorTotal ?? "R$ 0,00";
-      const quantidadeTotal = data?.quantidadeTotal ?? "0";
-      const status = String(data?.status || "").toUpperCase();
-
-      const pillClass = (status === "VÁLIDA") ? "pill ok" : "pill bad";
-      const pillIcon = (status === "VÁLIDA") ? "fa-check-circle" : "fa-triangle-exclamation";
-
-      return `
-        <div class="linha"><span class="k">Chave</span><span class="v" style="font-family:monospace; font-weight:900; word-break:break-all; overflow-wrap:anywhere;">${chave}</span></div>
-        <hr style="border:0;border-top:1px solid rgba(255,255,255,.10); margin:10px 0;">
-        <div class="linha"><span class="k">NF</span><span class="v">${numeroNF}</span></div>
-        <div class="linha"><span class="k">Valor total</span><span class="v">${valorTotal}</span></div>
-        <div class="linha"><span class="k">Qtd. itens</span><span class="v">${quantidadeTotal}</span></div>
-        <div class="${pillClass}"><i class="fas ${pillIcon}"></i> ${status || "—"}</div>
-      `;
-    }
-
-    function setResultadoHTML_(html){
-      const box = document.getElementById("resultado-nf");
-      box.innerHTML = html || "";
-      box.classList.remove("hidden");
-    }
-
-    function setErro_(msg){
-      document.getElementById("erro-nf2").textContent = msg || "";
-    }
-
-    function setErroLogin_(msg){
-      document.getElementById("erro-nf").textContent = msg || "";
-    }
-
-    function setLoading_(on){
-      const el = document.getElementById("loading-nf");
-      if(on) el.classList.remove("hidden");
-      else el.classList.add("hidden");
-    }
-
-    function renderHistorico_(){
-      const ul = document.getElementById("historicoLista-nf");
-      const info = document.getElementById("hist-info");
-      ul.innerHTML = "";
-
-      const arr = getHist_(filialAtual);
-      info.textContent = arr.length ? `${arr.length} itens` : "vazio";
-
-      arr.forEach(item=>{
-        const li = document.createElement("li");
-
-        const left = document.createElement("div");
-        left.style.display = "flex";
-        left.style.flexDirection = "column";
-        left.style.gap = "2px";
-
-        const nf = document.createElement("div");
-        nf.className = "nfmini";
-        nf.textContent = `NF ${item?.data?.numeroNF ?? "-"}`;
-
-        const dt = document.createElement("div");
-        dt.className = "datamini";
-        dt.textContent = item?.data?.dataRegistro ? String(item.data.dataRegistro) : "";
-
-        left.appendChild(nf);
-        left.appendChild(dt);
-
-        const right = document.createElement("div");
-        right.className = "valmini";
-        right.textContent = item?.data?.valorTotal ?? "";
-
-        li.appendChild(left);
-        li.appendChild(right);
-
-        li.addEventListener("click", ()=>{
-          const chave = String(item?.chave||"").trim();
-          document.getElementById("chave-nf").value = chave;
-          setResultadoHTML_(formatLinhaResultado_(chave, item?.data));
-          setErro_("");
-        });
-
-        ul.appendChild(li);
-      });
-    }
-
-    function logout_(){
-      filialAtual = "";
-      try{
-        localStorage.removeItem("HS_NF_FILIAL");
-      }catch(e){}
-
-      // fecha scanner se estiver aberto
-      fecharScanner().catch(()=>{});
-
-      // telas
-      document.getElementById("login-nf").classList.remove("hidden");
-      document.getElementById("principal-nf").classList.add("hidden");
-
-      // limpa UI
-      document.getElementById("codigo-nf").value = "";
-      document.getElementById("chave-nf").value = "";
-      document.getElementById("resultado-nf").classList.add("hidden");
-      document.getElementById("resultado-nf").innerHTML = "";
-      setErro_("");
-      setErroLogin_("");
-      setLoading_(false);
-
-      document.getElementById("codigo-nf").focus();
-    }
-
-    // ====== Consulta (GS) ======
-    async function consultarNF_(chave){
-      const t0 = Date.now();
-      const url = `${URL_API}?chave=${encodeURIComponent(chave)}&filial=${encodeURIComponent(filialAtual)}&t=${t0}`;
-      const resp = await fetch(url, { method: "GET", cache: "no-store" });
-      return await resp.json();
-    }
-
-    async function handleConsultarClick_(force){
-      setErro_("");
-      const chaveRaw = document.getElementById("chave-nf").value || "";
-      const chave = String(chaveRaw).replace(/\D/g,"").trim();
-
-      if(!FILIAIS_VALIDAS.includes(filialAtual)){
-        setErro_("Filial inválida. Faça login novamente.");
-        return;
-      }
-
-      if(chave.length !== 44){
-        setErro_("Chave deve conter exatamente 44 dígitos.");
-        return;
-      }
-
-      // ✅ trava “já consultada” por filial (local)
-      const hist = getHist_(filialAtual);
-      const ja = hist.find(x => String(x?.chave||"").trim() === chave);
-      if(ja && !force){
-        const ok = confirm("Essa chave já foi consultada anteriormente nessa filial.\n\nDeseja consultar novamente mesmo assim?");
-        if(!ok){
-          // mostra o dado salvo
-          setResultadoHTML_(formatLinhaResultado_(chave, ja?.data));
-          return;
-        }
-      }
-
-      setLoading_(true);
-
-      try{
-        const json = await consultarNF_(chave);
-
-        if(!json || !json.success){
-          const msg = json?.message || "Erro ao consultar.";
-          setErro_(msg);
-          setResultadoHTML_("");
-          document.getElementById("resultado-nf").classList.add("hidden");
-          return;
-        }
-
-        const data = json.data || {};
-        setResultadoHTML_(formatLinhaResultado_(chave, data));
-
-        // salva histórico local SEM apagar
-        addHist_(filialAtual, { chave, data, ts: Date.now() });
-        renderHistorico_();
-      }catch(e){
-        setErro_("Falha de rede ao consultar. Tente novamente.");
-      }finally{
-        setLoading_(false);
-      }
-    }
-
-    // ====== Scanner ======
     async function applyZoom_(z){
       if(!currentTrack || !zoomSupported) return;
       try{
@@ -725,7 +534,7 @@
 
     async function fecharScanner(){
       scannerOpen = false;
-      travadoScan = false;
+      travado = false;
       torchOn = false;
       currentTrack = null;
       zoomSupported = false;
@@ -747,13 +556,12 @@
     }
 
     async function abrirScanner(){
-      // iOS: precisa ser por clique do usuário (isso aqui é chamado pelo botão)
       const ov = document.getElementById("scannerOverlay");
       ov.style.display = "flex";
       document.body.style.overflow = "hidden";
 
       scannerOpen = true;
-      travadoScan = false;
+      travado = false;
       status_("<b>abrindo câmera…</b>");
 
       try{
@@ -802,7 +610,7 @@
         config,
         async (decodedText) => {
           if(!scannerOpen) return;
-          if(travadoScan) return;
+          if(travado) return;
 
           const chave = extrairChave44(decodedText);
           if(!chave){
@@ -810,18 +618,17 @@
             return;
           }
 
-          travadoScan = true;
+          travado = true;
           document.getElementById("chave-nf").value = chave;
           status_("<b>capturado!</b><br/>Chave 44 preenchida ✅");
           beepOk();
 
-          await new Promise(r => setTimeout(r, 180));
+          await new Promise(r => setTimeout(r, 200));
           await fecharScanner();
         },
         () => {}
       );
 
-      // tenta aplicar zoom/lanterna (quando suportado)
       setTimeout(async ()=>{
         try{
           const video = document.querySelector("#html5-reader video");
@@ -837,125 +644,74 @@
             zoomSupported = true;
             zoomMin = caps.zoom.min;
             zoomMax = caps.zoom.max;
-            zoomLevel = Math.min(Math.max(1.6, zoomMin), zoomMax);
+            zoomLevel = Math.min(Math.max(1.5, zoomMin), zoomMax);
             await applyZoom_(zoomLevel);
-          } else {
-            zoomSupported = false;
           }
-
           if(caps.torch !== undefined){
             torchSupported = true;
-          } else {
-            torchSupported = false;
           }
         }catch(e){}
-      }, 350);
+      }, 400);
     }
 
-    // ====== Bindings ======
-    document.addEventListener("DOMContentLoaded", ()=>{
-      // recusa overlay close
-      document.getElementById('btn-fechar-recusa').addEventListener('click', fecharOverlayRecusa);
-      document.getElementById('recusaOverlay').addEventListener('click', (e)=>{
-        if(e.target.id === "recusaOverlay") fecharOverlayRecusa();
-      });
-      document.addEventListener('keydown', (e)=>{
-        if (e.key === 'Escape' && document.getElementById('recusaOverlay').style.display === 'flex') fecharOverlayRecusa();
-      });
+    async function toggleScanner(){
+      if(scannerOpen) return fecharScanner();
+      return abrirScanner();
+    }
 
-      // login
-      document.getElementById("btn-entrar-nf").addEventListener("click", ()=>{
-        setErroLogin_("");
-        const f = String(document.getElementById("codigo-nf").value||"").trim();
-        if(!FILIAIS_VALIDAS.includes(f)){
-          setErroLogin_("Código de filial inválido.");
-          return;
-        }
-        filialAtual = f;
-        try{ localStorage.setItem("HS_NF_FILIAL", filialAtual); }catch(e){}
+    // ✅ garante que o botão leitor chama o scanner SEM quebrar o resto
+    function rebindLeitor(){
+      const btn = document.getElementById("btn-leitor-nf");
+      if(!btn) return;
 
-        document.getElementById("login-nf").classList.add("hidden");
-        document.getElementById("principal-nf").classList.remove("hidden");
-
-        document.getElementById("chave-nf").focus();
-        renderHistorico_();
-      });
-
-      // restore login
-      try{
-        const saved = localStorage.getItem("HS_NF_FILIAL");
-        if(saved && FILIAIS_VALIDAS.includes(saved)){
-          filialAtual = saved;
-          document.getElementById("login-nf").classList.add("hidden");
-          document.getElementById("principal-nf").classList.remove("hidden");
-          renderHistorico_();
-        }
-      }catch(e){}
-
-      // sair
-      document.getElementById("btn-sair-nf").addEventListener("click", (e)=>{
+      btn.onclick = null;
+      btn.addEventListener("click", async (e)=>{
         e.preventDefault();
-        logout_();
-      }, true);
-
-      // consultar
-      document.getElementById("btn-consultar-nf").addEventListener("click", (e)=>{
-        e.preventDefault();
-        handleConsultarClick_(false);
-      });
-
-      // enter no campo
-      document.getElementById("chave-nf").addEventListener("keydown", (e)=>{
-        if(e.key === "Enter"){
-          e.preventDefault();
-          handleConsultarClick_(false);
-        }
-      });
-
-      // limpar histórico local (apenas da filial atual)
-      document.getElementById("btn-limpar-nf").addEventListener("click", ()=>{
-        if(!filialAtual) return;
-        if(!confirm("Limpar o histórico local dessa filial?")) return;
-        setHist_(filialAtual, []);
-        renderHistorico_();
-      });
-
-      // scanner open
-      document.getElementById("btn-leitor-nf").addEventListener("click", async (e)=>{
-        e.preventDefault();
-        setErro_("");
+        const err = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
+        if(err) err.textContent = "";
         try{
-          await abrirScanner();
+          await toggleScanner();
         }catch(ex){
-          setErro_("Erro ao abrir câmera. Confirme permissão e tente novamente.");
-          await fecharScanner().catch(()=>{});
+          if(err) err.textContent = "Erro ao abrir câmera: " + (ex?.message || ex);
+          await fecharScanner();
         }
       }, true);
+    }
 
-      // scanner controls
-      document.getElementById("btn-fechar-scan").addEventListener("click", (e)=>{
-        e.preventDefault();
-        fecharScanner();
-      });
+    document.addEventListener("DOMContentLoaded", ()=>{
+      // ✅ logout funcional
+      const btnSair = document.getElementById("btn-sair-nf");
+      if(btnSair){
+        btnSair.addEventListener("click", (e)=>{
+          e.preventDefault();
+          logoutNF_forcado();
+        }, true);
+      }
 
+      document.getElementById("btn-fechar-scan").addEventListener("click", fecharScanner);
       document.addEventListener("keydown", (e)=>{
         if(e.key === "Escape" && scannerOpen) fecharScanner();
       });
 
       document.getElementById("btn-zoom-in").addEventListener("click", async ()=>{
         if(!zoomSupported) return status_("<b>zoom não suportado</b>");
-        await applyZoom_(Math.min(zoomMax, zoomLevel + 0.5));
+        const step = 0.5;
+        await applyZoom_(Math.min(zoomMax, zoomLevel + step));
       });
 
       document.getElementById("btn-zoom-out").addEventListener("click", async ()=>{
         if(!zoomSupported) return status_("<b>zoom não suportado</b>");
-        await applyZoom_(Math.max(zoomMin, zoomLevel - 0.5));
+        const step = 0.5;
+        await applyZoom_(Math.max(zoomMin, zoomLevel - step));
       });
 
       document.getElementById("btn-torch").addEventListener("click", async ()=>{
         if(!torchSupported) return status_("<b>lanterna não suportada</b>");
         await toggleTorch_();
       });
+
+      setTimeout(rebindLeitor, 50);
+      setTimeout(rebindLeitor, 250);
     });
   </script>
 </body>
