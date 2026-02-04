@@ -482,7 +482,7 @@
   <script src="script_nf.js?v=1.0.4"></script>
 
   <script>
-    // ========= Scanner COMPLETO RESTAURADO =========
+    // ========= Scanner COMPLETO - SEM PERMISSÃO ANTECIPADA =========
     let html5Scanner = null;
     let scannerOpen = false;
     let travado = false;
@@ -562,7 +562,7 @@
           html5Scanner = null;
         }
         
-        // Liberar stream de câmera (importante para iOS)
+        // Liberar stream de câmera
         const video = document.querySelector("#html5-reader video");
         if (video && video.srcObject) {
           const stream = video.srcObject;
@@ -570,12 +570,24 @@
           tracks.forEach(track => track.stop());
           video.srcObject = null;
         }
-      }catch(e){}
+      }catch(e){
+        console.warn("Erro ao fechar scanner:", e);
+      }
 
       status_("<b>fechado</b>");
     }
 
     async function abrirScanner(){
+      const chaveInput = document.getElementById("chave-nf");
+      
+      // Verificar se já tem conteúdo
+      if (chaveInput && chaveInput.value.trim() !== '') {
+        if (!confirm("O campo já contém um código. Deseja limpar e escanear um novo?")) {
+          return;
+        }
+        chaveInput.value = "";
+      }
+
       const ov = document.getElementById("scannerOverlay");
       ov.style.display = "flex";
       document.body.style.overflow = "hidden";
@@ -622,34 +634,16 @@
         ...(formats ? { formatsToSupport: formats } : {})
       };
 
-      // Constraints específicos para iOS
-      const constraints = isIOS ? {
-        video: {
-          facingMode: "environment",
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 }
-        }
-      } : { facingMode: "environment" };
+      // Constraints SIMPLES - SEM verificação antecipada de permissões
+      const constraints = { 
+        facingMode: "environment"
+      };
 
       status_("<b>procurando o código…</b><br/>Aproxime e alinhe no retângulo.");
 
       try {
-        // Para iOS, verificar permissões primeiro
-        if (isIOS) {
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-              video: true,
-              audio: false 
-            });
-            stream.getTracks().forEach(track => track.stop());
-          } catch (permissionError) {
-            status_("<b style='color:#ff6b6b'>Permissão negada</b><br/>Ajustes > Safari > Câmera");
-            setTimeout(() => fecharScanner(), 2000);
-            return;
-          }
-        }
-
+        // ✅ MUDANÇA CRÍTICA: NÃO verificar permissões antecipadamente!
+        // O HTML5-QRCode vai pedir permissão DENTRO do .start()
         await html5Scanner.start(
           constraints,
           config,
@@ -671,10 +665,26 @@
             await new Promise(r => setTimeout(r, 200));
             await fecharScanner();
           },
-          () => {}
+          (error) => {
+            // ✅ Tratar erros de permissão DENTRO do scanner
+            if (error && error.name === 'NotAllowedError') {
+              console.warn("Permissão de câmera negada pelo usuário");
+              status_("<b style='color:#ff6b6b'>Permissão negada</b><br/>Permita o acesso à câmera");
+              
+              // Mostrar instruções para iOS
+              if (isIOS) {
+                status_("<b style='color:#ff6b6b'>📱 iOS:</b><br/>Ajustes > Safari > Câmera");
+              }
+              
+              // Fechar após 3 segundos
+              setTimeout(() => fecharScanner(), 3000);
+            } else if (error && error !== "NotFoundException") {
+              console.warn("Erro do scanner:", error);
+            }
+          }
         );
 
-        // Verificar recursos da câmera (zoom, lanterna)
+        // Verificar recursos da câmera (zoom, lanterna) após iniciar
         setTimeout(async ()=>{
           try{
             const video = document.querySelector("#html5-reader video");
@@ -697,31 +707,42 @@
               torchSupported = true;
             }
           }catch(e){}
-        }, 400);
+        }, 800);
 
       } catch (error) {
         console.error("Erro ao iniciar scanner:", error);
-        status_("<b style='color:#ff6b6b'>Erro ao acessar câmera</b>");
         
-        if (isIOS && error.message && error.message.includes('Permission')) {
-          status_("<b>Permissão necessária</b><br/>Permita acesso à câmera nas configurações do Safari.");
-        }
-        
-        await fecharScanner();
-        
-        // Mostrar mensagem de erro
-        const errorDiv = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
-        if (errorDiv) {
+        // ✅ TRATAMENTO ESPECÍFICO PARA ERROS DE PERMISSÃO
+        if (error.name === 'NotAllowedError' || error.message.includes('Permission')) {
+          status_("<b style='color:#ff6b6b'>❌ Permissão necessária</b><br/>Permita o acesso à câmera para usar o scanner");
+          
           if (isIOS) {
-            errorDiv.innerHTML = `
-              <div style="color:#ff6b6b; background:#2a2a2a; padding:10px; border-radius:5px;">
-                <strong>Problema com a câmera:</strong><br/>
-                1. Verifique as permissões do navegador<br/>
-                2. Tente reiniciar o app<br/>
-                3. Use a digitação manual se necessário
-              </div>
-            `;
+            status_("<b>📱 iOS:</b><br/>1. Toque em 'Permitir'<br/>2. Ou vá em Ajustes > Safari > Câmera");
           }
+          
+          // Mostrar mensagem amigável por 3 segundos e fechar
+          setTimeout(() => {
+            fecharScanner();
+            
+            // Mostrar alerta explicativo
+            setTimeout(() => {
+              const errorDiv = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
+              if (errorDiv) {
+                errorDiv.innerHTML = `
+                  <div style="color:#ff6b6b; background:#2a2a2a; padding:10px; border-radius:5px; margin-top:10px;">
+                    <strong>Permissão de câmera necessária:</strong><br/>
+                    Para usar o leitor de código, você precisa permitir o acesso à câmera.<br/>
+                    <small>No iOS: Ajustes > Safari > Câmera > "Permitir"</small>
+                  </div>
+                `;
+              }
+            }, 500);
+          }, 3000);
+          
+        } else {
+          // Outros erros
+          status_("<b style='color:#ff6b6b'>Erro na câmera</b><br/>" + (error.message || "Tente novamente"));
+          setTimeout(() => fecharScanner(), 2000);
         }
       }
     }
@@ -731,78 +752,93 @@
       return abrirScanner();
     }
 
-    // ✅ CORREÇÃO DO BOTÃO QUE NÃO FUNCIONA
+    // ✅ Configuração ROBUSTA do botão
     function configurarBotaoLeitor() {
       const btn = document.getElementById("btn-leitor-nf");
       if(!btn) {
-        console.error("Botão btn-leitor-nf não encontrado!");
+        console.warn("Botão btn-leitor-nf não encontrado, tentando novamente...");
+        setTimeout(configurarBotaoLeitor, 500);
         return;
       }
 
-      // Remover event listeners antigos
-      const newBtn = btn.cloneNode(true);
-      btn.parentNode.replaceChild(newBtn, btn);
+      // Remover qualquer evento anterior
+      const oldBtn = btn;
+      const newBtn = oldBtn.cloneNode(true);
+      oldBtn.parentNode.replaceChild(newBtn, oldBtn);
       
-      // Adicionar novo event listener
-      newBtn.addEventListener("click", async function(e){
+      // Adicionar evento direto
+      newBtn.onclick = async function(e) {
         e.preventDefault();
         e.stopPropagation();
         
-        console.log("Botão leitor clicado!");
+        console.log("📸 Botão scanner clicado!");
         
-        const err = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
-        if(err) err.textContent = "";
+        // Limpar mensagens de erro anteriores
+        const errorDiv = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
+        if(errorDiv) errorDiv.textContent = "";
         
-        try{
+        try {
           await toggleScanner();
-        }catch(ex){
+        } catch(ex) {
           console.error("Erro no scanner:", ex);
-          if(err) err.textContent = "Erro ao abrir câmera: " + (ex?.message || ex);
+          if(errorDiv) {
+            errorDiv.textContent = "Erro: " + (ex.message || ex);
+          }
           await fecharScanner();
         }
-      }, true);
+      };
       
-      console.log("Botão leitor configurado com sucesso!");
+      console.log("✅ Botão scanner configurado com sucesso!");
     }
 
     document.addEventListener("DOMContentLoaded", function(){
-      console.log("DOMContentLoaded - Configurando eventos...");
+      console.log("🚀 DOMContentLoaded - Iniciando configuração...");
       
-      // ✅ Configurar botão leitor
+      // Configurar botão leitor
       configurarBotaoLeitor();
       
-      // ✅ Configurar novamente após 500ms (caso script_nf.js altere algo)
-      setTimeout(configurarBotaoLeitor, 500);
+      // Reconfigurar após delays (caso script_nf.js altere o DOM)
+      setTimeout(configurarBotaoLeitor, 300);
       setTimeout(configurarBotaoLeitor, 1000);
+      setTimeout(configurarBotaoLeitor, 2000);
 
       // ✅ logout funcional
       const btnSair = document.getElementById("btn-sair-nf");
       if(btnSair){
-        btnSair.addEventListener("click", function(e){
+        btnSair.onclick = function(e){
           e.preventDefault();
           logoutNF_forcado();
-        }, true);
+        };
       }
 
       // ✅ Botões do scanner
-      document.getElementById("btn-fechar-scan").addEventListener("click", fecharScanner);
+      document.getElementById("btn-fechar-scan").onclick = fecharScanner;
       
-      document.getElementById("btn-zoom-in").addEventListener("click", async ()=>{
-        if(!zoomSupported) return status_("<b>zoom não suportado</b>");
+      document.getElementById("btn-zoom-in").onclick = async function(){
+        if(!zoomSupported) {
+          status_("<b>zoom não suportado</b>");
+          return;
+        }
         const step = 0.5;
         await applyZoom_(Math.min(zoomMax, zoomLevel + step));
-      });
+      };
 
-      document.getElementById("btn-zoom-out").addEventListener("click", async ()=>{
-        if(!zoomSupported) return status_("<b>zoom não suportado</b>");
+      document.getElementById("btn-zoom-out").onclick = async function(){
+        if(!zoomSupported) {
+          status_("<b>zoom não suportado</b>");
+          return;
+        }
         const step = 0.5;
         await applyZoom_(Math.max(zoomMin, zoomLevel - step));
-      });
+      };
 
-      document.getElementById("btn-torch").addEventListener("click", async ()=>{
-        if(!torchSupported) return status_("<b>lanterna não suportada</b>");
+      document.getElementById("btn-torch").onclick = async function(){
+        if(!torchSupported) {
+          status_("<b>lanterna não suportada</b>");
+          return;
+        }
         await toggleTorch_();
-      });
+      };
 
       // ✅ Fechar com ESC
       document.addEventListener("keydown", function(e){
@@ -811,12 +847,12 @@
         }
       });
 
-      // ✅ Adicionar estilos para iOS se necessário
+      // ✅ Adicionar estilos para iOS
       if (isIOS) {
         const style = document.createElement('style');
         style.textContent = `
           /* Melhorar toques no iOS */
-          .scan-btn, #btn-leitor-nf {
+          button, .scan-btn {
             min-height: 44px !important;
             cursor: pointer !important;
           }
@@ -825,15 +861,35 @@
           button {
             -webkit-tap-highlight-color: transparent;
           }
+          
+          /* Scanner overlay específico para iOS */
+          #scannerOverlay {
+            -webkit-overflow-scrolling: touch;
+          }
+          
+          /* Evitar zoom em inputs */
+          input[type="text"], input[type="number"] {
+            font-size: 16px !important;
+          }
         `;
         document.head.appendChild(style);
       }
     });
 
-    // ✅ Expor função para ser chamada pelo script_nf.js se necessário
-    window.reconfigurarScanner = function() {
-      console.log("Reconfigurando scanner por solicitação externa...");
-      configurarBotaoLeitor();
+    // ✅ Expor função para debugging
+    window.debugScanner = {
+      abrir: abrirScanner,
+      fechar: fecharScanner,
+      status: scannerOpen,
+      config: function() {
+        console.log("Scanner config:", {
+          isIOS: isIOS,
+          scannerOpen: scannerOpen,
+          html5Scanner: !!html5Scanner,
+          btnLeitor: document.getElementById("btn-leitor-nf"),
+          hasPermission: navigator.mediaDevices && navigator.mediaDevices.getUserMedia
+        });
+      }
     };
   </script>
 </body>
