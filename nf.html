@@ -6,9 +6,7 @@
   <title>GERENCIAL HS - Recebimento de Nota Fiscal</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <!-- Dynamsoft (mantido, mas agora é opcional: se falhar, cai no Html5Qrcode) -->
-  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.6.21/dist/dbr.js"></script>
-  <!-- Fallback universal -->
+  <!-- ✅ SÓ HTML5QRCODE -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
@@ -22,7 +20,6 @@
       min-height: 100vh;
     }
 
-    /* BOTÃO HOME PADRÃO PRETO */
     .back-button {
       position: fixed;
       top: 20px;
@@ -81,14 +78,9 @@
       margin-top: 0;
     }
 
-    .result {
-      background: #111;
-      border: 1px solid #333;
-      padding: 12px;
-      border-radius: 6px;
-    }
+    .result { background: #111; border: 1px solid #333; padding: 12px; border-radius: 6px; }
 
-    /* ✅ evita estourar chave */
+    /* ✅ evita estourar a chave */
     .mono-wrap{
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       overflow-wrap: anywhere;
@@ -102,6 +94,7 @@
       padding: 10px;
       border-radius: 8px;
     }
+
     .history ul { list-style: none; padding: 0; margin: 0; }
     .history li {
       padding: 8px 8px;
@@ -113,7 +106,6 @@
       align-items:center;
     }
     .history li:hover { background: #1d1d1d; }
-
     .hist-left{display:flex; flex-direction:column; gap:2px; min-width:0;}
     .hist-key{
       font-weight:800; color:#22c55e;
@@ -123,11 +115,11 @@
     .hist-sub{font-size:12px; color:#cbd5e1}
     .hist-date{font-size:11px; color:#94a3b8; white-space:nowrap}
 
-    /* scanner embutido no card */
+    /* ✅ SCANNER EMBUTIDO (SEM OVERLAY FULLSCREEN) */
     #scanner {
       width: 100%;
       max-width: 520px;
-      height: 320px;
+      height: 340px;
       margin: 10px auto 0;
       position: relative;
       display: none;
@@ -175,11 +167,11 @@
       position:relative;
     }
 
-    /* onde o fallback Html5Qrcode renderiza */
     #html5-reader{
       width:100%;
       height:100%;
     }
+    /* ✅ importante: contain evita ficar “torto”/estourado no celular */
     #html5-reader video, #html5-reader canvas{
       width:100% !important;
       height:100% !important;
@@ -192,7 +184,7 @@
       left:50%; top:58%;
       transform:translate(-50%,-50%);
       width: min(92%, 520px);
-      height: 22%;
+      height: 24%;
       border: 2px solid rgba(187,247,208,.55);
       border-radius: 14px;
       box-shadow: 0 0 0 2000px rgba(0,0,0,.10) inset;
@@ -205,6 +197,8 @@
       color:#9bdcff;
       font-style: italic;
     }
+
+    #loading-nf { margin-top: 10px; color: #9bdcff; font-style: italic; }
 
     footer {
       text-align:center; font-size:14px; color:#ccc;
@@ -320,7 +314,7 @@
       <h2>Consulta de Nota Fiscal</h2>
 
       <label for="chave-nf">Chave de Acesso (44 dígitos)</label>
-      <input type="text" id="chave-nf" placeholder="Digite a chave completa" maxlength="44" />
+      <input type="text" id="chave-nf" placeholder="Digite a chave completa" maxlength="44" inputmode="numeric" />
 
       <button id="btn-leitor-nf">📷 Ler Código de Barras</button>
 
@@ -372,18 +366,15 @@
   </div>
 
   <script>
-    // ===================== SUA API =====================
+    // ✅ SEU APPWEB
     const URL_API = "https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec";
 
-    // ===================== STORAGE KEYS =====================
+    // storage
     const LS_FILIAL = "hs_nf_filial";
     const LS_HIST_PREFIX = "hs_nf_hist_"; // por filial
 
-    // ===================== HELPERS =====================
     const $ = (id)=>document.getElementById(id);
-
     function setHidden(el, hidden){ if(!el) return; el.classList.toggle("hidden", !!hidden); }
-
     function onlyDigits(s){ return String(s||"").replace(/\D/g,""); }
 
     function extrairChave44(texto){
@@ -402,59 +393,6 @@
       return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
 
-    function normalizeNumber_(val){
-      if(val === null || val === undefined) return null;
-      if(typeof val === "number" && isFinite(val)) return val;
-      const s = String(val).trim();
-      if(!s) return null;
-      let t = s.replace(/[^\d.,-]/g,"");
-      if(t.includes(",") && t.includes(".")){
-        t = t.replace(/\./g,"").replace(",",".");
-      } else if(t.includes(",") && !t.includes(".")){
-        t = t.replace(",",".");
-      }
-      const n = Number(t);
-      return isFinite(n) ? n : null;
-    }
-
-    function formatMoneyBR(v){
-      const n = Number(v);
-      if(!isFinite(n)) return String(v ?? "-");
-      return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
-    }
-
-    // busca recursiva por chaves em JSON
-    function findByKey_(obj, keyNames){
-      const targets = (keyNames||[]).map(k => String(k).toLowerCase());
-      const seen = new Set();
-
-      function walk(node){
-        if(node === null || node === undefined) return undefined;
-        if(typeof node !== "object") return undefined;
-        if(seen.has(node)) return undefined;
-        seen.add(node);
-
-        for(const k of Object.keys(node)){
-          if(targets.includes(k.toLowerCase())) return node[k];
-        }
-        for(const k of Object.keys(node)){
-          const got = walk(node[k]);
-          if(got !== undefined) return got;
-        }
-        return undefined;
-      }
-      return walk(obj);
-    }
-
-    function pickFirst_(obj, keyGroups){
-      for(const keys of keyGroups){
-        const v = findByKey_(obj, keys);
-        if(v !== undefined && v !== null && String(v).trim() !== "") return v;
-      }
-      return undefined;
-    }
-
-    // ===================== OVERLAY RECUSA =====================
     function abrirOverlayRecusa(mensagem) {
       const ov = $('recusaOverlay');
       const tx = $('recusaTexto');
@@ -468,17 +406,8 @@
       document.body.style.overflow = '';
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      $('btn-fechar-recusa').addEventListener('click', fecharOverlayRecusa);
-      $('recusaOverlay').addEventListener('click', (e) => { if (e.target === $('recusaOverlay')) fecharOverlayRecusa(); });
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && $('recusaOverlay').style.display === 'flex') fecharOverlayRecusa();
-      });
-    });
-
-    // ===================== HISTÓRICO =====================
+    // histórico
     function histKey_(filial){ return LS_HIST_PREFIX + String(filial||""); }
-
     function loadHist_(filial){
       try{
         const raw = localStorage.getItem(histKey_(filial));
@@ -486,25 +415,21 @@
         return Array.isArray(arr) ? arr : [];
       }catch(e){ return []; }
     }
-
     function saveHist_(filial, arr){
       try{ localStorage.setItem(histKey_(filial), JSON.stringify(arr || [])); }catch(e){}
     }
-
     function isChaveJaConsultada_(filial, chave){
       const arr = loadHist_(filial);
       return arr.some(x => String(x?.chave||"") === String(chave||""));
     }
-
     function addHist_(filial, item){
       const arr = loadHist_(filial);
       const chave = String(item?.chave || "");
       const filtered = arr.filter(x => String(x?.chave||"") !== chave);
       filtered.unshift(item);
-      saveHist_(filial, filtered.slice(0, 60));
+      saveHist_(filial, filtered.slice(0, 80));
       renderHist_();
     }
-
     function renderHist_(){
       const filial = localStorage.getItem(LS_FILIAL) || "";
       const ul = $('historicoLista-nf');
@@ -539,7 +464,6 @@
       });
     }
 
-    // ===================== LOGIN/LOGOUT =====================
     function showLogin_(){
       setHidden($('login-nf'), false);
       setHidden($('principal-nf'), true);
@@ -564,7 +488,6 @@
       $('codigo-nf').focus();
     }
 
-    // ===================== API CALL =====================
     async function apiGet_(params){
       const u = new URL(URL_API);
       Object.keys(params||{}).forEach(k => u.searchParams.set(k, params[k]));
@@ -575,34 +498,64 @@
       catch(e){ return { success:false, message:"Retorno não-JSON do servidor", raw:text }; }
     }
 
-    // ===================== RENDER RESULT =====================
-    function renderResultadoNF(resp, filial, chave){
+    // ✅ Aqui eu mantive a ideia do “funcionava”: usa success/message e tenta ler os campos comuns.
+    // Se seu GAS retorna com outros nomes, isso aqui ainda tenta pegar (vNF, valorTotal, qtdTotal, etc).
+    function pick(obj, keys){
+      for(const k of keys){
+        if(obj && Object.prototype.hasOwnProperty.call(obj, k) && obj[k] !== "" && obj[k] !== null && obj[k] !== undefined) return obj[k];
+      }
+      return undefined;
+    }
+    function deepPick(obj, keys){
+      if(!obj || typeof obj !== "object") return undefined;
+      const direct = pick(obj, keys);
+      if(direct !== undefined) return direct;
+      for(const k of Object.keys(obj)){
+        const v = obj[k];
+        if(v && typeof v === "object"){
+          const got = deepPick(v, keys);
+          if(got !== undefined) return got;
+        }
+      }
+      return undefined;
+    }
+    function normalizeNumber(val){
+      if(val === null || val === undefined) return null;
+      if(typeof val === "number" && isFinite(val)) return val;
+      const s = String(val).trim();
+      if(!s) return null;
+      let t = s.replace(/[^\d.,-]/g,"");
+      if(t.includes(",") && t.includes(".")){
+        t = t.replace(/\./g,"").replace(",",".");
+      } else if(t.includes(",") && !t.includes(".")){
+        t = t.replace(",",".");
+      }
+      const n = Number(t);
+      return isFinite(n) ? n : null;
+    }
+    function moneyBR(v){
+      const n = Number(v);
+      if(!isFinite(n)) return String(v ?? "-");
+      return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+    }
+
+    function renderResultado(resp, filial, chave){
       const box = $('resultado-nf');
       setHidden(box, false);
 
       const ok = !!resp?.success;
-
-      // base pode vir em resp.data / resp.nf / etc
       const base = resp?.data ?? resp?.nf ?? resp?.resultado ?? resp ?? {};
 
-      // ✅ tenta achar valor / qtd / valida onde estiver
-      const valorRaw = pickFirst_(base, [
-        ["vNF","valorTotal","valor_total","valor","total","valorNota","valor_nota","totalNF","total_nf"]
-      ]);
-      const qtdRaw = pickFirst_(base, [
-        ["quantidadeTotal","qtdTotal","qtd_total","quantidade","qtd","totalItens","qtdItens","qtd_itens","itensTotal"]
-      ]);
-      const validaRaw = pickFirst_(base, [
-        ["valida","valido","status","situacao","ok","isValid","valid"]
-      ]);
+      const valorRaw = deepPick(base, ["vNF","valorTotal","valor_total","valor","total","valorNota","valor_nota","totalNF","total_nf"]);
+      const qtdRaw   = deepPick(base, ["quantidadeTotal","qtdTotal","qtd_total","quantidade","qtd","totalItens","qtdItens","qtd_itens","itensTotal"]);
+      const validaRaw= deepPick(base, ["valida","valido","status","situacao","ok","isValid","valid"]);
 
-      const valorNum = normalizeNumber_(valorRaw);
-      const qtdNum = normalizeNumber_(qtdRaw);
+      const valorNum = normalizeNumber(valorRaw);
+      const qtdNum   = normalizeNumber(qtdRaw);
 
-      const valorFmt = (valorNum !== null) ? formatMoneyBR(valorNum) : "-";
-      const qtdFmt = (qtdNum !== null) ? `${qtdNum}` : "-";
+      const valorFmt = (valorNum !== null) ? moneyBR(valorNum) : "-";
+      const qtdFmt   = (qtdNum !== null) ? String(qtdNum) : "-";
 
-      // status: tenta inferir
       let statusTxt = "OK";
       if(typeof validaRaw === "string"){
         const s = validaRaw.toLowerCase();
@@ -611,11 +564,8 @@
       } else if(typeof validaRaw === "boolean"){
         statusTxt = validaRaw ? "VÁLIDA" : "INVÁLIDA";
       } else {
-        // fallback: se success true -> OK
-        statusTxt = ok ? "OK" : "ERRO";
+        statusTxt = ok ? "VÁLIDA" : "ERRO";
       }
-
-      const msg = String(resp?.message || (ok ? "OK" : "Erro"));
 
       box.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
@@ -634,15 +584,13 @@
         </div>
 
         <div style="margin-top:10px;color:${ok ? "#9bdcff" : "#ff6b6b"};font-size:13px">
-          ${msg}
+          ${String(resp?.message || (ok ? "OK" : "Erro"))}
         </div>
       `;
 
-      // overlay recusa (se vier)
       const recMsg = resp?.motivoRecusa || resp?.recusa || resp?.recusaMensagem;
       if(recMsg) abrirOverlayRecusa(recMsg);
 
-      // salva histórico apenas se OK
       if(ok && chave){
         addHist_(filial, {
           chave,
@@ -654,7 +602,6 @@
       }
     }
 
-    // ===================== CONSULTA (com TRAVA) =====================
     async function consultarNF(){
       const filial = localStorage.getItem(LS_FILIAL) || "";
       const chave = onlyDigits($('chave-nf').value || "");
@@ -672,7 +619,7 @@
         return;
       }
 
-      // ✅ TRAVA se já consultou antes
+      // ✅ TRAVA
       if(isChaveJaConsultada_(filial, chave)){
         $('erro-nf2').textContent = "⚠️ Essa NF já foi consultada/validada anteriormente nesta filial. (TRAVADA)";
         return;
@@ -686,7 +633,7 @@
           filial: filial,
           chave: chave
         });
-        renderResultadoNF(resp, filial, chave);
+        renderResultado(resp, filial, chave);
       }catch(err){
         $('erro-nf2').textContent = "Erro ao consultar: " + (err?.message || err);
       }finally{
@@ -694,34 +641,30 @@
       }
     }
 
-    // ===================== SCANNER (Dynamsoft -> fallback Html5Qrcode) =====================
+    // ===================== SCANNER HTML5QRCODE =====================
     let scannerOpen = false;
-    let usingDynamsoft = false;
-    let dbrScanner = null;
-
     let html5Scanner = null;
+    let travadoScan = false;
 
-    function showScanStatus_(txt){
+    function showScanStatus(txt){
       const el = $('scanStatus');
       el.textContent = txt || "";
       setHidden(el, !txt);
     }
 
-    function showScanner_(show){
-      const sc = $('scanner');
-      sc.style.display = show ? "flex" : "none";
+    function showScanner(show){
+      $('scanner').style.display = show ? "flex" : "none";
     }
 
-    function fillChaveFromScan_(decoded){
-      const chave = extrairChave44(decoded);
+    function fillFromScan(decodedText){
+      const chave = extrairChave44(decodedText);
       if(!chave){
-        showScanStatus_("Detectei algo, mas não achei 44 dígitos… tente aproximar mais.");
+        showScanStatus("Detectei algo, mas não achei 44 dígitos… alinhe melhor no retângulo.");
         return false;
       }
       $('chave-nf').value = chave;
       $('erro-nf2').textContent = "";
 
-      // se já consultada, já avisa na hora
       const filial = localStorage.getItem(LS_FILIAL) || "";
       if(filial && isChaveJaConsultada_(filial, chave)){
         $('erro-nf2').textContent = "⚠️ Essa NF já foi consultada/validada anteriormente nesta filial. (TRAVADA)";
@@ -730,56 +673,25 @@
       return true;
     }
 
-    async function startDynamsoft_(){
-      // Se a lib não carregou, força fallback
-      if(!window.Dynamsoft || !Dynamsoft.DBR) throw new Error("Dynamsoft DBR não carregou");
+    async function abrirScanner(){
+      if(scannerOpen) return;
+      scannerOpen = true;
+      travadoScan = false;
 
-      usingDynamsoft = true;
-      showScanStatus_("Abrindo câmera (Dynamsoft)…");
+      showScanner(true);
+      showScanStatus("Abrindo câmera…");
 
-      Dynamsoft.DBR.BarcodeScanner.license = Dynamsoft.DBR.BarcodeScanner.license || ""; // não mexo na sua licença
-
-      dbrScanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
-      dbrScanner.onFrameRead = ()=>{};
-      dbrScanner.onUnduplicatedRead = (txt) => {
-        if(!scannerOpen) return;
-        const ok = fillChaveFromScan_(txt);
-        if(ok) fecharScanner().catch(()=>{});
-      };
-
-      // configura pra priorizar Code128 / QR etc (chave 44 pode vir em vários)
-      try{
-        const rs = await dbrScanner.getRuntimeSettings();
-        rs.barcodeFormatIds =
-          Dynamsoft.DBR.EnumBarcodeFormat.BF_QR_CODE |
-          Dynamsoft.DBR.EnumBarcodeFormat.BF_CODE_128 |
-          Dynamsoft.DBR.EnumBarcodeFormat.BF_EAN_13;
-        rs.expectedBarcodesCount = 1;
-        await dbrScanner.updateRuntimeSettings(rs);
-      }catch(e){}
-
-      // Render no nosso container
-      dbrScanner.setUIElement($('html5-reader')); // reaproveita div
-      await dbrScanner.open();
-      showScanStatus_("Aponte a câmera para a chave…");
-    }
-
-    async function startHtml5_(){
-      usingDynamsoft = false;
-      showScanStatus_("Abrindo câmera (Html5Qrcode)…");
-
-      // limpa qualquer UI antiga
       $('html5-reader').innerHTML = "";
-
       html5Scanner = new Html5Qrcode("html5-reader");
 
+      // ✅ melhor leitura: fps alto + área baixa (faixa do código) + contain no CSS
       const config = {
         fps: 30,
         qrbox: (view) => {
           const w = Math.min(view.width, 520);
-          const h = Math.min(view.height, 320);
+          const h = Math.min(view.height, 340);
           const boxW = Math.floor(w * 0.92);
-          const boxH = Math.floor(h * 0.28);
+          const boxH = Math.floor(h * 0.30);
           return { width: boxW, height: boxH };
         },
         disableFlip: true,
@@ -787,54 +699,38 @@
         rememberLastUsedCamera: true
       };
 
-      await html5Scanner.start(
-        { facingMode: "environment" },
-        config,
-        (decodedText)=>{
-          if(!scannerOpen) return;
-          const ok = fillChaveFromScan_(decodedText);
-          if(ok) fecharScanner().catch(()=>{});
-        },
-        ()=>{}
-      );
-
-      showScanStatus_("Aponte a câmera para a chave…");
-    }
-
-    async function abrirScanner(){
-      if(scannerOpen) return;
-      scannerOpen = true;
-      showScanner_(true);
-      showScanStatus_("Iniciando…");
-
-      // tenta dynamsoft; se falhar, fallback html5
       try{
-        await startDynamsoft_();
+        await html5Scanner.start(
+          { facingMode: "environment" },
+          config,
+          async (decodedText) => {
+            if(!scannerOpen) return;
+            if(travadoScan) return;
+
+            const ok = fillFromScan(decodedText);
+            if(!ok) return;
+
+            travadoScan = true;
+            showScanStatus("Chave capturada ✅");
+            await new Promise(r=>setTimeout(r, 120));
+            await fecharScanner();
+          },
+          () => {}
+        );
+
+        showScanStatus("Aponte para a chave e alinhe no retângulo.");
       }catch(e){
-        try{
-          await startHtml5_();
-        }catch(ex){
-          showScanStatus_("");
-          $('erro-nf2').textContent = "Erro ao abrir câmera: " + (ex?.message || ex);
-          await fecharScanner().catch(()=>{});
-        }
+        showScanStatus("");
+        $('erro-nf2').textContent = "Erro ao abrir câmera: " + (e?.message || e);
+        await fecharScanner();
       }
     }
 
     async function fecharScanner(){
       scannerOpen = false;
-      showScanStatus_("");
+      travadoScan = false;
+      showScanStatus("");
 
-      // para dynamsoft
-      try{
-        if(dbrScanner){
-          await dbrScanner.close().catch(()=>{});
-          dbrScanner.destroyContext && dbrScanner.destroyContext();
-          dbrScanner = null;
-        }
-      }catch(e){}
-
-      // para html5
       try{
         if(html5Scanner){
           await html5Scanner.stop().catch(()=>{});
@@ -843,56 +739,41 @@
         }
       }catch(e){}
 
-      // limpa leitor
       try{ $('html5-reader').innerHTML = ""; }catch(e){}
-
-      showScanner_(false);
+      showScanner(false);
     }
 
     // ===================== BINDS =====================
-    document.addEventListener("DOMContentLoaded", ()=>{
-      // restaura sessão
-      const savedFilial = localStorage.getItem(LS_FILIAL);
-      if(savedFilial){
-        showPrincipal_();
-      }else{
-        showLogin_();
-        $('codigo-nf').focus();
-      }
+    document.addEventListener('DOMContentLoaded', () => {
+      $('btn-fechar-recusa').addEventListener('click', fecharOverlayRecusa);
+      $('recusaOverlay').addEventListener('click', (e)=>{ if(e.target === $('recusaOverlay')) fecharOverlayRecusa(); });
+      document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && $('recusaOverlay').style.display === 'flex') fecharOverlayRecusa(); });
 
-      $('btn-entrar-nf').addEventListener("click", ()=>{
+      const savedFilial = localStorage.getItem(LS_FILIAL);
+      if(savedFilial) showPrincipal_();
+      else { showLogin_(); $('codigo-nf').focus(); }
+
+      $('btn-entrar-nf').addEventListener('click', ()=>{
         const cod = onlyDigits($('codigo-nf').value || "");
-        if(!cod){
-          $('erro-nf').textContent = "Digite o código da filial.";
-          return;
-        }
+        if(!cod){ $('erro-nf').textContent = "Digite o código da filial."; return; }
         $('erro-nf').textContent = "";
         localStorage.setItem(LS_FILIAL, cod);
         showPrincipal_();
       });
 
-      $('btn-sair-nf').addEventListener("click", (e)=>{
-        e.preventDefault();
-        logoutNF();
-      });
+      $('btn-sair-nf').addEventListener('click', (e)=>{ e.preventDefault(); logoutNF(); });
 
-      $('btn-consultar-nf').addEventListener("click", (e)=>{
-        e.preventDefault();
-        consultarNF();
-      });
+      $('btn-consultar-nf').addEventListener('click', (e)=>{ e.preventDefault(); consultarNF(); });
 
-      $('btn-leitor-nf').addEventListener("click", async (e)=>{
+      $('btn-leitor-nf').addEventListener('click', async (e)=>{
         e.preventDefault();
         $('erro-nf2').textContent = "";
         await abrirScanner();
       });
 
-      $('btn-fechar-scan').addEventListener("click", (e)=>{
-        e.preventDefault();
-        fecharScanner().catch(()=>{});
-      });
+      $('btn-fechar-scan').addEventListener('click', (e)=>{ e.preventDefault(); fecharScanner(); });
 
-      $('btn-limpar-nf').addEventListener("click", ()=>{
+      $('btn-limpar-nf').addEventListener('click', ()=>{
         const filial = localStorage.getItem(LS_FILIAL) || "";
         if(!filial) return;
         if(!confirm("Limpar histórico local dessa filial?")) return;
@@ -911,13 +792,9 @@
       });
 
       $('chave-nf').addEventListener("keydown", (e)=>{
-        if(e.key === "Enter"){
-          e.preventDefault();
-          consultarNF();
-        }
+        if(e.key === "Enter"){ e.preventDefault(); consultarNF(); }
       });
 
-      // segurança: fecha scanner ao sair da página
       window.addEventListener("pagehide", ()=>{ fecharScanner().catch(()=>{}); });
     });
   </script>
