@@ -6,6 +6,9 @@
   <title>GERENCIAL HS - Recebimento de Nota Fiscal</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <!-- Dynamsoft (mantido, mas agora é opcional: se falhar, cai no Html5Qrcode) -->
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.6.21/dist/dbr.js"></script>
+  <!-- Fallback universal -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
@@ -19,6 +22,7 @@
       min-height: 100vh;
     }
 
+    /* BOTÃO HOME PADRÃO PRETO */
     .back-button {
       position: fixed;
       top: 20px;
@@ -77,9 +81,14 @@
       margin-top: 0;
     }
 
-    .result { background: #111; border: 1px solid #333; padding: 12px; border-radius: 6px; }
+    .result {
+      background: #111;
+      border: 1px solid #333;
+      padding: 12px;
+      border-radius: 6px;
+    }
 
-    /* ✅ WRAP pra não estourar */
+    /* ✅ evita estourar chave */
     .mono-wrap{
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       overflow-wrap: anywhere;
@@ -93,23 +102,109 @@
       padding: 10px;
       border-radius: 8px;
     }
-
     .history ul { list-style: none; padding: 0; margin: 0; }
-    .history li { padding: 8px 8px; border-bottom: 1px solid #222; cursor: pointer; display:flex; justify-content:space-between; gap:10px; align-items:center; }
+    .history li {
+      padding: 8px 8px;
+      border-bottom: 1px solid #222;
+      cursor: pointer;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+    }
     .history li:hover { background: #1d1d1d; }
-    .hist-left{display:flex; flex-direction:column; gap:2px; min-width: 0;}
+
+    .hist-left{display:flex; flex-direction:column; gap:2px; min-width:0;}
     .hist-key{
-      font-weight:800;
-      color:#22c55e;
+      font-weight:800; color:#22c55e;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      overflow-wrap:anywhere;
-      word-break:break-all;
+      overflow-wrap:anywhere; word-break:break-all;
     }
     .hist-sub{font-size:12px; color:#cbd5e1}
     .hist-date{font-size:11px; color:#94a3b8; white-space:nowrap}
 
-    #loading-nf { margin-top: 10px; color: #9bdcff; font-style: italic; }
-    #erro-nf2, #erro-nf { margin-top: 8px; }
+    /* scanner embutido no card */
+    #scanner {
+      width: 100%;
+      max-width: 520px;
+      height: 320px;
+      margin: 10px auto 0;
+      position: relative;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      background: #0b0b0c;
+      border: 1px solid #333;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    #scanner .scan-topbar{
+      position:absolute; left:0; right:0; top:0;
+      display:flex; justify-content:space-between; align-items:center;
+      padding:10px;
+      background: linear-gradient(180deg, rgba(20,20,22,.95), rgba(10,10,12,.95));
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      z-index: 5;
+    }
+    .scan-title{
+      display:flex; align-items:center; gap:8px;
+      font-weight:900; font-size:13px; color:#e5e7eb;
+    }
+    .scan-actions{display:flex; gap:8px;}
+    .scan-btn{
+      width:auto !important;
+      padding:8px 10px !important;
+      margin-top:0 !important;
+      border-radius:10px !important;
+      background: rgba(2,6,23,.88) !important;
+      border: 1px solid rgba(255,255,255,.14) !important;
+      color:#e5e7eb !important;
+      font-weight:800 !important;
+      font-size:12px !important;
+      cursor:pointer;
+    }
+    .scan-btn.primary{
+      background: rgba(103,58,183,.92) !important;
+      border-color: rgba(103,58,183,.55) !important;
+    }
+
+    #scanner .scan-body{
+      width:100%; height:100%;
+      padding-top:52px;
+      position:relative;
+    }
+
+    /* onde o fallback Html5Qrcode renderiza */
+    #html5-reader{
+      width:100%;
+      height:100%;
+    }
+    #html5-reader video, #html5-reader canvas{
+      width:100% !important;
+      height:100% !important;
+      object-fit: contain !important;
+      background:#000;
+    }
+
+    .scan-guide{
+      position:absolute;
+      left:50%; top:58%;
+      transform:translate(-50%,-50%);
+      width: min(92%, 520px);
+      height: 22%;
+      border: 2px solid rgba(187,247,208,.55);
+      border-radius: 14px;
+      box-shadow: 0 0 0 2000px rgba(0,0,0,.10) inset;
+      pointer-events:none;
+    }
+
+    #scanStatus{
+      margin-top:8px;
+      font-size:12px;
+      color:#9bdcff;
+      font-style: italic;
+    }
 
     footer {
       text-align:center; font-size:14px; color:#ccc;
@@ -130,6 +225,7 @@
       padding: 18px;
       backdrop-filter: blur(2px);
     }
+
     .recusa-card {
       width: 100%;
       max-width: 880px;
@@ -139,6 +235,7 @@
       box-shadow: 0 8px 30px rgba(0,0,0,.55);
       overflow: hidden;
     }
+
     .recusa-topo {
       display: flex;
       align-items: center;
@@ -148,6 +245,7 @@
       border-bottom: 1px solid #2a2a2f;
       background: linear-gradient(180deg, #141416, #0f0f12);
     }
+
     .recusa-titulo {
       display: flex;
       align-items: center;
@@ -157,6 +255,7 @@
       color: #ff3b3b;
       letter-spacing: .2px;
     }
+
     .recusa-btn-fechar {
       border: 1px solid #2a2a2f;
       background: transparent;
@@ -169,7 +268,9 @@
       margin-top: 0;
     }
     .recusa-btn-fechar:hover { background: rgba(255,255,255,.06); }
+
     .recusa-conteudo { padding: 16px; background: #0b0b0c; }
+
     .recusa-texto {
       white-space: pre-wrap;
       font-size: 16px;
@@ -180,6 +281,7 @@
       border: 1px solid #2a2a2f;
       background: #101012;
     }
+
     .recusa-rodape {
       padding: 14px 16px;
       border-top: 1px solid #2a2a2f;
@@ -187,144 +289,11 @@
       font-size: 13px;
       background: #0f0f12;
     }
-
-    /* ===================== SCANNER FULLSCREEN (PORTRAIT) ===================== */
-    #scannerOverlay {
-      position: fixed;
-      inset: 0;
-      z-index: 100000;
-      display: none;
-      background: rgba(0,0,0,.92);
-      align-items: center;
-      justify-content: center;
-      padding: 12px;
-      backdrop-filter: blur(2px);
-    }
-
-    .scan-card {
-      width: min(520px, 96vw);
-      height: min(820px, 92vh);
-      background: #0b0b0c;
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 18px;
-      box-shadow: 0 18px 60px rgba(0,0,0,.55);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .scan-top {
-      display:flex;
-      align-items:center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 12px;
-      border-bottom: 1px solid rgba(255,255,255,.10);
-      background: linear-gradient(180deg, rgba(20,20,22,.95), rgba(10,10,12,.95));
-    }
-    .scan-title {
-      display:flex; align-items:center; gap:10px;
-      font-weight: 900;
-      color: #e5e7eb;
-      font-size: 14px;
-      letter-spacing:.2px;
-    }
-    .scan-title i { color: #bbf7d0; }
-
-    .scan-actions { display:flex; gap:8px; align-items:center; }
-    .scan-btn {
-      width: auto !important;
-      padding: 10px 12px !important;
-      margin-top: 0 !important;
-      border-radius: 12px !important;
-      background: rgba(2,6,23,.88) !important;
-      border: 1px solid rgba(255,255,255,.14) !important;
-      color: #e5e7eb !important;
-      font-weight: 800 !important;
-      font-size: 12px !important;
-      cursor: pointer;
-      display:inline-flex;
-      align-items:center;
-      gap: 8px;
-    }
-    .scan-btn:hover { filter: brightness(1.07); }
-    .scan-btn.primary {
-      background: rgba(103,58,183,.92) !important;
-      border-color: rgba(103,58,183,.55) !important;
-    }
-
-    .scan-body {
-      position: relative;
-      flex: 1;
-      padding: 10px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
-
-    .scan-frame {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      border-radius: 16px;
-      overflow: hidden;
-      border: 2px solid rgba(103,58,183,.6);
-      box-shadow: 0 14px 40px rgba(103,58,183,.12);
-      background: #000;
-    }
-
-    #html5-reader { width: 100%; height: 100%; }
-    #html5-reader video, #html5-reader canvas {
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: contain !important;
-      background: #000;
-    }
-
-    .scan-guide {
-      position: absolute;
-      left: 50%;
-      top: 56%;
-      transform: translate(-50%, -50%);
-      width: min(92%, 520px);
-      height: 22%;
-      border: 2px solid rgba(187,247,208,.55);
-      border-radius: 14px;
-      box-shadow: 0 0 0 2000px rgba(0,0,0,.10) inset;
-      pointer-events: none;
-    }
-    .scan-line {
-      position:absolute;
-      left: 8%;
-      right: 8%;
-      top: 50%;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, rgba(187,247,208,.95), transparent);
-      box-shadow: 0 0 18px rgba(187,247,208,.35);
-      pointer-events: none;
-      animation: sweep 1.6s linear infinite;
-    }
-    @keyframes sweep {
-      0% { transform: translateY(-26px); opacity: .35; }
-      50% { transform: translateY(0); opacity: 1; }
-      100% { transform: translateY(26px); opacity: .35; }
-    }
-
-    .scan-status {
-      padding: 10px 12px;
-      border-top: 1px solid rgba(255,255,255,.10);
-      background: rgba(10,10,12,.95);
-      font-size: 12px;
-      color: #cbd5e1;
-      line-height: 1.4;
-    }
-    .scan-status b { color:#bbf7d0; }
-
-    input, button { touch-action: manipulation; }
   </style>
 </head>
 
 <body>
+
   <a href="index.html" class="back-button">
     <i class="fas fa-arrow-left"></i> Voltar à Home
   </a>
@@ -332,6 +301,7 @@
   <img src="logo.png" alt="Logo HS" class="logo-topo" />
 
   <div class="form-container">
+
     <!-- LOGIN FILIAL -->
     <div id="login-nf">
       <h2>Login da Filial</h2>
@@ -353,6 +323,20 @@
       <input type="text" id="chave-nf" placeholder="Digite a chave completa" maxlength="44" />
 
       <button id="btn-leitor-nf">📷 Ler Código de Barras</button>
+
+      <div id="scanner">
+        <div class="scan-topbar">
+          <div class="scan-title"><i class="fas fa-barcode"></i> Scanner (Chave 44)</div>
+          <div class="scan-actions">
+            <button class="scan-btn primary" id="btn-fechar-scan"><i class="fas fa-times"></i> Fechar</button>
+          </div>
+        </div>
+        <div class="scan-body">
+          <div id="html5-reader"></div>
+          <div class="scan-guide"></div>
+        </div>
+      </div>
+      <div id="scanStatus" class="hidden"></div>
 
       <button id="btn-consultar-nf">Consultar</button>
       <div id="loading-nf" class="hidden">⏳ Consultando nota fiscal...</div>
@@ -376,54 +360,101 @@
         <div class="recusa-titulo">🚫 NOTA MARCADA PARA RECUSA</div>
         <button class="recusa-btn-fechar" id="btn-fechar-recusa">Fechar</button>
       </div>
+
       <div class="recusa-conteudo">
         <div class="recusa-texto" id="recusaTexto"></div>
       </div>
+
       <div class="recusa-rodape">
         Se houver confirmação da recusa, realize também a recusa no controle de transporte e na via física destinada ao escritório.
       </div>
     </div>
   </div>
 
-  <!-- ✅ SCANNER FULLSCREEN -->
-  <div id="scannerOverlay">
-    <div class="scan-card">
-      <div class="scan-top">
-        <div class="scan-title">
-          <i class="fas fa-barcode"></i>
-          Leitor de Código (Chave 44)
-        </div>
-        <div class="scan-actions">
-          <button class="scan-btn" id="btn-zoom-out" title="Diminuir zoom"><i class="fas fa-search-minus"></i></button>
-          <button class="scan-btn" id="btn-zoom-in" title="Aumentar zoom"><i class="fas fa-search-plus"></i></button>
-          <button class="scan-btn" id="btn-torch" title="Lanterna"><i class="fas fa-bolt"></i></button>
-          <button class="scan-btn primary" id="btn-fechar-scan"><i class="fas fa-times"></i> Fechar</button>
-        </div>
-      </div>
-
-      <div class="scan-body">
-        <div class="scan-frame">
-          <div id="html5-reader"></div>
-          <div class="scan-guide"></div>
-          <div class="scan-line"></div>
-        </div>
-      </div>
-
-      <div class="scan-status" id="scanStatus">Status: <b>pronto</b></div>
-    </div>
-  </div>
-
   <script>
-    // ================== CONFIG ==================
+    // ===================== SUA API =====================
     const URL_API = "https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec";
-    const LS_FILIAL = "hs_nf_filial";
-    const LS_HIST_PREFIX = "hs_nf_hist_";
-    const APP_VER = "nf-html-singlefile-1.0.1";
 
-    // ================== HELPERS UI ==================
-    function $(id){ return document.getElementById(id); }
+    // ===================== STORAGE KEYS =====================
+    const LS_FILIAL = "hs_nf_filial";
+    const LS_HIST_PREFIX = "hs_nf_hist_"; // por filial
+
+    // ===================== HELPERS =====================
+    const $ = (id)=>document.getElementById(id);
+
     function setHidden(el, hidden){ if(!el) return; el.classList.toggle("hidden", !!hidden); }
 
+    function onlyDigits(s){ return String(s||"").replace(/\D/g,""); }
+
+    function extrairChave44(texto){
+      const only = onlyDigits(texto);
+      if(only.length < 44) return "";
+      for(let i=0;i<=only.length-44;i++){
+        const cand = only.slice(i,i+44);
+        if(/^\d{44}$/.test(cand)) return cand;
+      }
+      return "";
+    }
+
+    function nowBR_(){
+      const d = new Date();
+      const pad = (n)=>String(n).padStart(2,"0");
+      return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function normalizeNumber_(val){
+      if(val === null || val === undefined) return null;
+      if(typeof val === "number" && isFinite(val)) return val;
+      const s = String(val).trim();
+      if(!s) return null;
+      let t = s.replace(/[^\d.,-]/g,"");
+      if(t.includes(",") && t.includes(".")){
+        t = t.replace(/\./g,"").replace(",",".");
+      } else if(t.includes(",") && !t.includes(".")){
+        t = t.replace(",",".");
+      }
+      const n = Number(t);
+      return isFinite(n) ? n : null;
+    }
+
+    function formatMoneyBR(v){
+      const n = Number(v);
+      if(!isFinite(n)) return String(v ?? "-");
+      return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+    }
+
+    // busca recursiva por chaves em JSON
+    function findByKey_(obj, keyNames){
+      const targets = (keyNames||[]).map(k => String(k).toLowerCase());
+      const seen = new Set();
+
+      function walk(node){
+        if(node === null || node === undefined) return undefined;
+        if(typeof node !== "object") return undefined;
+        if(seen.has(node)) return undefined;
+        seen.add(node);
+
+        for(const k of Object.keys(node)){
+          if(targets.includes(k.toLowerCase())) return node[k];
+        }
+        for(const k of Object.keys(node)){
+          const got = walk(node[k]);
+          if(got !== undefined) return got;
+        }
+        return undefined;
+      }
+      return walk(obj);
+    }
+
+    function pickFirst_(obj, keyGroups){
+      for(const keys of keyGroups){
+        const v = findByKey_(obj, keys);
+        if(v !== undefined && v !== null && String(v).trim() !== "") return v;
+      }
+      return undefined;
+    }
+
+    // ===================== OVERLAY RECUSA =====================
     function abrirOverlayRecusa(mensagem) {
       const ov = $('recusaOverlay');
       const tx = $('recusaTexto');
@@ -445,97 +476,7 @@
       });
     });
 
-    function nowBR_(){
-      const d = new Date();
-      const pad = (n)=> String(n).padStart(2,'0');
-      return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    }
-
-    function onlyDigits(s){ return String(s||"").replace(/\D/g,""); }
-
-    function extrairChave44(texto){
-      const only = onlyDigits(texto);
-      if (only.length < 44) return "";
-      for (let i=0; i<=only.length-44; i++){
-        const cand = only.slice(i, i+44);
-        if (/^\d{44}$/.test(cand)) return cand;
-      }
-      return "";
-    }
-
-    function formatMoneyBR(v){
-      const n = Number(v);
-      if(!isFinite(n)) return String(v ?? "-");
-      return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
-    }
-
-    function normalizeNumber_(val){
-      if(val === null || val === undefined) return null;
-      if(typeof val === "number" && isFinite(val)) return val;
-      const s = String(val).trim();
-      if(!s) return null;
-
-      // remove moeda e espaços
-      let t = s.replace(/[^\d.,-]/g, "");
-
-      // se tem vírgula e ponto, assume padrão BR: 1.234,56
-      if(t.includes(",") && t.includes(".")){
-        t = t.replace(/\./g,"").replace(",",".");
-      } else if(t.includes(",") && !t.includes(".")){
-        // 123,45 -> 123.45
-        t = t.replace(",",".");
-      }
-      const n = Number(t);
-      return isFinite(n) ? n : null;
-    }
-
-    // ✅ busca recursiva por chaves (case-insensitive)
-    function findByKey_(obj, keyNames){
-      const targets = (keyNames||[]).map(k => String(k).toLowerCase());
-      const seen = new Set();
-
-      function walk(node){
-        if(node === null || node === undefined) return undefined;
-        if(typeof node !== "object") return undefined;
-        if(seen.has(node)) return undefined;
-        seen.add(node);
-
-        for(const k of Object.keys(node)){
-          const kl = k.toLowerCase();
-          if(targets.includes(kl)) return node[k];
-        }
-        for(const k of Object.keys(node)){
-          const v = node[k];
-          const got = walk(v);
-          if(got !== undefined) return got;
-        }
-        return undefined;
-      }
-      return walk(obj);
-    }
-
-    function pickFirst_(obj, keyGroups){
-      for(const keys of keyGroups){
-        const v = findByKey_(obj, keys);
-        if(v !== undefined && v !== null && String(v).trim() !== "") return v;
-      }
-      return undefined;
-    }
-
-    function beepOk(){
-      try{
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = "square"; o.frequency.value = 880;
-        g.gain.value = 0.10;
-        o.connect(g); g.connect(ctx.destination);
-        o.start(); setTimeout(()=>o.stop(), 120);
-      }catch(e){}
-      try{ if(navigator.vibrate) navigator.vibrate(60); }catch(e){}
-    }
-
-    // ================== HISTÓRICO ==================
+    // ===================== HISTÓRICO =====================
     function histKey_(filial){ return LS_HIST_PREFIX + String(filial||""); }
 
     function loadHist_(filial){
@@ -547,9 +488,12 @@
     }
 
     function saveHist_(filial, arr){
-      try{
-        localStorage.setItem(histKey_(filial), JSON.stringify(arr || []));
-      }catch(e){}
+      try{ localStorage.setItem(histKey_(filial), JSON.stringify(arr || [])); }catch(e){}
+    }
+
+    function isChaveJaConsultada_(filial, chave){
+      const arr = loadHist_(filial);
+      return arr.some(x => String(x?.chave||"") === String(chave||""));
     }
 
     function addHist_(filial, item){
@@ -557,7 +501,7 @@
       const chave = String(item?.chave || "");
       const filtered = arr.filter(x => String(x?.chave||"") !== chave);
       filtered.unshift(item);
-      saveHist_(filial, filtered.slice(0, 50));
+      saveHist_(filial, filtered.slice(0, 60));
       renderHist_();
     }
 
@@ -583,7 +527,7 @@
         li.innerHTML = `
           <div class="hist-left">
             <div class="hist-key">${String(item.chave||"").slice(0,7)}... — ${item.status || "OK"}</div>
-            <div class="hist-sub">${item.valorFmt || ""}  ${item.qtdFmt || ""}</div>
+            <div class="hist-sub">${item.valorFmt || ""} ${item.qtdFmt || ""}</div>
           </div>
           <div class="hist-date">${item.data || ""}</div>
         `;
@@ -595,7 +539,7 @@
       });
     }
 
-    // ================== LOGIN / LOGOUT ==================
+    // ===================== LOGIN/LOGOUT =====================
     function showLogin_(){
       setHidden($('login-nf'), false);
       setHidden($('principal-nf'), true);
@@ -607,6 +551,7 @@
     }
 
     function logoutNF(){
+      // não apaga histórico, só desloga
       localStorage.removeItem(LS_FILIAL);
       $('codigo-nf').value = "";
       $('chave-nf').value = "";
@@ -614,61 +559,63 @@
       $('erro-nf2').textContent = "";
       setHidden($('resultado-nf'), true);
       $('resultado-nf').innerHTML = "";
+      fecharScanner().catch(()=>{});
       showLogin_();
       $('codigo-nf').focus();
     }
 
-    // ================== API CALL ==================
+    // ===================== API CALL =====================
     async function apiGet_(params){
       const u = new URL(URL_API);
       Object.keys(params||{}).forEach(k => u.searchParams.set(k, params[k]));
-      u.searchParams.set("v", APP_VER);
-      u.searchParams.set("t", Date.now());
-
-      const resp = await fetch(u.toString(), { method: "GET" });
+      u.searchParams.set("t", Date.now()); // anti-cache
+      const resp = await fetch(u.toString(), { method:"GET" });
       const text = await resp.text();
-      try{ return JSON.parse(text); }catch(e){
-        return { success:false, message:"Retorno não-JSON do servidor", raw:text };
-      }
+      try{ return JSON.parse(text); }
+      catch(e){ return { success:false, message:"Retorno não-JSON do servidor", raw:text }; }
     }
 
-    // ================== RENDER RESULTADO ==================
+    // ===================== RENDER RESULT =====================
     function renderResultadoNF(resp, filial, chave){
       const box = $('resultado-nf');
       setHidden(box, false);
 
       const ok = !!resp?.success;
-      const msg = String(resp?.message || (ok ? "OK" : "Erro"));
 
-      // base: pode vir em resp.data/resp.nf/resp.resultado...
+      // base pode vir em resp.data / resp.nf / etc
       const base = resp?.data ?? resp?.nf ?? resp?.resultado ?? resp ?? {};
 
-      // ✅ tenta achar número NF, emitente, valor total e quantidade total em QUALQUER lugar
-      const numeroNF = pickFirst_(base, [
-        ["numeroNF","numero","nnf","nNF"],
-        ["numero_da_nf","numnf"]
-      ]);
-
-      const emitente = pickFirst_(base, [
-        ["emitente","nomeEmitente","razaoEmitente","emit_nome","xnome","xNome"],
-        ["fornecedor","razaoSocial","razao_social"]
-      ]);
-
+      // ✅ tenta achar valor / qtd / valida onde estiver
       const valorRaw = pickFirst_(base, [
-        ["vNF","valorTotal","valor_total","valor","total","valorNota","valor_nota"],
-        ["totalNF","total_nf"]
+        ["vNF","valorTotal","valor_total","valor","total","valorNota","valor_nota","totalNF","total_nf"]
       ]);
-
       const qtdRaw = pickFirst_(base, [
-        ["quantidadeTotal","qtdTotal","qtd_total","quantidade","qtd","totalItens","qtdItens","qtd_itens","itensTotal"],
-        ["qComTotal","qcomtotal"]
+        ["quantidadeTotal","qtdTotal","qtd_total","quantidade","qtd","totalItens","qtdItens","qtd_itens","itensTotal"]
+      ]);
+      const validaRaw = pickFirst_(base, [
+        ["valida","valido","status","situacao","ok","isValid","valid"]
       ]);
 
       const valorNum = normalizeNumber_(valorRaw);
       const qtdNum = normalizeNumber_(qtdRaw);
 
       const valorFmt = (valorNum !== null) ? formatMoneyBR(valorNum) : "-";
-      const qtdFmt = (qtdNum !== null) ? `Qtd: ${qtdNum}` : "";
+      const qtdFmt = (qtdNum !== null) ? `${qtdNum}` : "-";
+
+      // status: tenta inferir
+      let statusTxt = "OK";
+      if(typeof validaRaw === "string"){
+        const s = validaRaw.toLowerCase();
+        if(s.includes("inv") || s.includes("erro")) statusTxt = "INVÁLIDA";
+        else if(s.includes("val")) statusTxt = "VÁLIDA";
+      } else if(typeof validaRaw === "boolean"){
+        statusTxt = validaRaw ? "VÁLIDA" : "INVÁLIDA";
+      } else {
+        // fallback: se success true -> OK
+        statusTxt = ok ? "OK" : "ERRO";
+      }
+
+      const msg = String(resp?.message || (ok ? "OK" : "Erro"));
 
       box.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
@@ -678,13 +625,12 @@
           <div style="font-size:12px;color:#94a3b8">${nowBR_()}</div>
         </div>
 
-        <div style="color:#cbd5e1;line-height:1.55">
+        <div style="color:#cbd5e1;line-height:1.6">
           <div><b>Filial:</b> ${filial || "-"}</div>
+          <div><b>Status:</b> ${statusTxt}</div>
           <div><b>Chave:</b> <span class="mono-wrap">${chave || "-"}</span></div>
-          ${numeroNF ? `<div><b>Número NF:</b> ${numeroNF}</div>` : ``}
-          ${emitente ? `<div><b>Emitente:</b> ${emitente}</div>` : ``}
           <div><b>Valor total:</b> ${valorFmt}</div>
-          <div><b>Quantidade total:</b> ${(qtdNum !== null) ? qtdNum : "-"}</div>
+          <div><b>Quantidade total:</b> ${qtdFmt}</div>
         </div>
 
         <div style="margin-top:10px;color:${ok ? "#9bdcff" : "#ff6b6b"};font-size:13px">
@@ -692,25 +638,23 @@
         </div>
       `;
 
-      // overlay recusa
-      if(resp?.motivoRecusa || resp?.recusa || resp?.recusaMensagem){
-        const m = resp.motivoRecusa || resp.recusaMensagem || resp.recusa;
-        abrirOverlayRecusa(m);
-      }
+      // overlay recusa (se vier)
+      const recMsg = resp?.motivoRecusa || resp?.recusa || resp?.recusaMensagem;
+      if(recMsg) abrirOverlayRecusa(recMsg);
 
-      // salva histórico se ok
+      // salva histórico apenas se OK
       if(ok && chave){
         addHist_(filial, {
           chave,
-          status: "OK",
-          valorFmt,
-          qtdFmt,
+          status: statusTxt,
+          valorFmt: `Valor: ${valorFmt}`,
+          qtdFmt: `Qtd: ${qtdFmt}`,
           data: nowBR_()
         });
       }
     }
 
-    // ================== CONSULTA ==================
+    // ===================== CONSULTA (com TRAVA) =====================
     async function consultarNF(){
       const filial = localStorage.getItem(LS_FILIAL) || "";
       const chave = onlyDigits($('chave-nf').value || "");
@@ -725,6 +669,12 @@
       }
       if(chave.length !== 44){
         $('erro-nf2').textContent = "A chave deve ter 44 dígitos.";
+        return;
+      }
+
+      // ✅ TRAVA se já consultou antes
+      if(isChaveJaConsultada_(filial, chave)){
+        $('erro-nf2').textContent = "⚠️ Essa NF já foi consultada/validada anteriormente nesta filial. (TRAVADA)";
         return;
       }
 
@@ -744,168 +694,164 @@
       }
     }
 
-    // ================== SCANNER (HTML5) ==================
-    let html5Scanner = null;
+    // ===================== SCANNER (Dynamsoft -> fallback Html5Qrcode) =====================
     let scannerOpen = false;
-    let travado = false;
+    let usingDynamsoft = false;
+    let dbrScanner = null;
 
-    let currentTrack = null;
-    let zoomLevel = 1;
-    let zoomMin = 1;
-    let zoomMax = 1;
-    let torchOn = false;
-    let torchSupported = false;
-    let zoomSupported = false;
+    let html5Scanner = null;
 
-    function status_(html){
-      $('scanStatus').innerHTML = "Status: " + html;
+    function showScanStatus_(txt){
+      const el = $('scanStatus');
+      el.textContent = txt || "";
+      setHidden(el, !txt);
     }
 
-    async function applyZoom_(z){
-      if(!currentTrack || !zoomSupported) return;
-      try{
-        await currentTrack.applyConstraints({ advanced: [{ zoom: z }] });
-        zoomLevel = z;
-        status_(`<b>lendo…</b><br/>Zoom: ${zoomLevel.toFixed(1)}x`);
-      }catch(e){}
+    function showScanner_(show){
+      const sc = $('scanner');
+      sc.style.display = show ? "flex" : "none";
     }
 
-    async function toggleTorch_(){
-      if(!currentTrack || !torchSupported) return;
-      try{
-        torchOn = !torchOn;
-        await currentTrack.applyConstraints({ advanced: [{ torch: torchOn }] });
-        status_(`<b>lendo…</b><br/>Lanterna: ${torchOn ? "ON" : "OFF"}`);
-      }catch(e){}
+    function fillChaveFromScan_(decoded){
+      const chave = extrairChave44(decoded);
+      if(!chave){
+        showScanStatus_("Detectei algo, mas não achei 44 dígitos… tente aproximar mais.");
+        return false;
+      }
+      $('chave-nf').value = chave;
+      $('erro-nf2').textContent = "";
+
+      // se já consultada, já avisa na hora
+      const filial = localStorage.getItem(LS_FILIAL) || "";
+      if(filial && isChaveJaConsultada_(filial, chave)){
+        $('erro-nf2').textContent = "⚠️ Essa NF já foi consultada/validada anteriormente nesta filial. (TRAVADA)";
+      }
+
+      return true;
     }
 
-    async function fecharScanner(){
-      scannerOpen = false;
-      travado = false;
-      torchOn = false;
-      currentTrack = null;
-      zoomSupported = false;
-      torchSupported = false;
+    async function startDynamsoft_(){
+      // Se a lib não carregou, força fallback
+      if(!window.Dynamsoft || !Dynamsoft.DBR) throw new Error("Dynamsoft DBR não carregou");
 
-      $('scannerOverlay').style.display = "none";
-      document.body.style.overflow = "";
+      usingDynamsoft = true;
+      showScanStatus_("Abrindo câmera (Dynamsoft)…");
 
+      Dynamsoft.DBR.BarcodeScanner.license = Dynamsoft.DBR.BarcodeScanner.license || ""; // não mexo na sua licença
+
+      dbrScanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
+      dbrScanner.onFrameRead = ()=>{};
+      dbrScanner.onUnduplicatedRead = (txt) => {
+        if(!scannerOpen) return;
+        const ok = fillChaveFromScan_(txt);
+        if(ok) fecharScanner().catch(()=>{});
+      };
+
+      // configura pra priorizar Code128 / QR etc (chave 44 pode vir em vários)
       try{
-        if(html5Scanner){
-          await html5Scanner.stop().catch(()=>{});
-          await html5Scanner.clear().catch(()=>{});
-          html5Scanner = null;
-        }
+        const rs = await dbrScanner.getRuntimeSettings();
+        rs.barcodeFormatIds =
+          Dynamsoft.DBR.EnumBarcodeFormat.BF_QR_CODE |
+          Dynamsoft.DBR.EnumBarcodeFormat.BF_CODE_128 |
+          Dynamsoft.DBR.EnumBarcodeFormat.BF_EAN_13;
+        rs.expectedBarcodesCount = 1;
+        await dbrScanner.updateRuntimeSettings(rs);
       }catch(e){}
 
-      status_("<b>fechado</b>");
+      // Render no nosso container
+      dbrScanner.setUIElement($('html5-reader')); // reaproveita div
+      await dbrScanner.open();
+      showScanStatus_("Aponte a câmera para a chave…");
     }
 
-    async function abrirScanner(){
-      $('scannerOverlay').style.display = "flex";
-      document.body.style.overflow = "hidden";
+    async function startHtml5_(){
+      usingDynamsoft = false;
+      showScanStatus_("Abrindo câmera (Html5Qrcode)…");
 
-      scannerOpen = true;
-      travado = false;
-      status_("<b>abrindo câmera…</b>");
-
-      try{
-        if(html5Scanner){
-          await html5Scanner.stop().catch(()=>{});
-          await html5Scanner.clear().catch(()=>{});
-          html5Scanner = null;
-        }
-      }catch(e){}
+      // limpa qualquer UI antiga
+      $('html5-reader').innerHTML = "";
 
       html5Scanner = new Html5Qrcode("html5-reader");
-
-      let formats = undefined;
-      try{
-        if(window.Html5QrcodeSupportedFormats){
-          formats = [
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.QR_CODE,
-            Html5QrcodeSupportedFormats.EAN_13
-          ];
-        }
-      }catch(e){}
 
       const config = {
         fps: 30,
         qrbox: (view) => {
           const w = Math.min(view.width, 520);
-          const h = Math.min(view.height, 820);
+          const h = Math.min(view.height, 320);
           const boxW = Math.floor(w * 0.92);
-          const boxH = Math.floor(h * 0.22);
+          const boxH = Math.floor(h * 0.28);
           return { width: boxW, height: boxH };
         },
-        aspectRatio: 0.75,
         disableFlip: true,
         experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-        rememberLastUsedCamera: true,
-        ...(formats ? { formatsToSupport: formats } : {})
+        rememberLastUsedCamera: true
       };
 
-      const constraints = { facingMode: "environment" };
-
-      status_("<b>procurando o código…</b><br/>Aproxime e alinhe no retângulo.");
-
       await html5Scanner.start(
-        constraints,
+        { facingMode: "environment" },
         config,
-        async (decodedText) => {
+        (decodedText)=>{
           if(!scannerOpen) return;
-          if(travado) return;
-
-          const chave = extrairChave44(decodedText);
-          if(!chave){
-            status_("<b>lendo…</b><br/>Detectei algo, procurando 44 dígitos…");
-            return;
-          }
-
-          travado = true;
-          $('chave-nf').value = chave;
-          status_("<b>capturado!</b><br/>Chave 44 preenchida ✅");
-          beepOk();
-
-          await new Promise(r => setTimeout(r, 200));
-          await fecharScanner();
+          const ok = fillChaveFromScan_(decodedText);
+          if(ok) fecharScanner().catch(()=>{});
         },
-        () => {}
+        ()=>{}
       );
 
-      setTimeout(async ()=>{
+      showScanStatus_("Aponte a câmera para a chave…");
+    }
+
+    async function abrirScanner(){
+      if(scannerOpen) return;
+      scannerOpen = true;
+      showScanner_(true);
+      showScanStatus_("Iniciando…");
+
+      // tenta dynamsoft; se falhar, fallback html5
+      try{
+        await startDynamsoft_();
+      }catch(e){
         try{
-          const video = document.querySelector("#html5-reader video");
-          const stream = video && video.srcObject;
-          if(!stream) return;
-          const t = stream.getVideoTracks && stream.getVideoTracks()[0];
-          if(!t) return;
-
-          currentTrack = t;
-          const caps = currentTrack.getCapabilities ? currentTrack.getCapabilities() : {};
-
-          if(caps.zoom){
-            zoomSupported = true;
-            zoomMin = caps.zoom.min;
-            zoomMax = caps.zoom.max;
-            zoomLevel = Math.min(Math.max(1.5, zoomMin), zoomMax);
-            await applyZoom_(zoomLevel);
-          }
-          if(caps.torch !== undefined){
-            torchSupported = true;
-          }
-        }catch(e){}
-      }, 450);
+          await startHtml5_();
+        }catch(ex){
+          showScanStatus_("");
+          $('erro-nf2').textContent = "Erro ao abrir câmera: " + (ex?.message || ex);
+          await fecharScanner().catch(()=>{});
+        }
+      }
     }
 
-    async function toggleScanner(){
-      if(scannerOpen) return fecharScanner();
-      return abrirScanner();
+    async function fecharScanner(){
+      scannerOpen = false;
+      showScanStatus_("");
+
+      // para dynamsoft
+      try{
+        if(dbrScanner){
+          await dbrScanner.close().catch(()=>{});
+          dbrScanner.destroyContext && dbrScanner.destroyContext();
+          dbrScanner = null;
+        }
+      }catch(e){}
+
+      // para html5
+      try{
+        if(html5Scanner){
+          await html5Scanner.stop().catch(()=>{});
+          await html5Scanner.clear().catch(()=>{});
+          html5Scanner = null;
+        }
+      }catch(e){}
+
+      // limpa leitor
+      try{ $('html5-reader').innerHTML = ""; }catch(e){}
+
+      showScanner_(false);
     }
 
-    // ================== BINDS ==================
+    // ===================== BINDS =====================
     document.addEventListener("DOMContentLoaded", ()=>{
+      // restaura sessão
       const savedFilial = localStorage.getItem(LS_FILIAL);
       if(savedFilial){
         showPrincipal_();
@@ -938,31 +884,12 @@
       $('btn-leitor-nf').addEventListener("click", async (e)=>{
         e.preventDefault();
         $('erro-nf2').textContent = "";
-        try{
-          await toggleScanner();
-        }catch(ex){
-          $('erro-nf2').textContent = "Erro ao abrir câmera: " + (ex?.message || ex);
-          await fecharScanner();
-        }
-      }, true);
-
-      $('btn-fechar-scan').addEventListener("click", fecharScanner);
-
-      document.addEventListener("keydown", (e)=>{
-        if(e.key === "Escape" && scannerOpen) fecharScanner();
+        await abrirScanner();
       });
 
-      $('btn-zoom-in').addEventListener("click", async ()=>{
-        if(!zoomSupported) return status_("<b>zoom não suportado</b>");
-        await applyZoom_(Math.min(zoomMax, zoomLevel + 0.5));
-      });
-      $('btn-zoom-out').addEventListener("click", async ()=>{
-        if(!zoomSupported) return status_("<b>zoom não suportado</b>");
-        await applyZoom_(Math.max(zoomMin, zoomLevel - 0.5));
-      });
-      $('btn-torch').addEventListener("click", async ()=>{
-        if(!torchSupported) return status_("<b>lanterna não suportada</b>");
-        await toggleTorch_();
+      $('btn-fechar-scan').addEventListener("click", (e)=>{
+        e.preventDefault();
+        fecharScanner().catch(()=>{});
       });
 
       $('btn-limpar-nf').addEventListener("click", ()=>{
@@ -973,23 +900,27 @@
         renderHist_();
       });
 
+      $('chave-nf').addEventListener("input", ()=>{
+        const filial = localStorage.getItem(LS_FILIAL) || "";
+        const chave = onlyDigits($('chave-nf').value || "");
+        if(filial && chave.length === 44 && isChaveJaConsultada_(filial, chave)){
+          $('erro-nf2').textContent = "⚠️ Essa NF já foi consultada/validada anteriormente nesta filial. (TRAVADA)";
+        } else {
+          if($('erro-nf2').textContent.includes("(TRAVADA)")) $('erro-nf2').textContent = "";
+        }
+      });
+
       $('chave-nf').addEventListener("keydown", (e)=>{
         if(e.key === "Enter"){
           e.preventDefault();
           consultarNF();
         }
       });
-    });
 
-    function showLogin_(){
-      setHidden($('login-nf'), false);
-      setHidden($('principal-nf'), true);
-    }
-    function showPrincipal_(){
-      setHidden($('login-nf'), true);
-      setHidden($('principal-nf'), false);
-      renderHist_();
-    }
+      // segurança: fecha scanner ao sair da página
+      window.addEventListener("pagehide", ()=>{ fecharScanner().catch(()=>{}); });
+    });
   </script>
+
 </body>
 </html>
