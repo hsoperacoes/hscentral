@@ -6,6 +6,7 @@
   <title>GERENCIAL HS - Recebimento de Nota Fiscal</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <!-- ✅ SOMENTE HTML5QRCODE -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
@@ -77,7 +78,8 @@
       margin-top: 0;
     }
 
-    .result { background: #111; border: 1px solid #333; padding: 12px; border-radius: 6px; }
+    .result { background: #111; border: 1px solid #333; padding: 12px; border-radius: 6px; white-space: pre-wrap; }
+    .result strong{color:#9bdcff}
 
     .history {
       margin-top: 20px;
@@ -398,11 +400,14 @@
   </div>
 
   <script>
-    // ✅ SEU APPWEB (AGORA DO JEITO QUE O script_nf.js NORMALMENTE ESPERA)
+    /* =========================================================
+       ✅ APPWEB (SEU)
+    ========================================================= */
     const URL_API = "https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec";
-    window.URL_API = URL_API; // compat
-    window.__HS_DISABLE_DYNAMSOFT__ = true;
 
+    /* =========================================================
+       ✅ RECUSA OVERLAY
+    ========================================================= */
     function abrirOverlayRecusa(mensagem) {
       const ov = document.getElementById('recusaOverlay');
       const tx = document.getElementById('recusaTexto');
@@ -415,66 +420,163 @@
       ov.style.display = 'none';
       document.body.style.overflow = '';
     }
-    document.addEventListener('DOMContentLoaded', () => {
-      const btn = document.getElementById('btn-fechar-recusa');
-      const ov = document.getElementById('recusaOverlay');
-      btn.addEventListener('click', fecharOverlayRecusa);
-      ov.addEventListener('click', (e) => { if (e.target === ov) fecharOverlayRecusa(); });
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && ov.style.display === 'flex') fecharOverlayRecusa();
-      });
-    });
 
-    // ✅ LOGOUT FORÇADO (pra voltar e trocar filial SEM travar)
-    function logoutNF_forcado(){
+    /* =========================================================
+       ✅ LOGIN / HISTÓRICO (INLINE) — SEM script_nf.js
+    ========================================================= */
+    const LS_FILIAL_KEY = "hs_nf_filial";
+    const LS_HIST_KEY_PREFIX = "hs_nf_hist_"; // hs_nf_hist_293 etc.
+
+    function getFilial_(){ return localStorage.getItem(LS_FILIAL_KEY) || ""; }
+    function setFilial_(f){ localStorage.setItem(LS_FILIAL_KEY, f); }
+    function clearFilial_(){ localStorage.removeItem(LS_FILIAL_KEY); }
+
+    function getHistKey_(){ return LS_HIST_KEY_PREFIX + (getFilial_() || ""); }
+    function loadHist_(){
       try{
-        // remove só chaves do NF, sem apagar outras coisas do HS Central
-        const toRemove = [];
-        for(let i=0; i<localStorage.length; i++){
-          const k = localStorage.key(i);
-          if(!k) continue;
-          const kl = k.toLowerCase();
-          if(
-            kl.startsWith("hs_nf") ||
-            kl.startsWith("hs-nf") ||
-            kl.startsWith("nf_") ||
-            kl.includes("nf_filial") ||
-            kl.includes("filial_nf") ||
-            kl.includes("hsnf")
-          ){
-            toRemove.push(k);
-          }
-        }
-        toRemove.forEach(k => localStorage.removeItem(k));
-      }catch(e){}
-
-      // volta telas
-      const login = document.getElementById("login-nf");
-      const principal = document.getElementById("principal-nf");
-      if(login) login.classList.remove("hidden");
-      if(principal) principal.classList.add("hidden");
-
-      // limpa campos
-      const chave = document.getElementById("chave-nf");
-      if(chave) chave.value = "";
-      const res = document.getElementById("resultado-nf");
-      if(res){ res.classList.add("hidden"); res.innerHTML = ""; }
-      const err = document.getElementById("erro-nf2");
-      if(err) err.textContent = "";
-      const err1 = document.getElementById("erro-nf");
-      if(err1) err1.textContent = "";
-
-      // garante foco
-      const cod = document.getElementById("codigo-nf");
-      if(cod) cod.focus();
+        const raw = localStorage.getItem(getHistKey_());
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+      }catch(e){ return []; }
     }
-  </script>
+    function saveHist_(arr){
+      try{ localStorage.setItem(getHistKey_(), JSON.stringify(arr || [])); }catch(e){}
+    }
+    function addHist_(chave){
+      const arr = loadHist_();
+      const s = String(chave||"").trim();
+      if(!s) return;
+      const now = new Date();
+      const item = { chave: s, ts: now.toISOString() };
+      const filtered = arr.filter(x => x && x.chave !== s);
+      filtered.unshift(item);
+      saveHist_(filtered.slice(0, 50));
+      renderHist_();
+    }
+    function clearHist_(){
+      try{ localStorage.removeItem(getHistKey_()); }catch(e){}
+      renderHist_();
+    }
 
-  <!-- ✅ seu sistema (login/consulta/histórico) -->
-  <script src="script_nf.js?v=1.0.4"></script>
+    function renderHist_(){
+      const ul = document.getElementById("historicoLista-nf");
+      if(!ul) return;
+      ul.innerHTML = "";
+      const arr = loadHist_();
 
-  <script>
-    // ========= Scanner =========
+      if(!arr.length){
+        const li = document.createElement("li");
+        li.style.opacity = ".7";
+        li.textContent = "Sem histórico ainda.";
+        ul.appendChild(li);
+        return;
+      }
+
+      arr.forEach(it => {
+        const li = document.createElement("li");
+        const dt = (()=>{ try{ return new Date(it.ts).toLocaleString("pt-BR"); }catch(e){ return ""; }})();
+        li.textContent = `${it.chave}  —  ${dt}`;
+        li.addEventListener("click", ()=>{
+          document.getElementById("chave-nf").value = it.chave;
+        });
+        ul.appendChild(li);
+      });
+    }
+
+    function showLogin_(){
+      document.getElementById("login-nf").classList.remove("hidden");
+      document.getElementById("principal-nf").classList.add("hidden");
+    }
+    function showPrincipal_(){
+      document.getElementById("login-nf").classList.add("hidden");
+      document.getElementById("principal-nf").classList.remove("hidden");
+      renderHist_();
+    }
+
+    function logoutNF_forcado(){
+      clearFilial_();
+      showLogin_();
+      document.getElementById("codigo-nf").value = "";
+      document.getElementById("chave-nf").value = "";
+      setHidden_("resultado-nf", true);
+      document.getElementById("resultado-nf").textContent = "";
+      document.getElementById("erro-nf2").textContent = "";
+      document.getElementById("erro-nf").textContent = "";
+      document.getElementById("codigo-nf").focus();
+    }
+
+    function setHidden_(id, hidden){
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.classList.toggle("hidden", !!hidden);
+    }
+
+    async function consultarNF_(){
+      const filial = getFilial_();
+      const chave = document.getElementById("chave-nf").value.trim();
+      const loading = document.getElementById("loading-nf");
+      const res = document.getElementById("resultado-nf");
+      const err = document.getElementById("erro-nf2");
+
+      err.textContent = "";
+      setHidden_("resultado-nf", true);
+      res.textContent = "";
+
+      if(!filial){
+        err.textContent = "Filial não logada. Saia e entre de novo.";
+        return;
+      }
+      if(chave.length !== 44){
+        err.textContent = "Chave inválida. Precisa ter 44 dígitos.";
+        return;
+      }
+
+      loading.classList.remove("hidden");
+
+      try{
+        // ✅ AJUSTE AQUI se o seu Apps Script usar outro "api="
+        // Ex.: api=consultarNF (mais comum) OU api=consultarNota OU api=consultaNF...
+        const url = `${URL_API}?api=consultarNF&filial=${encodeURIComponent(filial)}&chave=${encodeURIComponent(chave)}&t=${Date.now()}`;
+        const r = await fetch(url, { method:"GET" });
+        const data = await r.json();
+
+        // padrão: {success:true, ...} ou {sucesso:true, ...}
+        const ok = !!(data && (data.success === true || data.sucesso === true));
+
+        if(!ok){
+          const msg = (data && (data.message || data.mensagem || data.erro)) || "Não foi possível consultar.";
+          throw new Error(msg);
+        }
+
+        // ✅ se vier marcado como recusa (você pode adaptar chaves)
+        const recusaMsg = data.recusaMensagem || data.motivoRecusa || data.recusa || "";
+        const recusaFlag = !!(data.recusaFlag || data.isRecusa || data.recusada || false);
+
+        if(recusaFlag && recusaMsg){
+          abrirOverlayRecusa(recusaMsg);
+        }
+
+        // mostra resultado (bonitinho)
+        const texto =
+`✅ Consulta OK
+Filial: ${filial}
+Chave: ${chave}
+
+${JSON.stringify(data, null, 2)}`;
+
+        res.textContent = texto;
+        setHidden_("resultado-nf", false);
+        addHist_(chave);
+      }catch(e){
+        err.textContent = (e && e.message) ? e.message : "Erro na consulta.";
+      }finally{
+        loading.classList.add("hidden");
+      }
+    }
+
+    /* =========================================================
+       ✅ SCANNER (SEU) + MELHORIAS iOS
+    ========================================================= */
     let html5Scanner = null;
     let scannerOpen = false;
     let travado = false;
@@ -512,6 +614,16 @@
         o.start(); setTimeout(()=>o.stop(), 120);
       }catch(e){}
       try{ if(navigator.vibrate) navigator.vibrate(60); }catch(e){}
+    }
+
+    // ✅ iOS: pedir permissão da câmera ANTES (reduz erro de permissão)
+    async function warmupCameraPermission_(){
+      try{
+        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        s.getTracks().forEach(t => t.stop());
+      }catch(e){
+        // não bloqueia aqui; o start do Html5Qrcode vai mostrar erro e a gente exibe
+      }
     }
 
     async function applyZoom_(z){
@@ -563,6 +675,9 @@
       scannerOpen = true;
       travado = false;
       status_("<b>abrindo câmera…</b>");
+
+      // warmup iOS
+      await warmupCameraPermission_();
 
       try{
         if(html5Scanner){
@@ -629,6 +744,7 @@
         () => {}
       );
 
+      // pega track pra zoom/torch
       setTimeout(async ()=>{
         try{
           const video = document.querySelector("#html5-reader video");
@@ -651,7 +767,7 @@
             torchSupported = true;
           }
         }catch(e){}
-      }, 400);
+      }, 450);
     }
 
     async function toggleScanner(){
@@ -659,50 +775,77 @@
       return abrirScanner();
     }
 
-    // ✅ garante que o botão leitor chama o scanner SEM quebrar o resto
-    function rebindLeitor(){
-      const btn = document.getElementById("btn-leitor-nf");
-      if(!btn) return;
+    /* =========================================================
+       ✅ BINDS
+    ========================================================= */
+    document.addEventListener('DOMContentLoaded', () => {
+      // recusa
+      const btn = document.getElementById('btn-fechar-recusa');
+      const ov = document.getElementById('recusaOverlay');
+      btn.addEventListener('click', fecharOverlayRecusa);
+      ov.addEventListener('click', (e) => { if (e.target === ov) fecharOverlayRecusa(); });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && ov.style.display === 'flex') fecharOverlayRecusa();
+      });
 
-      btn.onclick = null;
-      btn.addEventListener("click", async (e)=>{
+      // login
+      document.getElementById("btn-entrar-nf").addEventListener("click", ()=>{
+        const f = document.getElementById("codigo-nf").value.trim();
+        const err = document.getElementById("erro-nf");
+        err.textContent = "";
+        if(!f){ err.textContent = "Digite o código da filial."; return; }
+        setFilial_(f);
+        showPrincipal_();
+      });
+
+      // sair
+      document.getElementById("btn-sair-nf").addEventListener("click", (e)=>{
         e.preventDefault();
-        const err = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
-        if(err) err.textContent = "";
-        try{
-          await toggleScanner();
-        }catch(ex){
-          if(err) err.textContent = "Erro ao abrir câmera: " + (ex?.message || ex);
+        logoutNF_forcado();
+      });
+
+      // consultar
+      document.getElementById("btn-consultar-nf").addEventListener("click", (e)=>{
+        e.preventDefault();
+        consultarNF_();
+      });
+
+      // enter no campo chave
+      document.getElementById("chave-nf").addEventListener("keydown", (e)=>{
+        if(e.key === "Enter"){
+          e.preventDefault();
+          consultarNF_();
+        }
+      });
+
+      // histórico
+      document.getElementById("btn-limpar-nf").addEventListener("click", (e)=>{
+        e.preventDefault();
+        if(confirm("Limpar histórico local desta filial?")) clearHist_();
+      });
+
+      // scanner binds
+      document.getElementById("btn-leitor-nf").addEventListener("click", async (e)=>{
+        e.preventDefault();
+        const err = document.getElementById("erro-nf2");
+        err.textContent = "";
+        try{ await toggleScanner(); }
+        catch(ex){
+          err.textContent = "Erro ao abrir câmera: " + (ex?.message || ex);
           await fecharScanner();
         }
       }, true);
-    }
-
-    document.addEventListener("DOMContentLoaded", ()=>{
-      // ✅ logout funcional
-      const btnSair = document.getElementById("btn-sair-nf");
-      if(btnSair){
-        btnSair.addEventListener("click", (e)=>{
-          e.preventDefault();
-          logoutNF_forcado();
-        }, true);
-      }
 
       document.getElementById("btn-fechar-scan").addEventListener("click", fecharScanner);
-      document.addEventListener("keydown", (e)=>{
-        if(e.key === "Escape" && scannerOpen) fecharScanner();
-      });
 
       document.getElementById("btn-zoom-in").addEventListener("click", async ()=>{
         if(!zoomSupported) return status_("<b>zoom não suportado</b>");
-        const step = 0.5;
-        await applyZoom_(Math.min(zoomMax, zoomLevel + step));
+        await applyZoom_(Math.min(zoomMax, zoomLevel + 0.5));
       });
 
       document.getElementById("btn-zoom-out").addEventListener("click", async ()=>{
         if(!zoomSupported) return status_("<b>zoom não suportado</b>");
-        const step = 0.5;
-        await applyZoom_(Math.max(zoomMin, zoomLevel - step));
+        await applyZoom_(Math.max(zoomMin, zoomLevel - 0.5));
       });
 
       document.getElementById("btn-torch").addEventListener("click", async ()=>{
@@ -710,8 +853,17 @@
         await toggleTorch_();
       });
 
-      setTimeout(rebindLeitor, 50);
-      setTimeout(rebindLeitor, 250);
+      document.addEventListener("keydown", (e)=>{
+        if(e.key === "Escape" && scannerOpen) fecharScanner();
+      });
+
+      // auto-login se já tem filial
+      const filial = getFilial_();
+      if(filial) showPrincipal_();
+      else showLogin_();
+
+      // status inicial
+      status_("<b>pronto</b>");
     });
   </script>
 </body>
