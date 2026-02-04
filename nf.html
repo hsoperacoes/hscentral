@@ -386,7 +386,7 @@
           Leitor de Código (Chave 44)
         </div>
         <div class="scan-actions">
-          <button class="scan-btn" id="btn-fechar-scan"><i class="fas fa-times"></i> Fechar</button>
+          <button class="scan-btn primary" id="btn-fechar-scan"><i class="fas fa-times"></i> Fechar</button>
         </div>
       </div>
 
@@ -481,14 +481,12 @@
   <script src="script_nf.js?v=1.0.4"></script>
 
   <script>
-    // ========= SCANNER OTIMIZADO PARA iOS =========
+    // ========= SCANNER SIMPLIFICADO E FUNCIONAL =========
     let html5Scanner = null;
     let scannerOpen = false;
-    let travado = false;
     
     // Detectar iOS
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
     function status_(html){
       const scanStatus = document.getElementById("scanStatus");
@@ -521,7 +519,7 @@
         setTimeout(()=>o.stop(), 120);
       }catch(e){}
       
-      // Vibrar se suportado (iOS e Android)
+      // Vibrar se suportado
       try{ 
         if(navigator.vibrate) navigator.vibrate(60); 
       }catch(e){}
@@ -529,7 +527,6 @@
 
     async function fecharScanner(){
       scannerOpen = false;
-      travado = false;
 
       const ov = document.getElementById("scannerOverlay");
       ov.style.display = "none";
@@ -558,12 +555,21 @@
     }
 
     async function abrirScanner(){
+      const chaveInput = document.getElementById("chave-nf");
+      
+      // Verificar se já tem conteúdo
+      if (chaveInput && chaveInput.value.trim() !== '') {
+        if (!confirm("O campo já contém um código. Deseja limpar e escanear um novo?")) {
+          return;
+        }
+        chaveInput.value = "";
+      }
+
       const ov = document.getElementById("scannerOverlay");
       ov.style.display = "flex";
       document.body.style.overflow = "hidden";
 
       scannerOpen = true;
-      travado = false;
       status_("<b>iniciando câmera…</b>");
 
       try {
@@ -582,202 +588,106 @@
         // Inicializar scanner
         html5Scanner = new Html5Qrcode("html5-reader");
 
-        // Configurações otimizadas para iOS
+        // Configurações simplificadas
         const config = {
-          fps: isIOS ? 20 : 30, // FPS mais baixo para iOS
-          qrbox: (view) => {
-            const w = Math.min(view.width, 520);
-            const h = Math.min(view.height, 820);
-            const boxW = Math.floor(w * 0.92);
-            const boxH = Math.floor(h * 0.22);
-            return { width: boxW, height: boxH };
-          },
-          aspectRatio: isIOS ? 1.0 : 0.75, // Aspect ratio diferente para iOS
+          fps: isIOS ? 20 : 30,
+          qrbox: { width: 250, height: 150 },
+          aspectRatio: 1.0,
           disableFlip: true,
-          rememberLastUsedCamera: true,
-          experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true,
-            highlightScanRegion: false // iOS funciona melhor sem highlight
-          }
+          rememberLastUsedCamera: true
         };
 
-        // Constraints específicos para iOS
-        const constraints = {
-          video: {
-            facingMode: "environment",
-            // iOS pode precisar de resoluções específicas
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            frameRate: { ideal: 30 }
-          }
-        };
-
-        status_("<b>procurando o código…</b><br/>Aproxime e alinhe no retângulo.");
-
-        // Função de sucesso
-        const onScanSuccess = async (decodedText) => {
-          if (!scannerOpen || travado) return;
-
-          const chave = extrairChave44(decodedText);
-          if (!chave) {
-            status_("<b>lendo…</b><br/>Procure um código de 44 dígitos");
-            return;
-          }
-
-          travado = true;
-          
-          // Preencher campo
-          const chaveInput = document.getElementById("chave-nf");
-          if (chaveInput) {
-            chaveInput.value = chave;
-            // Disparar eventos para outros scripts
-            chaveInput.dispatchEvent(new Event('input', { bubbles: true }));
-            chaveInput.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-
-          status_("<b>capturado!</b><br/>Chave 44 preenchida ✅");
-          beepOk();
-
-          // Feedback visual
-          if (ov) {
-            ov.style.backgroundColor = "rgba(0, 200, 0, 0.1)";
-            setTimeout(() => {
-              ov.style.backgroundColor = "rgba(0, 0, 0, 0.92)";
-            }, 300);
-          }
-
-          // Fechar após breve delay
-          await new Promise(resolve => setTimeout(resolve, 800));
-          await fecharScanner();
-        };
-
-        // Função de erro
-        const onScanError = (error) => {
-          if (error && error !== "NotFoundException") {
-            console.warn("Erro do scanner:", error);
-            status_(`<b>erro:</b> ${error.substring(0, 50)}...`);
-          }
-        };
-
-        // Para iOS, verificar permissões primeiro
-        if (isIOS) {
-          try {
-            // Solicitar permissão antes de abrir o scanner completo
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-              video: true,
-              audio: false 
-            });
-            
-            // Liberar imediatamente
-            stream.getTracks().forEach(track => track.stop());
-            
-          } catch (permissionError) {
-            status_("<b style='color:#ff6b6b'>Permissão negada</b><br/>Ajustes > Safari > Câmera");
-            setTimeout(() => fecharScanner(), 2000);
-            return;
-          }
-        }
+        status_("<b>procurando código…</b><br/>Aproxime o código do retângulo");
 
         // Iniciar scanner
         await html5Scanner.start(
-          constraints,
+          { facingMode: "environment" },
           config,
-          onScanSuccess,
-          onScanError
+          (decodedText) => {
+            const chave = extrairChave44(decodedText);
+            if (chave) {
+              if (chaveInput) {
+                chaveInput.value = chave;
+                // Disparar eventos
+                chaveInput.dispatchEvent(new Event('input', { bubbles: true }));
+                chaveInput.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+              beepOk();
+              status_("<b>✅ Código capturado!</b>");
+              
+              // Fechar automaticamente após 1 segundo
+              setTimeout(() => {
+                fecharScanner();
+              }, 1000);
+            } else {
+              status_("<b>❌ Código inválido</b><br/>Procure um código de 44 dígitos");
+            }
+          },
+          (error) => {
+            // Ignorar erros de "não encontrado"
+            if (error !== "NotFoundException") {
+              console.warn("Scanner error:", error);
+            }
+          }
         ).catch(async (error) => {
           console.error("Erro ao iniciar scanner:", error);
-          status_("<b style='color:#ff6b6b'>Erro ao acessar câmera</b>");
+          status_("<b style='color:#ff6b6b'>Erro na câmera</b>");
           
           if (isIOS && error.message && error.message.includes('Permission')) {
-            status_("<b>Permissão necessária</b><br/>Permita acesso à câmera nas configurações do Safari.");
+            status_("<b>Permissão negada</b><br/>Ajustes > Safari > Câmera");
           }
           
           await fecharScanner();
-          
-          // Mostrar mensagem amigável
-          const errorDiv = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
-          if (errorDiv) {
-            if (isIOS) {
-              errorDiv.innerHTML = `
-                <div style="color:#ff6b6b; background:#2a2a2a; padding:10px; border-radius:5px;">
-                  <strong>Problema com a câmera no iOS:</strong><br/>
-                  1. Verifique as permissões do Safari<br/>
-                  2. Tente reiniciar o app<br/>
-                  3. Use a digitação manual se necessário
-                </div>
-              `;
-            } else {
-              errorDiv.textContent = "Erro ao acessar a câmera: " + (error.message || error);
-            }
-          }
+          alert("Erro ao acessar a câmera: " + error.message);
         });
 
-        // Ajustar interface após inicialização
+        // Atualizar status após iniciar
         setTimeout(() => {
-          status_("<b>pronto para leitura</b><br/>Aponte para o código de barras");
-          
-          // Forçar redimensionamento para iOS
-          if (isIOS) {
-            const video = document.querySelector("#html5-reader video");
-            if (video) {
-              video.style.objectFit = "cover";
-              video.style.width = "100%";
-              video.style.height = "100%";
-            }
-          }
+          status_("<b>📷 Pronto para leitura</b><br/>Aponte para o código de barras");
         }, 500);
 
       } catch (error) {
         console.error("Erro fatal no scanner:", error);
         await fecharScanner();
+        alert("Erro ao iniciar o scanner: " + error.message);
       }
     }
 
-    async function toggleScanner(){
-      if(scannerOpen) return fecharScanner();
-      return abrirScanner();
-    }
-
-    // ✅ garante que o botão leitor chama o scanner SEM quebrar o resto
-    function rebindLeitor(){
-      const btn = document.getElementById("btn-leitor-nf");
-      if(!btn) return;
-
-      btn.onclick = null;
-      btn.addEventListener("click", async (e)=>{
-        e.preventDefault();
-        const err = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
-        if(err) err.textContent = "";
-        try{
-          await toggleScanner();
-        }catch(ex){
-          if(err) err.textContent = "Erro ao abrir câmera: " + (ex?.message || ex);
-          await fecharScanner();
-        }
-      }, true);
-    }
-
-    document.addEventListener("DOMContentLoaded", ()=>{
-      // ✅ logout funcional
-      const btnSair = document.getElementById("btn-sair-nf");
-      if(btnSair){
-        btnSair.addEventListener("click", (e)=>{
+    // ✅ CONFIGURAÇÃO SIMPLES DOS EVENTOS
+    document.addEventListener("DOMContentLoaded", function() {
+      console.log("DOM carregado, configurando eventos do scanner...");
+      
+      // Botão de abrir scanner
+      const btnLeitor = document.getElementById("btn-leitor-nf");
+      if (btnLeitor) {
+        console.log("Botão leitor encontrado, adicionando evento...");
+        btnLeitor.addEventListener("click", function(e) {
           e.preventDefault();
-          logoutNF_forcado();
-        }, true);
+          console.log("Botão clicado!");
+          abrirScanner();
+        });
+      } else {
+        console.error("Botão btn-leitor-nf não encontrado!");
       }
 
-      // Configurar botões do scanner
-      document.getElementById("btn-fechar-scan").addEventListener("click", fecharScanner);
-      document.addEventListener("keydown", (e)=>{
-        if(e.key === "Escape" && scannerOpen) fecharScanner();
+      // Botão de fechar scanner
+      const btnFechar = document.getElementById("btn-fechar-scan");
+      if (btnFechar) {
+        btnFechar.addEventListener("click", fecharScanner);
+      }
+
+      // Fechar com ESC
+      document.addEventListener("keydown", function(e) {
+        if (e.key === "Escape" && scannerOpen) {
+          fecharScanner();
+        }
       });
 
-      // Fechar ao clicar fora (apenas se não for iOS)
+      // Fechar ao clicar fora (se não for iOS)
       if (!isIOS) {
         const scannerOverlay = document.getElementById("scannerOverlay");
         if (scannerOverlay) {
-          scannerOverlay.addEventListener("click", (e) => {
+          scannerOverlay.addEventListener("click", function(e) {
             if (e.target === scannerOverlay) {
               fecharScanner();
             }
@@ -785,27 +695,64 @@
         }
       }
 
-      // Rebinding do botão leitor
-      setTimeout(rebindLeitor, 50);
-      setTimeout(rebindLeitor, 250);
-      
+      // Botão sair
+      const btnSair = document.getElementById("btn-sair-nf");
+      if (btnSair) {
+        btnSair.addEventListener("click", function(e) {
+          e.preventDefault();
+          logoutNF_forcado();
+        });
+      }
+
       // Adicionar estilos dinâmicos para iOS
       if (isIOS) {
         const style = document.createElement('style');
         style.textContent = `
           /* Melhorar toques no iOS */
-          .scan-btn {
-            min-height: 44px !important; /* Tamanho mínimo de toque do iOS */
+          button, .scan-btn {
+            min-height: 44px !important;
+            cursor: pointer;
+          }
+          
+          /* Garantir que botões sejam clicáveis */
+          button {
+            -webkit-tap-highlight-color: transparent;
           }
           
           /* Evitar zoom no iOS */
-          input, select, textarea {
-            font-size: 16px !important; /* Evita zoom automático no iOS */
+          input {
+            font-size: 16px !important;
           }
         `;
         document.head.appendChild(style);
       }
+
+      // Debug: verificar se elementos existem
+      console.log("Elementos do scanner:", {
+        btnLeitor: document.getElementById("btn-leitor-nf"),
+        scannerOverlay: document.getElementById("scannerOverlay"),
+        html5Reader: document.getElementById("html5-reader")
+      });
     });
+
+    // ✅ Também configurar eventos quando a tela principal é mostrada
+    // (caso o script_nf.js altere o DOM dinamicamente)
+    function configurarEventosAposLogin() {
+      setTimeout(() => {
+        const btnLeitor = document.getElementById("btn-leitor-nf");
+        if (btnLeitor && !btnLeitor.hasAttribute('data-evento-configurado')) {
+          console.log("Configurando evento do botão leitor após login...");
+          btnLeitor.addEventListener("click", function(e) {
+            e.preventDefault();
+            abrirScanner();
+          });
+          btnLeitor.setAttribute('data-evento-configurado', 'true');
+        }
+      }, 500);
+    }
+
+    // Expor função para ser chamada pelo script_nf.js se necessário
+    window.configurarEventosScanner = configurarEventosAposLogin;
   </script>
 </body>
 </html>
