@@ -6,7 +6,7 @@
   <title>GERENCIAL HS - Recebimento de Nota Fiscal</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <!-- ✅ SÓ HTML5QRCODE -->
+  <!-- ✅ SOMENTE HTML5QRCODE -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
@@ -78,15 +78,29 @@
       margin-top: 0;
     }
 
-    .result { background: #111; border: 1px solid #333; padding: 12px; border-radius: 6px; }
-
-    /* ✅ evita estourar a chave */
-    .mono-wrap{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    .result {
+      background: #111;
+      border: 1px solid #333;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 10px;
+      word-break: break-word;
       overflow-wrap: anywhere;
-      word-break: break-all;
-      line-height: 1.35;
+      line-height: 1.45;
     }
+
+    .result .linha { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+    .result .k { color:#cbd5e1; font-weight:700; }
+    .result .v { color:#fff; font-weight:900; }
+    .pill {
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px; border-radius:999px; font-weight:900; font-size:12px;
+      border:1px solid rgba(255,255,255,.12);
+      margin-top:10px;
+      background: rgba(255,255,255,.06);
+    }
+    .pill.ok { border-color: rgba(34,197,94,.35); background: rgba(34,197,94,.12); color:#bbf7d0; }
+    .pill.bad { border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.12); color:#fecaca; }
 
     .history {
       margin-top: 20px;
@@ -95,110 +109,31 @@
       border-radius: 8px;
     }
 
+    .history .top {
+      display:flex; justify-content:space-between; align-items:center; gap:10px;
+      margin-bottom:8px;
+    }
+    .history h3 { margin:0; font-size:14px; color:#e5e7eb; }
+    .history small { color:#9ca3af; }
+
     .history ul { list-style: none; padding: 0; margin: 0; }
     .history li {
-      padding: 8px 8px;
+      padding: 8px 10px;
       border-bottom: 1px solid #222;
       cursor: pointer;
       display:flex;
       justify-content:space-between;
       gap:10px;
       align-items:center;
+      flex-wrap:wrap;
     }
     .history li:hover { background: #1d1d1d; }
-    .hist-left{display:flex; flex-direction:column; gap:2px; min-width:0;}
-    .hist-key{
-      font-weight:800; color:#22c55e;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      overflow-wrap:anywhere; word-break:break-all;
-    }
-    .hist-sub{font-size:12px; color:#cbd5e1}
-    .hist-date{font-size:11px; color:#94a3b8; white-space:nowrap}
-
-    /* ✅ SCANNER EMBUTIDO (SEM OVERLAY FULLSCREEN) */
-    #scanner {
-      width: 100%;
-      max-width: 520px;
-      height: 340px;
-      margin: 10px auto 0;
-      position: relative;
-      display: none;
-      justify-content: center;
-      align-items: center;
-      background: #0b0b0c;
-      border: 1px solid #333;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-
-    #scanner .scan-topbar{
-      position:absolute; left:0; right:0; top:0;
-      display:flex; justify-content:space-between; align-items:center;
-      padding:10px;
-      background: linear-gradient(180deg, rgba(20,20,22,.95), rgba(10,10,12,.95));
-      border-bottom: 1px solid rgba(255,255,255,.10);
-      z-index: 5;
-    }
-    .scan-title{
-      display:flex; align-items:center; gap:8px;
-      font-weight:900; font-size:13px; color:#e5e7eb;
-    }
-    .scan-actions{display:flex; gap:8px;}
-    .scan-btn{
-      width:auto !important;
-      padding:8px 10px !important;
-      margin-top:0 !important;
-      border-radius:10px !important;
-      background: rgba(2,6,23,.88) !important;
-      border: 1px solid rgba(255,255,255,.14) !important;
-      color:#e5e7eb !important;
-      font-weight:800 !important;
-      font-size:12px !important;
-      cursor:pointer;
-    }
-    .scan-btn.primary{
-      background: rgba(103,58,183,.92) !important;
-      border-color: rgba(103,58,183,.55) !important;
-    }
-
-    #scanner .scan-body{
-      width:100%; height:100%;
-      padding-top:52px;
-      position:relative;
-    }
-
-    #html5-reader{
-      width:100%;
-      height:100%;
-    }
-    /* ✅ importante: contain evita ficar “torto”/estourado no celular */
-    #html5-reader video, #html5-reader canvas{
-      width:100% !important;
-      height:100% !important;
-      object-fit: contain !important;
-      background:#000;
-    }
-
-    .scan-guide{
-      position:absolute;
-      left:50%; top:58%;
-      transform:translate(-50%,-50%);
-      width: min(92%, 520px);
-      height: 24%;
-      border: 2px solid rgba(187,247,208,.55);
-      border-radius: 14px;
-      box-shadow: 0 0 0 2000px rgba(0,0,0,.10) inset;
-      pointer-events:none;
-    }
-
-    #scanStatus{
-      margin-top:8px;
-      font-size:12px;
-      color:#9bdcff;
-      font-style: italic;
-    }
+    .history .nfmini { color:#e5e7eb; font-weight:800; }
+    .history .datamini { color:#9ca3af; font-size:12px; }
+    .history .valmini { color:#bbf7d0; font-weight:900; }
 
     #loading-nf { margin-top: 10px; color: #9bdcff; font-style: italic; }
+    #erro-nf2, #erro-nf { margin-top: 8px; }
 
     footer {
       text-align:center; font-size:14px; color:#ccc;
@@ -219,7 +154,6 @@
       padding: 18px;
       backdrop-filter: blur(2px);
     }
-
     .recusa-card {
       width: 100%;
       max-width: 880px;
@@ -229,7 +163,6 @@
       box-shadow: 0 8px 30px rgba(0,0,0,.55);
       overflow: hidden;
     }
-
     .recusa-topo {
       display: flex;
       align-items: center;
@@ -239,7 +172,6 @@
       border-bottom: 1px solid #2a2a2f;
       background: linear-gradient(180deg, #141416, #0f0f12);
     }
-
     .recusa-titulo {
       display: flex;
       align-items: center;
@@ -249,7 +181,6 @@
       color: #ff3b3b;
       letter-spacing: .2px;
     }
-
     .recusa-btn-fechar {
       border: 1px solid #2a2a2f;
       background: transparent;
@@ -262,9 +193,7 @@
       margin-top: 0;
     }
     .recusa-btn-fechar:hover { background: rgba(255,255,255,.06); }
-
     .recusa-conteudo { padding: 16px; background: #0b0b0c; }
-
     .recusa-texto {
       white-space: pre-wrap;
       font-size: 16px;
@@ -275,7 +204,6 @@
       border: 1px solid #2a2a2f;
       background: #101012;
     }
-
     .recusa-rodape {
       padding: 14px 16px;
       border-top: 1px solid #2a2a2f;
@@ -283,11 +211,146 @@
       font-size: 13px;
       background: #0f0f12;
     }
+
+    /* ===================== SCANNER FULLSCREEN (PORTRAIT) ===================== */
+    #scannerOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100000;
+      display: none;
+      background: rgba(0,0,0,.92);
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      backdrop-filter: blur(2px);
+    }
+
+    .scan-card {
+      width: min(520px, 96vw);
+      height: min(820px, 92vh);
+      background: #0b0b0c;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 18px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .scan-top {
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(20,20,22,.95), rgba(10,10,12,.95));
+    }
+    .scan-title {
+      display:flex; align-items:center; gap:10px;
+      font-weight: 900;
+      color: #e5e7eb;
+      font-size: 14px;
+      letter-spacing:.2px;
+    }
+    .scan-title i { color: #bbf7d0; }
+
+    .scan-actions { display:flex; gap:8px; align-items:center; }
+    .scan-btn {
+      width: auto !important;
+      padding: 10px 12px !important;
+      margin-top: 0 !important;
+      border-radius: 12px !important;
+      background: rgba(2,6,23,.88) !important;
+      border: 1px solid rgba(255,255,255,.14) !important;
+      color: #e5e7eb !important;
+      font-weight: 800 !important;
+      font-size: 12px !important;
+      cursor: pointer;
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+    }
+    .scan-btn:hover { filter: brightness(1.07); }
+    .scan-btn.primary {
+      background: rgba(103,58,183,.92) !important;
+      border-color: rgba(103,58,183,.55) !important;
+    }
+
+    .scan-body {
+      position: relative;
+      flex: 1;
+      padding: 10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .scan-frame {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 2px solid rgba(103,58,183,.6);
+      box-shadow: 0 14px 40px rgba(103,58,183,.12);
+      background: #000;
+    }
+
+    #html5-reader { width: 100%; height: 100%; }
+
+    /* ✅ não corta o vídeo (melhora MUITO Code128) */
+    #html5-reader video, #html5-reader canvas {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+      background: #000;
+    }
+
+    .scan-guide {
+      position: absolute;
+      left: 50%;
+      top: 56%;
+      transform: translate(-50%, -50%);
+      width: min(92%, 520px);
+      height: 22%;
+      border: 2px solid rgba(187,247,208,.55);
+      border-radius: 14px;
+      box-shadow: 0 0 0 2000px rgba(0,0,0,.10) inset;
+      pointer-events: none;
+    }
+    .scan-line {
+      position:absolute;
+      left: 8%;
+      right: 8%;
+      top: 50%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(187,247,208,.95), transparent);
+      box-shadow: 0 0 18px rgba(187,247,208,.35);
+      pointer-events: none;
+      animation: sweep 1.6s linear infinite;
+    }
+    @keyframes sweep {
+      0% { transform: translateY(-26px); opacity: .35; }
+      50% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(26px); opacity: .35; }
+    }
+
+    .scan-status {
+      padding: 10px 12px;
+      border-top: 1px solid rgba(255,255,255,.10);
+      background: rgba(10,10,12,.95);
+      font-size: 12px;
+      color: #cbd5e1;
+      line-height: 1.4;
+    }
+    .scan-status b { color:#bbf7d0; }
+
+    input, button { touch-action: manipulation; }
   </style>
 </head>
 
 <body>
-
   <a href="index.html" class="back-button">
     <i class="fas fa-arrow-left"></i> Voltar à Home
   </a>
@@ -295,7 +358,6 @@
   <img src="logo.png" alt="Logo HS" class="logo-topo" />
 
   <div class="form-container">
-
     <!-- LOGIN FILIAL -->
     <div id="login-nf">
       <h2>Login da Filial</h2>
@@ -318,27 +380,16 @@
 
       <button id="btn-leitor-nf">📷 Ler Código de Barras</button>
 
-      <div id="scanner">
-        <div class="scan-topbar">
-          <div class="scan-title"><i class="fas fa-barcode"></i> Scanner (Chave 44)</div>
-          <div class="scan-actions">
-            <button class="scan-btn primary" id="btn-fechar-scan"><i class="fas fa-times"></i> Fechar</button>
-          </div>
-        </div>
-        <div class="scan-body">
-          <div id="html5-reader"></div>
-          <div class="scan-guide"></div>
-        </div>
-      </div>
-      <div id="scanStatus" class="hidden"></div>
-
       <button id="btn-consultar-nf">Consultar</button>
       <div id="loading-nf" class="hidden">⏳ Consultando nota fiscal...</div>
       <div id="resultado-nf" class="result hidden"></div>
       <div id="erro-nf2" style="color: #ff6b6b; margin-top: 8px;"></div>
 
       <div class="history">
-        <h3>Histórico da Filial</h3>
+        <div class="top">
+          <h3>Histórico da Filial</h3>
+          <small id="hist-info">—</small>
+        </div>
         <ul id="historicoLista-nf"></ul>
         <button id="btn-limpar-nf">🗑 Limpar Histórico Local</button>
       </div>
@@ -347,389 +398,342 @@
 
   <footer>HS Operações © 2025 - Todos os direitos reservados</footer>
 
-  <!-- OVERLAY RECUSA -->
+  <!-- OVERLAY RECUSA (mantido) -->
   <div id="recusaOverlay">
     <div class="recusa-card" role="dialog" aria-modal="true">
       <div class="recusa-topo">
         <div class="recusa-titulo">🚫 NOTA MARCADA PARA RECUSA</div>
         <button class="recusa-btn-fechar" id="btn-fechar-recusa">Fechar</button>
       </div>
-
       <div class="recusa-conteudo">
         <div class="recusa-texto" id="recusaTexto"></div>
       </div>
-
       <div class="recusa-rodape">
         Se houver confirmação da recusa, realize também a recusa no controle de transporte e na via física destinada ao escritório.
       </div>
     </div>
   </div>
 
+  <!-- ✅ SCANNER FULLSCREEN (Html5Qrcode) -->
+  <div id="scannerOverlay">
+    <div class="scan-card">
+      <div class="scan-top">
+        <div class="scan-title">
+          <i class="fas fa-barcode"></i>
+          Leitor de Código (Chave 44)
+        </div>
+        <div class="scan-actions">
+          <button class="scan-btn" id="btn-zoom-out" title="Diminuir zoom"><i class="fas fa-search-minus"></i></button>
+          <button class="scan-btn" id="btn-zoom-in" title="Aumentar zoom"><i class="fas fa-search-plus"></i></button>
+          <button class="scan-btn" id="btn-torch" title="Lanterna"><i class="fas fa-bolt"></i></button>
+          <button class="scan-btn primary" id="btn-fechar-scan"><i class="fas fa-times"></i> Fechar</button>
+        </div>
+      </div>
+
+      <div class="scan-body">
+        <div class="scan-frame">
+          <div id="html5-reader"></div>
+          <div class="scan-guide"></div>
+          <div class="scan-line"></div>
+        </div>
+      </div>
+
+      <div class="scan-status" id="scanStatus">Status: <b>pronto</b></div>
+    </div>
+  </div>
+
   <script>
-    // ✅ SEU APPWEB
+    // ✅ SEU APPWEB (NÃO ALTERAR)
     const URL_API = "https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec";
 
-    // storage
-    const LS_FILIAL = "hs_nf_filial";
-    const LS_HIST_PREFIX = "hs_nf_hist_"; // por filial
+    const FILIAIS_VALIDAS = ["293","488","287","288","761"];
 
-    const $ = (id)=>document.getElementById(id);
-    function setHidden(el, hidden){ if(!el) return; el.classList.toggle("hidden", !!hidden); }
-    function onlyDigits(s){ return String(s||"").replace(/\D/g,""); }
+    // ====== Estado ======
+    let filialAtual = "";
+    let scannerOpen = false;
+    let travadoScan = false;
 
-    function extrairChave44(texto){
-      const only = onlyDigits(texto);
-      if(only.length < 44) return "";
-      for(let i=0;i<=only.length-44;i++){
-        const cand = only.slice(i,i+44);
-        if(/^\d{44}$/.test(cand)) return cand;
-      }
-      return "";
-    }
+    let html5Scanner = null;
 
-    function nowBR_(){
-      const d = new Date();
-      const pad = (n)=>String(n).padStart(2,"0");
-      return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    }
+    let currentTrack = null;
+    let zoomLevel = 1;
+    let zoomMin = 1;
+    let zoomMax = 1;
+    let torchOn = false;
+    let torchSupported = false;
+    let zoomSupported = false;
 
+    // ====== Recusa overlay (mantido) ======
     function abrirOverlayRecusa(mensagem) {
-      const ov = $('recusaOverlay');
-      const tx = $('recusaTexto');
+      const ov = document.getElementById('recusaOverlay');
+      const tx = document.getElementById('recusaTexto');
       tx.textContent = (mensagem || '').toString().trim();
       ov.style.display = 'flex';
       document.body.style.overflow = 'hidden';
     }
     function fecharOverlayRecusa() {
-      const ov = $('recusaOverlay');
+      const ov = document.getElementById('recusaOverlay');
       ov.style.display = 'none';
       document.body.style.overflow = '';
     }
 
-    // histórico
-    function histKey_(filial){ return LS_HIST_PREFIX + String(filial||""); }
-    function loadHist_(filial){
+    // ====== Helpers ======
+    function status_(html){
+      document.getElementById("scanStatus").innerHTML = "Status: " + html;
+    }
+
+    function extrairChave44(texto){
+      const only = String(texto || "").replace(/\D/g, "");
+      if (only.length < 44) return "";
+      for (let i=0; i<=only.length-44; i++){
+        const cand = only.slice(i, i+44);
+        if (/^\d{44}$/.test(cand)) return cand;
+      }
+      return "";
+    }
+
+    function beepOk(){
       try{
-        const raw = localStorage.getItem(histKey_(filial));
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "square"; o.frequency.value = 880;
+        g.gain.value = 0.10;
+        o.connect(g); g.connect(ctx.destination);
+        o.start(); setTimeout(()=>o.stop(), 120);
+      }catch(e){}
+      try{ if(navigator.vibrate) navigator.vibrate(60); }catch(e){}
+    }
+
+    function keyHist_(filial){
+      return `HS_NF_HIST_${String(filial||"").trim()}`;
+    }
+
+    function getHist_(filial){
+      try{
+        const raw = localStorage.getItem(keyHist_(filial));
         const arr = raw ? JSON.parse(raw) : [];
         return Array.isArray(arr) ? arr : [];
-      }catch(e){ return []; }
-    }
-    function saveHist_(filial, arr){
-      try{ localStorage.setItem(histKey_(filial), JSON.stringify(arr || [])); }catch(e){}
-    }
-    function isChaveJaConsultada_(filial, chave){
-      const arr = loadHist_(filial);
-      return arr.some(x => String(x?.chave||"") === String(chave||""));
-    }
-    function addHist_(filial, item){
-      const arr = loadHist_(filial);
-      const chave = String(item?.chave || "");
-      const filtered = arr.filter(x => String(x?.chave||"") !== chave);
-      filtered.unshift(item);
-      saveHist_(filial, filtered.slice(0, 80));
-      renderHist_();
-    }
-    function renderHist_(){
-      const filial = localStorage.getItem(LS_FILIAL) || "";
-      const ul = $('historicoLista-nf');
-      if(!ul) return;
-
-      ul.innerHTML = "";
-      const arr = loadHist_(filial);
-
-      if(arr.length === 0){
-        const li = document.createElement("li");
-        li.style.cursor = "default";
-        li.innerHTML = `<span style="color:#94a3b8">Sem histórico ainda.</span>`;
-        ul.appendChild(li);
-        return;
+      }catch(e){
+        return [];
       }
+    }
+
+    function setHist_(filial, arr){
+      try{
+        localStorage.setItem(keyHist_(filial), JSON.stringify(arr || []));
+      }catch(e){}
+    }
+
+    function addHist_(filial, item){
+      const arr = getHist_(filial);
+      // dedup por chave
+      const chave = String(item?.chave||"").trim();
+      const sem = arr.filter(x => String(x?.chave||"").trim() !== chave);
+      sem.unshift(item);
+      setHist_(filial, sem.slice(0, 30));
+    }
+
+    function formatLinhaResultado_(chave, data){
+      const numeroNF = data?.numeroNF ?? "-";
+      const valorTotal = data?.valorTotal ?? "R$ 0,00";
+      const quantidadeTotal = data?.quantidadeTotal ?? "0";
+      const status = String(data?.status || "").toUpperCase();
+
+      const pillClass = (status === "VÁLIDA") ? "pill ok" : "pill bad";
+      const pillIcon = (status === "VÁLIDA") ? "fa-check-circle" : "fa-triangle-exclamation";
+
+      return `
+        <div class="linha"><span class="k">Chave</span><span class="v" style="font-family:monospace; font-weight:900; word-break:break-all; overflow-wrap:anywhere;">${chave}</span></div>
+        <hr style="border:0;border-top:1px solid rgba(255,255,255,.10); margin:10px 0;">
+        <div class="linha"><span class="k">NF</span><span class="v">${numeroNF}</span></div>
+        <div class="linha"><span class="k">Valor total</span><span class="v">${valorTotal}</span></div>
+        <div class="linha"><span class="k">Qtd. itens</span><span class="v">${quantidadeTotal}</span></div>
+        <div class="${pillClass}"><i class="fas ${pillIcon}"></i> ${status || "—"}</div>
+      `;
+    }
+
+    function setResultadoHTML_(html){
+      const box = document.getElementById("resultado-nf");
+      box.innerHTML = html || "";
+      box.classList.remove("hidden");
+    }
+
+    function setErro_(msg){
+      document.getElementById("erro-nf2").textContent = msg || "";
+    }
+
+    function setErroLogin_(msg){
+      document.getElementById("erro-nf").textContent = msg || "";
+    }
+
+    function setLoading_(on){
+      const el = document.getElementById("loading-nf");
+      if(on) el.classList.remove("hidden");
+      else el.classList.add("hidden");
+    }
+
+    function renderHistorico_(){
+      const ul = document.getElementById("historicoLista-nf");
+      const info = document.getElementById("hist-info");
+      ul.innerHTML = "";
+
+      const arr = getHist_(filialAtual);
+      info.textContent = arr.length ? `${arr.length} itens` : "vazio";
 
       arr.forEach(item=>{
         const li = document.createElement("li");
-        li.title = "Clique para colar a chave no campo";
-        li.innerHTML = `
-          <div class="hist-left">
-            <div class="hist-key">${String(item.chave||"").slice(0,7)}... — ${item.status || "OK"}</div>
-            <div class="hist-sub">${item.valorFmt || ""} ${item.qtdFmt || ""}</div>
-          </div>
-          <div class="hist-date">${item.data || ""}</div>
-        `;
+
+        const left = document.createElement("div");
+        left.style.display = "flex";
+        left.style.flexDirection = "column";
+        left.style.gap = "2px";
+
+        const nf = document.createElement("div");
+        nf.className = "nfmini";
+        nf.textContent = `NF ${item?.data?.numeroNF ?? "-"}`;
+
+        const dt = document.createElement("div");
+        dt.className = "datamini";
+        dt.textContent = item?.data?.dataRegistro ? String(item.data.dataRegistro) : "";
+
+        left.appendChild(nf);
+        left.appendChild(dt);
+
+        const right = document.createElement("div");
+        right.className = "valmini";
+        right.textContent = item?.data?.valorTotal ?? "";
+
+        li.appendChild(left);
+        li.appendChild(right);
+
         li.addEventListener("click", ()=>{
-          $('chave-nf').value = String(item.chave||"");
-          $('erro-nf2').textContent = "";
+          const chave = String(item?.chave||"").trim();
+          document.getElementById("chave-nf").value = chave;
+          setResultadoHTML_(formatLinhaResultado_(chave, item?.data));
+          setErro_("");
         });
+
         ul.appendChild(li);
       });
     }
 
-    function showLogin_(){
-      setHidden($('login-nf'), false);
-      setHidden($('principal-nf'), true);
-    }
-    function showPrincipal_(){
-      setHidden($('login-nf'), true);
-      setHidden($('principal-nf'), false);
-      renderHist_();
-    }
+    function logout_(){
+      filialAtual = "";
+      try{
+        localStorage.removeItem("HS_NF_FILIAL");
+      }catch(e){}
 
-    function logoutNF(){
-      // não apaga histórico, só desloga
-      localStorage.removeItem(LS_FILIAL);
-      $('codigo-nf').value = "";
-      $('chave-nf').value = "";
-      $('erro-nf').textContent = "";
-      $('erro-nf2').textContent = "";
-      setHidden($('resultado-nf'), true);
-      $('resultado-nf').innerHTML = "";
+      // fecha scanner se estiver aberto
       fecharScanner().catch(()=>{});
-      showLogin_();
-      $('codigo-nf').focus();
+
+      // telas
+      document.getElementById("login-nf").classList.remove("hidden");
+      document.getElementById("principal-nf").classList.add("hidden");
+
+      // limpa UI
+      document.getElementById("codigo-nf").value = "";
+      document.getElementById("chave-nf").value = "";
+      document.getElementById("resultado-nf").classList.add("hidden");
+      document.getElementById("resultado-nf").innerHTML = "";
+      setErro_("");
+      setErroLogin_("");
+      setLoading_(false);
+
+      document.getElementById("codigo-nf").focus();
     }
 
-    async function apiGet_(params){
-      const u = new URL(URL_API);
-      Object.keys(params||{}).forEach(k => u.searchParams.set(k, params[k]));
-      u.searchParams.set("t", Date.now()); // anti-cache
-      const resp = await fetch(u.toString(), { method:"GET" });
-      const text = await resp.text();
-      try{ return JSON.parse(text); }
-      catch(e){ return { success:false, message:"Retorno não-JSON do servidor", raw:text }; }
+    // ====== Consulta (GS) ======
+    async function consultarNF_(chave){
+      const t0 = Date.now();
+      const url = `${URL_API}?chave=${encodeURIComponent(chave)}&filial=${encodeURIComponent(filialAtual)}&t=${t0}`;
+      const resp = await fetch(url, { method: "GET", cache: "no-store" });
+      return await resp.json();
     }
 
-    // ✅ Aqui eu mantive a ideia do “funcionava”: usa success/message e tenta ler os campos comuns.
-    // Se seu GAS retorna com outros nomes, isso aqui ainda tenta pegar (vNF, valorTotal, qtdTotal, etc).
-    function pick(obj, keys){
-      for(const k of keys){
-        if(obj && Object.prototype.hasOwnProperty.call(obj, k) && obj[k] !== "" && obj[k] !== null && obj[k] !== undefined) return obj[k];
+    async function handleConsultarClick_(force){
+      setErro_("");
+      const chaveRaw = document.getElementById("chave-nf").value || "";
+      const chave = String(chaveRaw).replace(/\D/g,"").trim();
+
+      if(!FILIAIS_VALIDAS.includes(filialAtual)){
+        setErro_("Filial inválida. Faça login novamente.");
+        return;
       }
-      return undefined;
-    }
-    function deepPick(obj, keys){
-      if(!obj || typeof obj !== "object") return undefined;
-      const direct = pick(obj, keys);
-      if(direct !== undefined) return direct;
-      for(const k of Object.keys(obj)){
-        const v = obj[k];
-        if(v && typeof v === "object"){
-          const got = deepPick(v, keys);
-          if(got !== undefined) return got;
+
+      if(chave.length !== 44){
+        setErro_("Chave deve conter exatamente 44 dígitos.");
+        return;
+      }
+
+      // ✅ trava “já consultada” por filial (local)
+      const hist = getHist_(filialAtual);
+      const ja = hist.find(x => String(x?.chave||"").trim() === chave);
+      if(ja && !force){
+        const ok = confirm("Essa chave já foi consultada anteriormente nessa filial.\n\nDeseja consultar novamente mesmo assim?");
+        if(!ok){
+          // mostra o dado salvo
+          setResultadoHTML_(formatLinhaResultado_(chave, ja?.data));
+          return;
         }
       }
-      return undefined;
-    }
-    function normalizeNumber(val){
-      if(val === null || val === undefined) return null;
-      if(typeof val === "number" && isFinite(val)) return val;
-      const s = String(val).trim();
-      if(!s) return null;
-      let t = s.replace(/[^\d.,-]/g,"");
-      if(t.includes(",") && t.includes(".")){
-        t = t.replace(/\./g,"").replace(",",".");
-      } else if(t.includes(",") && !t.includes(".")){
-        t = t.replace(",",".");
-      }
-      const n = Number(t);
-      return isFinite(n) ? n : null;
-    }
-    function moneyBR(v){
-      const n = Number(v);
-      if(!isFinite(n)) return String(v ?? "-");
-      return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
-    }
 
-    function renderResultado(resp, filial, chave){
-      const box = $('resultado-nf');
-      setHidden(box, false);
-
-      const ok = !!resp?.success;
-      const base = resp?.data ?? resp?.nf ?? resp?.resultado ?? resp ?? {};
-
-      const valorRaw = deepPick(base, ["vNF","valorTotal","valor_total","valor","total","valorNota","valor_nota","totalNF","total_nf"]);
-      const qtdRaw   = deepPick(base, ["quantidadeTotal","qtdTotal","qtd_total","quantidade","qtd","totalItens","qtdItens","qtd_itens","itensTotal"]);
-      const validaRaw= deepPick(base, ["valida","valido","status","situacao","ok","isValid","valid"]);
-
-      const valorNum = normalizeNumber(valorRaw);
-      const qtdNum   = normalizeNumber(qtdRaw);
-
-      const valorFmt = (valorNum !== null) ? moneyBR(valorNum) : "-";
-      const qtdFmt   = (qtdNum !== null) ? String(qtdNum) : "-";
-
-      let statusTxt = "OK";
-      if(typeof validaRaw === "string"){
-        const s = validaRaw.toLowerCase();
-        if(s.includes("inv") || s.includes("erro")) statusTxt = "INVÁLIDA";
-        else if(s.includes("val")) statusTxt = "VÁLIDA";
-      } else if(typeof validaRaw === "boolean"){
-        statusTxt = validaRaw ? "VÁLIDA" : "INVÁLIDA";
-      } else {
-        statusTxt = ok ? "VÁLIDA" : "ERRO";
-      }
-
-      box.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
-          <div style="font-weight:900;color:${ok ? "#4ade80" : "#ff6b6b"}">
-            ${ok ? "✅ Consulta OK" : "❌ Erro na Consulta"}
-          </div>
-          <div style="font-size:12px;color:#94a3b8">${nowBR_()}</div>
-        </div>
-
-        <div style="color:#cbd5e1;line-height:1.6">
-          <div><b>Filial:</b> ${filial || "-"}</div>
-          <div><b>Status:</b> ${statusTxt}</div>
-          <div><b>Chave:</b> <span class="mono-wrap">${chave || "-"}</span></div>
-          <div><b>Valor total:</b> ${valorFmt}</div>
-          <div><b>Quantidade total:</b> ${qtdFmt}</div>
-        </div>
-
-        <div style="margin-top:10px;color:${ok ? "#9bdcff" : "#ff6b6b"};font-size:13px">
-          ${String(resp?.message || (ok ? "OK" : "Erro"))}
-        </div>
-      `;
-
-      const recMsg = resp?.motivoRecusa || resp?.recusa || resp?.recusaMensagem;
-      if(recMsg) abrirOverlayRecusa(recMsg);
-
-      if(ok && chave){
-        addHist_(filial, {
-          chave,
-          status: statusTxt,
-          valorFmt: `Valor: ${valorFmt}`,
-          qtdFmt: `Qtd: ${qtdFmt}`,
-          data: nowBR_()
-        });
-      }
-    }
-
-    async function consultarNF(){
-      const filial = localStorage.getItem(LS_FILIAL) || "";
-      const chave = onlyDigits($('chave-nf').value || "");
-
-      $('erro-nf2').textContent = "";
-      setHidden($('resultado-nf'), true);
-      $('resultado-nf').innerHTML = "";
-
-      if(!filial){
-        $('erro-nf2').textContent = "Filial não encontrada. Faça login novamente.";
-        return;
-      }
-      if(chave.length !== 44){
-        $('erro-nf2').textContent = "A chave deve ter 44 dígitos.";
-        return;
-      }
-
-      // ✅ TRAVA
-      if(isChaveJaConsultada_(filial, chave)){
-        $('erro-nf2').textContent = "⚠️ Essa NF já foi consultada/validada anteriormente nesta filial. (TRAVADA)";
-        return;
-      }
-
-      setHidden($('loading-nf'), false);
+      setLoading_(true);
 
       try{
-        const resp = await apiGet_({
-          api: "consultarNotaFiscal",
-          filial: filial,
-          chave: chave
-        });
-        renderResultado(resp, filial, chave);
-      }catch(err){
-        $('erro-nf2').textContent = "Erro ao consultar: " + (err?.message || err);
-      }finally{
-        setHidden($('loading-nf'), true);
-      }
-    }
+        const json = await consultarNF_(chave);
 
-    // ===================== SCANNER HTML5QRCODE =====================
-    let scannerOpen = false;
-    let html5Scanner = null;
-    let travadoScan = false;
+        if(!json || !json.success){
+          const msg = json?.message || "Erro ao consultar.";
+          setErro_(msg);
+          setResultadoHTML_("");
+          document.getElementById("resultado-nf").classList.add("hidden");
+          return;
+        }
 
-    function showScanStatus(txt){
-      const el = $('scanStatus');
-      el.textContent = txt || "";
-      setHidden(el, !txt);
-    }
+        const data = json.data || {};
+        setResultadoHTML_(formatLinhaResultado_(chave, data));
 
-    function showScanner(show){
-      $('scanner').style.display = show ? "flex" : "none";
-    }
-
-    function fillFromScan(decodedText){
-      const chave = extrairChave44(decodedText);
-      if(!chave){
-        showScanStatus("Detectei algo, mas não achei 44 dígitos… alinhe melhor no retângulo.");
-        return false;
-      }
-      $('chave-nf').value = chave;
-      $('erro-nf2').textContent = "";
-
-      const filial = localStorage.getItem(LS_FILIAL) || "";
-      if(filial && isChaveJaConsultada_(filial, chave)){
-        $('erro-nf2').textContent = "⚠️ Essa NF já foi consultada/validada anteriormente nesta filial. (TRAVADA)";
-      }
-
-      return true;
-    }
-
-    async function abrirScanner(){
-      if(scannerOpen) return;
-      scannerOpen = true;
-      travadoScan = false;
-
-      showScanner(true);
-      showScanStatus("Abrindo câmera…");
-
-      $('html5-reader').innerHTML = "";
-      html5Scanner = new Html5Qrcode("html5-reader");
-
-      // ✅ melhor leitura: fps alto + área baixa (faixa do código) + contain no CSS
-      const config = {
-        fps: 30,
-        qrbox: (view) => {
-          const w = Math.min(view.width, 520);
-          const h = Math.min(view.height, 340);
-          const boxW = Math.floor(w * 0.92);
-          const boxH = Math.floor(h * 0.30);
-          return { width: boxW, height: boxH };
-        },
-        disableFlip: true,
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-        rememberLastUsedCamera: true
-      };
-
-      try{
-        await html5Scanner.start(
-          { facingMode: "environment" },
-          config,
-          async (decodedText) => {
-            if(!scannerOpen) return;
-            if(travadoScan) return;
-
-            const ok = fillFromScan(decodedText);
-            if(!ok) return;
-
-            travadoScan = true;
-            showScanStatus("Chave capturada ✅");
-            await new Promise(r=>setTimeout(r, 120));
-            await fecharScanner();
-          },
-          () => {}
-        );
-
-        showScanStatus("Aponte para a chave e alinhe no retângulo.");
+        // salva histórico local SEM apagar
+        addHist_(filialAtual, { chave, data, ts: Date.now() });
+        renderHistorico_();
       }catch(e){
-        showScanStatus("");
-        $('erro-nf2').textContent = "Erro ao abrir câmera: " + (e?.message || e);
-        await fecharScanner();
+        setErro_("Falha de rede ao consultar. Tente novamente.");
+      }finally{
+        setLoading_(false);
       }
+    }
+
+    // ====== Scanner ======
+    async function applyZoom_(z){
+      if(!currentTrack || !zoomSupported) return;
+      try{
+        await currentTrack.applyConstraints({ advanced: [{ zoom: z }] });
+        zoomLevel = z;
+        status_(`<b>lendo…</b><br/>Zoom: ${zoomLevel.toFixed(1)}x`);
+      }catch(e){}
+    }
+
+    async function toggleTorch_(){
+      if(!currentTrack || !torchSupported) return;
+      try{
+        torchOn = !torchOn;
+        await currentTrack.applyConstraints({ advanced: [{ torch: torchOn }] });
+        status_(`<b>lendo…</b><br/>Lanterna: ${torchOn ? "ON" : "OFF"}`);
+      }catch(e){}
     }
 
     async function fecharScanner(){
       scannerOpen = false;
       travadoScan = false;
-      showScanStatus("");
+      torchOn = false;
+      currentTrack = null;
+      zoomSupported = false;
+      torchSupported = false;
+
+      const ov = document.getElementById("scannerOverlay");
+      ov.style.display = "none";
+      document.body.style.overflow = "";
 
       try{
         if(html5Scanner){
@@ -739,65 +743,220 @@
         }
       }catch(e){}
 
-      try{ $('html5-reader').innerHTML = ""; }catch(e){}
-      showScanner(false);
+      status_("<b>fechado</b>");
     }
 
-    // ===================== BINDS =====================
-    document.addEventListener('DOMContentLoaded', () => {
-      $('btn-fechar-recusa').addEventListener('click', fecharOverlayRecusa);
-      $('recusaOverlay').addEventListener('click', (e)=>{ if(e.target === $('recusaOverlay')) fecharOverlayRecusa(); });
-      document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && $('recusaOverlay').style.display === 'flex') fecharOverlayRecusa(); });
+    async function abrirScanner(){
+      // iOS: precisa ser por clique do usuário (isso aqui é chamado pelo botão)
+      const ov = document.getElementById("scannerOverlay");
+      ov.style.display = "flex";
+      document.body.style.overflow = "hidden";
 
-      const savedFilial = localStorage.getItem(LS_FILIAL);
-      if(savedFilial) showPrincipal_();
-      else { showLogin_(); $('codigo-nf').focus(); }
+      scannerOpen = true;
+      travadoScan = false;
+      status_("<b>abrindo câmera…</b>");
 
-      $('btn-entrar-nf').addEventListener('click', ()=>{
-        const cod = onlyDigits($('codigo-nf').value || "");
-        if(!cod){ $('erro-nf').textContent = "Digite o código da filial."; return; }
-        $('erro-nf').textContent = "";
-        localStorage.setItem(LS_FILIAL, cod);
-        showPrincipal_();
+      try{
+        if(html5Scanner){
+          await html5Scanner.stop().catch(()=>{});
+          await html5Scanner.clear().catch(()=>{});
+          html5Scanner = null;
+        }
+      }catch(e){}
+
+      html5Scanner = new Html5Qrcode("html5-reader");
+
+      let formats = undefined;
+      try{
+        if(window.Html5QrcodeSupportedFormats){
+          formats = [
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.EAN_13
+          ];
+        }
+      }catch(e){}
+
+      const config = {
+        fps: 30,
+        qrbox: (view) => {
+          const w = Math.min(view.width, 520);
+          const h = Math.min(view.height, 820);
+          const boxW = Math.floor(w * 0.92);
+          const boxH = Math.floor(h * 0.22);
+          return { width: boxW, height: boxH };
+        },
+        aspectRatio: 0.75,
+        disableFlip: true,
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        rememberLastUsedCamera: true,
+        ...(formats ? { formatsToSupport: formats } : {})
+      };
+
+      const constraints = { facingMode: "environment" };
+
+      status_("<b>procurando o código…</b><br/>Aproxime e alinhe no retângulo.");
+
+      await html5Scanner.start(
+        constraints,
+        config,
+        async (decodedText) => {
+          if(!scannerOpen) return;
+          if(travadoScan) return;
+
+          const chave = extrairChave44(decodedText);
+          if(!chave){
+            status_("<b>lendo…</b><br/>Detectei algo, procurando 44 dígitos…");
+            return;
+          }
+
+          travadoScan = true;
+          document.getElementById("chave-nf").value = chave;
+          status_("<b>capturado!</b><br/>Chave 44 preenchida ✅");
+          beepOk();
+
+          await new Promise(r => setTimeout(r, 180));
+          await fecharScanner();
+        },
+        () => {}
+      );
+
+      // tenta aplicar zoom/lanterna (quando suportado)
+      setTimeout(async ()=>{
+        try{
+          const video = document.querySelector("#html5-reader video");
+          const stream = video && video.srcObject;
+          if(!stream) return;
+          const t = stream.getVideoTracks && stream.getVideoTracks()[0];
+          if(!t) return;
+
+          currentTrack = t;
+          const caps = currentTrack.getCapabilities ? currentTrack.getCapabilities() : {};
+
+          if(caps.zoom){
+            zoomSupported = true;
+            zoomMin = caps.zoom.min;
+            zoomMax = caps.zoom.max;
+            zoomLevel = Math.min(Math.max(1.6, zoomMin), zoomMax);
+            await applyZoom_(zoomLevel);
+          } else {
+            zoomSupported = false;
+          }
+
+          if(caps.torch !== undefined){
+            torchSupported = true;
+          } else {
+            torchSupported = false;
+          }
+        }catch(e){}
+      }, 350);
+    }
+
+    // ====== Bindings ======
+    document.addEventListener("DOMContentLoaded", ()=>{
+      // recusa overlay close
+      document.getElementById('btn-fechar-recusa').addEventListener('click', fecharOverlayRecusa);
+      document.getElementById('recusaOverlay').addEventListener('click', (e)=>{
+        if(e.target.id === "recusaOverlay") fecharOverlayRecusa();
+      });
+      document.addEventListener('keydown', (e)=>{
+        if (e.key === 'Escape' && document.getElementById('recusaOverlay').style.display === 'flex') fecharOverlayRecusa();
       });
 
-      $('btn-sair-nf').addEventListener('click', (e)=>{ e.preventDefault(); logoutNF(); });
+      // login
+      document.getElementById("btn-entrar-nf").addEventListener("click", ()=>{
+        setErroLogin_("");
+        const f = String(document.getElementById("codigo-nf").value||"").trim();
+        if(!FILIAIS_VALIDAS.includes(f)){
+          setErroLogin_("Código de filial inválido.");
+          return;
+        }
+        filialAtual = f;
+        try{ localStorage.setItem("HS_NF_FILIAL", filialAtual); }catch(e){}
 
-      $('btn-consultar-nf').addEventListener('click', (e)=>{ e.preventDefault(); consultarNF(); });
+        document.getElementById("login-nf").classList.add("hidden");
+        document.getElementById("principal-nf").classList.remove("hidden");
 
-      $('btn-leitor-nf').addEventListener('click', async (e)=>{
+        document.getElementById("chave-nf").focus();
+        renderHistorico_();
+      });
+
+      // restore login
+      try{
+        const saved = localStorage.getItem("HS_NF_FILIAL");
+        if(saved && FILIAIS_VALIDAS.includes(saved)){
+          filialAtual = saved;
+          document.getElementById("login-nf").classList.add("hidden");
+          document.getElementById("principal-nf").classList.remove("hidden");
+          renderHistorico_();
+        }
+      }catch(e){}
+
+      // sair
+      document.getElementById("btn-sair-nf").addEventListener("click", (e)=>{
         e.preventDefault();
-        $('erro-nf2').textContent = "";
-        await abrirScanner();
+        logout_();
+      }, true);
+
+      // consultar
+      document.getElementById("btn-consultar-nf").addEventListener("click", (e)=>{
+        e.preventDefault();
+        handleConsultarClick_(false);
       });
 
-      $('btn-fechar-scan').addEventListener('click', (e)=>{ e.preventDefault(); fecharScanner(); });
-
-      $('btn-limpar-nf').addEventListener('click', ()=>{
-        const filial = localStorage.getItem(LS_FILIAL) || "";
-        if(!filial) return;
-        if(!confirm("Limpar histórico local dessa filial?")) return;
-        localStorage.removeItem(histKey_(filial));
-        renderHist_();
-      });
-
-      $('chave-nf').addEventListener("input", ()=>{
-        const filial = localStorage.getItem(LS_FILIAL) || "";
-        const chave = onlyDigits($('chave-nf').value || "");
-        if(filial && chave.length === 44 && isChaveJaConsultada_(filial, chave)){
-          $('erro-nf2').textContent = "⚠️ Essa NF já foi consultada/validada anteriormente nesta filial. (TRAVADA)";
-        } else {
-          if($('erro-nf2').textContent.includes("(TRAVADA)")) $('erro-nf2').textContent = "";
+      // enter no campo
+      document.getElementById("chave-nf").addEventListener("keydown", (e)=>{
+        if(e.key === "Enter"){
+          e.preventDefault();
+          handleConsultarClick_(false);
         }
       });
 
-      $('chave-nf').addEventListener("keydown", (e)=>{
-        if(e.key === "Enter"){ e.preventDefault(); consultarNF(); }
+      // limpar histórico local (apenas da filial atual)
+      document.getElementById("btn-limpar-nf").addEventListener("click", ()=>{
+        if(!filialAtual) return;
+        if(!confirm("Limpar o histórico local dessa filial?")) return;
+        setHist_(filialAtual, []);
+        renderHistorico_();
       });
 
-      window.addEventListener("pagehide", ()=>{ fecharScanner().catch(()=>{}); });
+      // scanner open
+      document.getElementById("btn-leitor-nf").addEventListener("click", async (e)=>{
+        e.preventDefault();
+        setErro_("");
+        try{
+          await abrirScanner();
+        }catch(ex){
+          setErro_("Erro ao abrir câmera. Confirme permissão e tente novamente.");
+          await fecharScanner().catch(()=>{});
+        }
+      }, true);
+
+      // scanner controls
+      document.getElementById("btn-fechar-scan").addEventListener("click", (e)=>{
+        e.preventDefault();
+        fecharScanner();
+      });
+
+      document.addEventListener("keydown", (e)=>{
+        if(e.key === "Escape" && scannerOpen) fecharScanner();
+      });
+
+      document.getElementById("btn-zoom-in").addEventListener("click", async ()=>{
+        if(!zoomSupported) return status_("<b>zoom não suportado</b>");
+        await applyZoom_(Math.min(zoomMax, zoomLevel + 0.5));
+      });
+
+      document.getElementById("btn-zoom-out").addEventListener("click", async ()=>{
+        if(!zoomSupported) return status_("<b>zoom não suportado</b>");
+        await applyZoom_(Math.max(zoomMin, zoomLevel - 0.5));
+      });
+
+      document.getElementById("btn-torch").addEventListener("click", async ()=>{
+        if(!torchSupported) return status_("<b>lanterna não suportada</b>");
+        await toggleTorch_();
+      });
     });
   </script>
-
 </body>
 </html>
