@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>GERENCIAL HS - Recebimento de Nota Fiscal</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
@@ -327,6 +327,12 @@
     body.ios-device input[type="number"] {
       font-size: 16px !important;
     }
+    
+    /* Melhorar visualização do scanner no iOS */
+    .ios-scanner-fix {
+      transform: scaleX(1) !important;
+      -webkit-transform: scaleX(1) !important;
+    }
   </style>
 </head>
 
@@ -538,12 +544,14 @@
       if(statusEl) statusEl.innerHTML = "Status: " + html;
     }
 
-    // ✅ FUNÇÃO CRÍTICA: Extrair chave de 44 dígitos (MELHORADA)
+    // ✅ FUNÇÃO CRÍTICA: Extrair chave de 44 dígitos
     function extrairChave44(texto){
       console.log("📄 Texto recebido para extração:", texto);
       
+      if (!texto) return "";
+      
       // Remove tudo que não é número
-      const only = String(texto || "").replace(/\D/g, "");
+      const only = String(texto).replace(/\D/g, "");
       console.log("🔢 Apenas números:", only);
       
       // Se não tem pelo menos 44 dígitos, retorna vazio
@@ -597,6 +605,8 @@
     }
 
     async function fecharScanner(){
+      console.log("🛑 Fechando scanner...");
+      
       scannerOpen = false;
       travado = false;
       torchOn = false;
@@ -736,8 +746,9 @@
       }, 5000);
     }
 
-    async function abrirScanner(){
-      console.log("🚀 Abrindo scanner...");
+    // ✅ NOVA ABORDAGEM: Scanner SIMPLIFICADO para iOS
+    async function abrirScannerIOS(){
+      console.log("📱 Abrindo scanner otimizado para iOS...");
       
       const chaveInput = document.getElementById("chave-nf");
       
@@ -766,63 +777,49 @@
       }catch(e){}
 
       html5Scanner = new Html5Qrcode("html5-reader");
-      console.log("📷 Html5Qrcode instanciado");
 
-      // ✅ CONFIGURAÇÃO OTIMIZADA
+      // ✅ CONFIGURAÇÃO ESPECÍFICA PARA iOS QUE FUNCIONA
       const config = {
-        fps: isIOS ? 10 : 30, // iOS funciona melhor com FPS mais baixo
+        fps: 10, // iOS funciona melhor com FPS mais baixo
         qrbox: { 
-          width: isIOS ? 250 : 300,
-          height: isIOS ? 150 : 200
+          width: 280,
+          height: 180
         },
         aspectRatio: 1.0,
-        disableFlip: false,
+        disableFlip: false, // IMPORTANTE: deixar false no iOS
         experimentalFeatures: {
-          useBarCodeDetectorIfSupported: !isIOS // Desativar apenas no iOS
+          useBarCodeDetectorIfSupported: false // DESATIVAR no iOS
         },
-        rememberLastUsedCamera: true,
         formatsToSupport: [
           Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.QR_CODE,
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.EAN_8,
-          Html5QrcodeSupportedFormats.UPC_A,
-          Html5QrcodeSupportedFormats.UPC_E
+          Html5QrcodeSupportedFormats.QR_CODE
         ]
       };
 
       status_("<b>procurando o código…</b><br/>Aproxime e alinhe no retângulo.");
 
       try {
-        // ✅ Callback direto e simples
-        const onScanSuccess = async (decodedText, decodedResult) => {
-          console.log("✅ Código detectado:", decodedText);
-          console.log("📊 Resultado detalhado:", decodedResult);
-          
-          // Processar imediatamente
-          await processarLeitura(decodedText);
-        };
-
-        const onScanFailure = (error) => {
-          // Ignorar erros normais (como "NotFoundException")
-          if (error && !error.toString().includes("NotFound")) {
-            console.log("Scanner error:", error);
-          }
-        };
-
-        // ✅ Iniciar scanner
+        // ✅ Método SIMPLIFICADO para iOS
         await html5Scanner.start(
           { facingMode: "environment" },
           config,
-          onScanSuccess,
-          onScanFailure
+          async (decodedText) => {
+            console.log("📖 iOS leu:", decodedText);
+            await processarLeitura(decodedText);
+          },
+          (error) => {
+            // Ignorar erros normais
+            if (error && !error.includes("NotFound")) {
+              console.log("Scanner error:", error);
+            }
+          }
         );
 
-        console.log("✅ Scanner iniciado com sucesso!");
+        console.log("✅ Scanner iOS iniciado com sucesso!");
         status_("<b>✅ Scanner pronto!</b><br/>Aponte para o código de barras.");
 
       } catch (error) {
-        console.error("❌ Erro ao iniciar scanner:", error);
+        console.error("❌ Erro ao iniciar scanner iOS:", error);
         
         // ✅ TENTATIVA ALTERNATIVA se "environment" falhar
         if (error.message && error.message.includes("environment")) {
@@ -831,9 +828,10 @@
           
           try {
             await html5Scanner.start(
-              { facingMode: "user" }, // Tentar câmera frontal
+              { facingMode: "user" },
               config,
               async (decodedText) => {
+                console.log("📖 iOS (frontal) leu:", decodedText);
                 await processarLeitura(decodedText);
               }
             );
@@ -848,9 +846,92 @@
       }
     }
 
-    async function toggleScanner(){
-      if(scannerOpen) return fecharScanner();
-      return abrirScanner();
+    // ✅ Scanner para Android/Desktop (mantém configuração original)
+    async function abrirScannerNormal(){
+      console.log("📱 Abrindo scanner normal...");
+      
+      const chaveInput = document.getElementById("chave-nf");
+      
+      if (chaveInput && chaveInput.value.trim() !== '') {
+        if (!confirm("O campo já contém um código. Deseja limpar e escanear um novo?")) {
+          return;
+        }
+        chaveInput.value = "";
+      }
+
+      const ov = document.getElementById("scannerOverlay");
+      if(ov) ov.style.display = "flex";
+      document.body.style.overflow = "hidden";
+
+      scannerOpen = true;
+      travado = false;
+      status_("<b>abrindo câmera…</b>");
+
+      try{
+        if(html5Scanner){
+          await html5Scanner.stop().catch(()=>{});
+          await html5Scanner.clear().catch(()=>{});
+          html5Scanner = null;
+        }
+      }catch(e){}
+
+      html5Scanner = new Html5Qrcode("html5-reader");
+
+      const config = {
+        fps: 30,
+        qrbox: { width: 300, height: 200 },
+        aspectRatio: 1.0,
+        disableFlip: false,
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true
+        },
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8
+        ]
+      };
+
+      status_("<b>procurando o código…</b><br/>Aproxime e alinhe no retângulo.");
+
+      try {
+        await html5Scanner.start(
+          { facingMode: "environment" },
+          config,
+          async (decodedText) => {
+            console.log("📖 Normal leu:", decodedText);
+            await processarLeitura(decodedText);
+          },
+          (error) => {
+            if (error && !error.includes("NotFound")) {
+              console.log("Scanner error:", error);
+            }
+          }
+        );
+
+        console.log("✅ Scanner normal iniciado com sucesso!");
+        status_("<b>✅ Scanner pronto!</b><br/>Aponte para o código de barras.");
+
+      } catch (error) {
+        console.error("❌ Erro ao iniciar scanner normal:", error);
+        alert("Erro ao iniciar scanner: " + (error.message || error));
+        fecharScanner();
+      }
+    }
+
+    // ✅ Função principal que escolhe o scanner correto
+    async function abrirScanner(){
+      if(scannerOpen) {
+        await fecharScanner();
+        return;
+      }
+      
+      if(isIOS) {
+        await abrirScannerIOS();
+      } else {
+        await abrirScannerNormal();
+      }
     }
 
     // ✅ Configuração ROBUSTA do botão
@@ -879,7 +960,7 @@
         if(errorDiv) errorDiv.textContent = "";
         
         try {
-          await toggleScanner();
+          await abrirScanner();
         } catch(ex) {
           console.error("Erro no scanner:", ex);
           if(errorDiv) {
@@ -961,6 +1042,17 @@
           }
         });
       }
+      
+      // ✅ Aplicar fix para iOS
+      if (isIOS) {
+        // Aplicar classe fix para elementos de vídeo
+        setTimeout(() => {
+          const videos = document.querySelectorAll('#html5-reader video');
+          videos.forEach(video => {
+            video.classList.add('ios-scanner-fix');
+          });
+        }, 1000);
+      }
     });
 
     // ✅ Expor função para debugging
@@ -981,8 +1073,22 @@
           campoChave: document.getElementById("chave-nf"),
           hasPermission: navigator.mediaDevices && navigator.mediaDevices.getUserMedia
         });
+      },
+      // ✅ TESTE DIRETO: Forçar preenchimento de chave
+      preencherChaveTeste: function() {
+        const chaveTeste = "12345678901234567890123456789012345678901234";
+        const campo = document.getElementById("chave-nf");
+        if(campo) {
+          campo.value = chaveTeste;
+          campo.dispatchEvent(new Event('input', { bubbles: true }));
+          console.log("✅ Chave de teste preenchida:", chaveTeste);
+          return true;
+        }
+        return false;
       }
     };
+    
+    console.log("✅ Sistema de scanner completamente carregado!");
   </script>
 </body>
 </html>
