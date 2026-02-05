@@ -482,7 +482,7 @@
   <script src="script_nf.js?v=1.0.4"></script>
 
   <script>
-    // ========= Scanner COMPLETO - SEM PERMISSÃO ANTECIPADA =========
+    // ========= Scanner COMPLETO - OTIMIZADO PARA iOS =========
     let html5Scanner = null;
     let scannerOpen = false;
     let travado = false;
@@ -577,6 +577,73 @@
       status_("<b>fechado</b>");
     }
 
+    // ✅ FUNÇÃO CRÍTICA: Verifica se há permissão da câmera
+    async function checkCameraPermission() {
+      try {
+        // Método mais direto para iOS
+        if (isIOS) {
+          // No iOS, tentamos uma abordagem mais simples
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment" } 
+          });
+          
+          // Se chegou aqui, tem permissão
+          stream.getTracks().forEach(track => track.stop());
+          return true;
+        } else {
+          // Para Android/desktop, verificação normal
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const videoDevices = devices.filter(device => device.kind === 'videoinput');
+          const hasPermission = videoDevices.some(device => device.label);
+          return hasPermission;
+        }
+      } catch (error) {
+        console.log("Permissão não concedida:", error);
+        return false;
+      }
+    }
+
+    // ✅ NOVA FUNÇÃO: Processar leitura com validação melhorada
+    async function processarLeitura(decodedText) {
+      if(!scannerOpen || travado) return false;
+      
+      const chave = extrairChave44(decodedText);
+      if(!chave){
+        // Status informativo para códigos inválidos
+        status_(`<b>leu algo</b><br/>"${decodedText.substring(0, 20)}..."<br/>Procurando 44 dígitos...`);
+        return false;
+      }
+
+      // Valida se realmente tem 44 dígitos
+      if (chave.length !== 44 || !/^\d{44}$/.test(chave)) {
+        status_(`<b style="color:#ff6b6b">Formato inválido</b><br/>Encontrado: ${chave.length} dígitos`);
+        return false;
+      }
+
+      travado = true;
+      
+      // Mostrar que capturou
+      status_(`<b style="color:#bbf7d0">✅ CAPTURADO!</b><br/>Chave: ${chave.substring(0, 10)}...`);
+      
+      // Preencher campo
+      const chaveInput = document.getElementById("chave-nf");
+      if (chaveInput) {
+        chaveInput.value = chave;
+        chaveInput.focus();
+      }
+      
+      // Beep de confirmação
+      beepOk();
+      
+      // Pequeno delay para mostrar confirmação
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Fechar scanner
+      await fecharScanner();
+      
+      return true;
+    }
+
     async function abrirScanner(){
       const chaveInput = document.getElementById("chave-nf");
       
@@ -606,83 +673,98 @@
 
       html5Scanner = new Html5Qrcode("html5-reader");
 
-      let formats = undefined;
-      try{
-        if(window.Html5QrcodeSupportedFormats){
-          formats = [
+      // ✅ CONFIGURAÇÕES OTIMIZADAS PARA iOS
+      let config;
+      if (isIOS) {
+        // Configurações ESPECÍFICAS para iOS que FUNCIONAM
+        config = {
+          fps: 15, // FPS mais baixo para iOS (estabilidade)
+          qrbox: { 
+            width: 280, // Largura fixa para iOS
+            height: 180  // Altura adequada para códigos longos
+          },
+          aspectRatio: 1.0, // Quadrado funciona melhor no iOS
+          disableFlip: true,
+          experimentalFeatures: { 
+            useBarCodeDetectorIfSupported: false // DESATIVADO para iOS
+          },
+          rememberLastUsedCamera: true,
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.QR_CODE
+          ]
+        };
+      } else {
+        // Configurações normais para Android/Desktop
+        config = {
+          fps: 30,
+          qrbox: (view) => {
+            const w = Math.min(view.width, 520);
+            const h = Math.min(view.height, 820);
+            const boxW = Math.floor(w * 0.92);
+            const boxH = Math.floor(h * 0.22);
+            return { width: boxW, height: boxH };
+          },
+          aspectRatio: 0.75,
+          disableFlip: true,
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+          rememberLastUsedCamera: true,
+          formatsToSupport: [
             Html5QrcodeSupportedFormats.CODE_128,
             Html5QrcodeSupportedFormats.QR_CODE,
             Html5QrcodeSupportedFormats.EAN_13
-          ];
-        }
-      }catch(e){}
+          ]
+        };
+      }
 
-      // Configurações otimizadas para iOS
-      const config = {
-        fps: isIOS ? 20 : 30,
-        qrbox: (view) => {
-          const w = Math.min(view.width, 520);
-          const h = Math.min(view.height, 820);
-          const boxW = Math.floor(w * 0.92);
-          const boxH = Math.floor(h * 0.22);
-          return { width: boxW, height: boxH };
-        },
-        aspectRatio: isIOS ? 1.0 : 0.75,
-        disableFlip: true,
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-        rememberLastUsedCamera: true,
-        ...(formats ? { formatsToSupport: formats } : {})
-      };
-
-      // Constraints SIMPLES - SEM verificação antecipada de permissões
+      // Constraints otimizados para iOS
       const constraints = { 
-        facingMode: "environment"
+        facingMode: "environment",
+        ...(isIOS ? {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 }
+        } : {})
       };
 
       status_("<b>procurando o código…</b><br/>Aproxime e alinhe no retângulo.");
 
       try {
-        // ✅ MUDANÇA CRÍTICA: NÃO verificar permissões antecipadamente!
-        // O HTML5-QRCode vai pedir permissão DENTRO do .start()
-        await html5Scanner.start(
-          constraints,
-          config,
-          async (decodedText) => {
-            if(!scannerOpen) return;
-            if(travado) return;
-
-            const chave = extrairChave44(decodedText);
-            if(!chave){
-              status_("<b>lendo…</b><br/>Detectei algo, procurando 44 dígitos…");
-              return;
-            }
-
-            travado = true;
-            document.getElementById("chave-nf").value = chave;
-            status_("<b>capturado!</b><br/>Chave 44 preenchida ✅");
-            beepOk();
-
-            await new Promise(r => setTimeout(r, 200));
-            await fecharScanner();
-          },
-          (error) => {
-            // ✅ Tratar erros de permissão DENTRO do scanner
-            if (error && error.name === 'NotAllowedError') {
-              console.warn("Permissão de câmera negada pelo usuário");
-              status_("<b style='color:#ff6b6b'>Permissão negada</b><br/>Permita o acesso à câmera");
-              
-              // Mostrar instruções para iOS
-              if (isIOS) {
-                status_("<b style='color:#ff6b6b'>📱 iOS:</b><br/>Ajustes > Safari > Câmera");
+        // ✅ CONTADOR DE TENTATIVAS PARA iOS
+        let tentativas = 0;
+        const maxTentativas = 2;
+        
+        while (tentativas < maxTentativas) {
+          try {
+            await html5Scanner.start(
+              constraints,
+              config,
+              async (decodedText) => {
+                await processarLeitura(decodedText);
+              },
+              (error) => {
+                // Ignorar erros normais do scanner
+                if (error && error !== "NotFoundException") {
+                  console.log("Scanner error:", error);
+                }
               }
-              
-              // Fechar após 3 segundos
-              setTimeout(() => fecharScanner(), 3000);
-            } else if (error && error !== "NotFoundException") {
-              console.warn("Erro do scanner:", error);
+            );
+            
+            // Se chegou aqui, iniciou com sucesso
+            break;
+            
+          } catch (startError) {
+            tentativas++;
+            console.log(`Tentativa ${tentativas} falhou:`, startError);
+            
+            if (tentativas >= maxTentativas) {
+              throw startError;
             }
+            
+            // Aguardar um pouco antes de tentar novamente
+            await new Promise(resolve => setTimeout(resolve, 500));
           }
-        );
+        }
 
         // Verificar recursos da câmera (zoom, lanterna) após iniciar
         setTimeout(async ()=>{
@@ -712,37 +794,44 @@
       } catch (error) {
         console.error("Erro ao iniciar scanner:", error);
         
-        // ✅ TRATAMENTO ESPECÍFICO PARA ERROS DE PERMISSÃO
+        // ✅ MENSAGENS DE ERRO ESPECÍFICAS PARA iOS
         if (error.name === 'NotAllowedError' || error.message.includes('Permission')) {
-          status_("<b style='color:#ff6b6b'>❌ Permissão necessária</b><br/>Permita o acesso à câmera para usar o scanner");
+          status_(`
+            <b style="color:#ff6b6b">❌ Permissão de câmera necessária</b><br/>
+            Para usar o scanner, você precisa permitir o acesso à câmera.<br/><br/>
+            ${isIOS ? 
+              '<b>📱 No iOS:</b><br/>1. Toque em "Permitir" quando solicitado<br/>2. Ou vá em Ajustes > Safari > Câmera > "Permitir"' : 
+              'No Android, toque em "Permitir" quando solicitado.'}
+          `);
           
-          if (isIOS) {
-            status_("<b>📱 iOS:</b><br/>1. Toque em 'Permitir'<br/>2. Ou vá em Ajustes > Safari > Câmera");
-          }
-          
-          // Mostrar mensagem amigável por 3 segundos e fechar
           setTimeout(() => {
             fecharScanner();
-            
-            // Mostrar alerta explicativo
-            setTimeout(() => {
-              const errorDiv = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
-              if (errorDiv) {
-                errorDiv.innerHTML = `
-                  <div style="color:#ff6b6b; background:#2a2a2a; padding:10px; border-radius:5px; margin-top:10px;">
-                    <strong>Permissão de câmera necessária:</strong><br/>
-                    Para usar o leitor de código, você precisa permitir o acesso à câmera.<br/>
-                    <small>No iOS: Ajustes > Safari > Câmera > "Permitir"</small>
-                  </div>
-                `;
-              }
-            }, 500);
+          }, 5000);
+          
+        } else if (error.name === 'NotFoundError' || error.message.includes('device')) {
+          status_(`
+            <b style="color:#ff6b6b">❌ Câmera não encontrada</b><br/>
+            Nenhuma câmera traseira encontrada.<br/><br/>
+            ${isIOS ? 
+              '<b>📱 No iOS:</b><br/>Verifique se a câmera está disponível e tente novamente.' : 
+              'Verifique se há uma câmera disponível.'}
+          `);
+          
+          setTimeout(() => {
+            fecharScanner();
           }, 3000);
           
         } else {
           // Outros erros
-          status_("<b style='color:#ff6b6b'>Erro na câmera</b><br/>" + (error.message || "Tente novamente"));
-          setTimeout(() => fecharScanner(), 2000);
+          status_(`
+            <b style="color:#ff6b6b">Erro ao iniciar scanner</b><br/>
+            ${error.message || "Tente novamente"}
+            ${isIOS ? '<br/><br/><b>📱 Dica iOS:</b> Feche e abra novamente o scanner.' : ''}
+          `);
+          
+          setTimeout(() => {
+            fecharScanner();
+          }, 3000);
         }
       }
     }
@@ -766,8 +855,8 @@
       const newBtn = oldBtn.cloneNode(true);
       oldBtn.parentNode.replaceChild(newBtn, oldBtn);
       
-      // Adicionar evento direto
-      newBtn.onclick = async function(e) {
+      // Adicionar evento direto e SIMPLES
+      newBtn.addEventListener('click', async function(e) {
         e.preventDefault();
         e.stopPropagation();
         
@@ -786,7 +875,7 @@
           }
           await fecharScanner();
         }
-      };
+      }, { passive: true });
       
       console.log("✅ Botão scanner configurado com sucesso!");
     }
@@ -812,33 +901,33 @@
       }
 
       // ✅ Botões do scanner
-      document.getElementById("btn-fechar-scan").onclick = fecharScanner;
+      document.getElementById("btn-fechar-scan").addEventListener('click', fecharScanner);
       
-      document.getElementById("btn-zoom-in").onclick = async function(){
+      document.getElementById("btn-zoom-in").addEventListener('click', async function(){
         if(!zoomSupported) {
           status_("<b>zoom não suportado</b>");
           return;
         }
         const step = 0.5;
         await applyZoom_(Math.min(zoomMax, zoomLevel + step));
-      };
+      });
 
-      document.getElementById("btn-zoom-out").onclick = async function(){
+      document.getElementById("btn-zoom-out").addEventListener('click', async function(){
         if(!zoomSupported) {
           status_("<b>zoom não suportado</b>");
           return;
         }
         const step = 0.5;
         await applyZoom_(Math.max(zoomMin, zoomLevel - step));
-      };
+      });
 
-      document.getElementById("btn-torch").onclick = async function(){
+      document.getElementById("btn-torch").addEventListener('click', async function(){
         if(!torchSupported) {
           status_("<b>lanterna não suportada</b>");
           return;
         }
         await toggleTorch_();
-      };
+      });
 
       // ✅ Fechar com ESC
       document.addEventListener("keydown", function(e){
@@ -870,6 +959,12 @@
           /* Evitar zoom em inputs */
           input[type="text"], input[type="number"] {
             font-size: 16px !important;
+          }
+          
+          /* Melhorar visualização do scanner no iOS */
+          #html5-reader video {
+            transform: scaleX(1) !important;
+            -webkit-transform: scaleX(1) !important;
           }
         `;
         document.head.appendChild(style);
