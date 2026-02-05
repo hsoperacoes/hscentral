@@ -119,10 +119,9 @@
 
     .scanner-close{
       position:absolute;top:15px;right:15px;
-      background:rgba(220, 38, 38, 0.95); /* Vermelho mais visível para iOS */
-      border:2px solid white !important;
-      border-radius:999px;padding:12px 16px !important;
-      font-size:14px !important;
+      background:rgba(17,24,39,.92);
+      border:1px solid #374151;
+      border-radius:999px;padding:10px 14px;font-size:12px;
       z-index:99999;
       box-shadow:0 10px 25px rgba(0,0,0,.35);
     }
@@ -258,25 +257,6 @@
     @media (max-width: 860px){
       .cards{grid-template-columns:1fr}
       .linha-botoes{flex-direction:column}
-    }
-
-    /* ✅ NOVOS ESTILOS PARA iOS */
-    @media (max-width: 768px) {
-      #scanner-view {
-        width: 95vw !important;
-        padding: 12px !important;
-      }
-      
-      #scanner video, #scanner canvas {
-        max-height: 60vh !important;
-        object-fit: cover !important;
-      }
-      
-      .scanner-info {
-        width: 95vw !important;
-        font-size: 13px !important;
-        padding: 10px 12px !important;
-      }
     }
   </style>
 </head>
@@ -455,11 +435,6 @@
     let syncTimer = null;
     let syncAtivo = false;
     let ultimoSyncHash = "";
-
-    // ✅ FUNÇÃO PARA DETECTAR iOS
-    function isIOS() {
-      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    }
 
     async function postJSON_(payload){
       const resp = await fetch(URL_API, {
@@ -915,32 +890,14 @@
       try{
         await pararScannerAtual_();
 
-        // ⚠️ CONFIGURAÇÃO ESPECIAL PARA iOS
-        if (isIOS()) {
-          // Para iOS, use configurações mais simples
-          if (modoScanner === "EAN") {
-            await iniciarHtml5EAN_iOS(scannerView, info);
-          } else {
-            await iniciarHtml5NF44_iOS(scannerView);
-          }
+        if(modoScanner === "EAN"){
+          await iniciarHtml5EAN_Bonito_(scannerView, info);
         } else {
-          // Configuração normal para Android/Desktop
-          if (modoScanner === "EAN") {
-            await iniciarHtml5EAN_Bonito_(scannerView, info);
-          } else {
-            await iniciarHtml5NF44_(scannerView);
-          }
+          await iniciarHtml5NF44_Simples_(scannerView);
         }
       }catch(ex){
-        console.error("Erro ao iniciar leitor:", ex);
-        
-        // Mensagem mais amigável para iOS
-        if (isIOS() && ex.message && ex.message.includes("permission")) {
-          alert("Permissão de câmera negada. Por favor, permita o acesso à câmera nas configurações do Safari.");
-        } else {
-          alert("Erro ao iniciar o leitor: " + (ex.message || ex));
-        }
-        
+        console.error("Erro ao iniciar scanner:", ex);
+        alert("Erro ao iniciar a câmera. Verifique as permissões.");
         scannerDiv.style.display = "none";
       }
     }
@@ -963,219 +920,42 @@
       }catch(e){}
     }
 
-    // ✅ NOVA FUNÇÃO PARA iOS - NF
-    async function iniciarHtml5NF44_iOS(scannerView) {
-      scannerView.innerHTML = `
-        <div style="
-          width:min(820px, 96vw);
-          background:#0b0b0c;
-          border:2px solid #673ab7;
-          border-radius:16px;
-          padding:14px;
-          box-shadow:0 18px 70px rgba(103,58,183,.25);
-        ">
-          <div id="html5-nf44" style="width:100%; border-radius:12px; overflow:hidden;"></div>
-          <div style="
-            margin-top:10px; font-size:13px; color:#cbd5e1;
-            background:rgba(31,41,55,.55);
-            border:1px solid #374151;
-            padding:10px 12px;border-radius:12px;
-          ">
-            <strong>iOS:</strong> Aponte para o código de barras da NF. Mantenha estável para leitura.
-          </div>
-        </div>
-      `;
-
+    // ✅ VERSÃO SIMPLIFICADA PARA NF - MAIS CONFIÁVEL
+    async function iniciarHtml5NF44_Simples_(scannerView){
+      scannerView.innerHTML = `<div id="html5-nf44" style="width:100%; border-radius:12px; overflow:hidden;"></div>`;
       html5ScannerNF = new Html5Qrcode("html5-nf44");
 
       const config = {
-        fps: 8, // FPS mais baixo para iOS
-        qrbox: { width: 280, height: 200 }, // Tamanho ajustado
-        experimentalFeatures: { useBarCodeDetectorIfSupported: false }, // Desativado para iOS
+        fps: 10, // FPS mais baixo para maior confiabilidade
+        qrbox: { width: 250, height: 180 }, // Tamanho adequado para códigos longos
         rememberLastUsedCamera: true,
-        aspectRatio: 1.333 // 4:3 para iOS
+        formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.EAN_13]
       };
 
-      let travadoNF = false;
-
-      try {
-        await html5ScannerNF.start(
-          { facingMode: "environment" },
-          config,
-          async (decodedText) => {
-            if (modoScanner !== "NF") return;
-            if (travadoNF) return;
-
-            const chave = extrairChave44(decodedText);
-            if (!chave) return;
-
-            travadoNF = true;
-            document.getElementById("chave").value = chave;
-            beepOk();
-
-            await new Promise(r => setTimeout(r, 200)); // Delay maior para iOS
-            await fecharLeitor();
-          },
-          (errorMsg) => {
-            console.log("NF Scanner error:", errorMsg);
-          }
-        );
-      } catch (error) {
-        if (error.message && error.message.includes("NotAllowedError")) {
-          throw new Error("Permissão de câmera negada no iOS");
-        }
-        throw error;
-      }
-    }
-
-    // ✅ NOVA FUNÇÃO PARA iOS - EAN
-    async function iniciarHtml5EAN_iOS(scannerView, info) {
-      scannerView.innerHTML = `<div id="html5-ean" style="width:min(720px, 92vw); border-radius:12px; overflow:hidden;"></div>`;
-      html5ScannerEAN = new Html5Qrcode("html5-ean");
-
-      // CONFIGURAÇÃO OTIMIZADA PARA iOS
-      const config = {
-        fps: 10, // FPS mais baixo para iOS
-        qrbox: { width: 250, height: 250 }, // Tamanho menor para melhor performance
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: false // Desativa detector experimental no iOS
-        },
-        rememberLastUsedCamera: true,
-        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
-        aspectRatio: 1.0 // Proporção quadrada para iOS
-      };
-
-      // ✅ VARIÁVEL DE CONTROLE EXTREMO
-      let emProcessamento = false;
-
-      // ✅ FUNÇÃO QUE PROCESSA UMA LEITURA COM SEGURANÇA EXTREMA
-      async function processarLeituraSegura(ean13) {
-        if (emProcessamento) return false;
-        emProcessamento = true;
-        scannerTravadoAbsolutamente = true;
-
-        try {
-          // ✅ 1. REGISTRA NO SERVIDOR
-          await registrarBipeServidor_(ean13);
-
-          // ✅ 2. BEEP
-          beepOk();
-
-          // ✅ 3. NOTIFICAÇÃO VISUAL
-          _mostrarNotificacaoEAN_(ean13);
-
-          // ✅ 4. ATUALIZA UI
-          scannerView.classList.add("scanner-paused");
-          info.classList.add("scanner-info-paused");
-          info.innerHTML = `
-            ✅ <strong>EAN ${ean13}</strong> registrado!<br/>
-            Toque em <span class="scanner-info-highlight">QUALQUER LUGAR</span> da tela para continuar.
-          `;
-
-          return true;
-        } catch (error) {
-          console.error("Erro no processamento:", error);
-          return false;
-        } finally {
-          // NÃO LIBERA AQUI - só no clique
-        }
-      }
-
-      try {
-        await html5ScannerEAN.start(
-          { facingMode: "environment" },
-          config,
-          async (decodedText) => {
-            if (modoScanner !== "EAN") return;
-            if (scannerTravadoAbsolutamente) return;
-
-            // ✅ FILTRO RÁPIDO DE TEXTO
-            const textoLimpo = String(decodedText || "").trim();
-            if (textoLimpo.length < 10) return;
-
-            const ean13 = extrairEAN13DoTexto(textoLimpo);
-            if (!ean13) return;
-
-            // ✅ VERIFICAÇÃO DUPLA DO EAN
-            if (ean13.length !== 13 || !isValidEAN13(ean13)) return;
-
-            // ✅ DEBOUNCE PARA iOS
-            const agora = Date.now();
-            if (ean13 === ultimoEanProcessado && (agora - timestampUltimoProcessamento) < 1000) {
-              return;
-            }
-
-            ultimoEanProcessado = ean13;
-            timestampUltimoProcessamento = agora;
-
-            // ✅ PROCESSAMENTO SEGURO
-            await processarLeituraSegura(ean13);
-          },
-          (errorMsg) => {
-            // Log reduzido para iOS
-            console.log("Scanner error:", errorMsg);
-          }
-        );
-      } catch (error) {
-        // Tentativa alternativa com configuração mais simples
-        if (error.message && error.message.includes("NotAllowedError")) {
-          throw new Error("Permissão de câmera negada no iOS");
-        }
-        throw error;
-      }
-    }
-
-    async function iniciarHtml5NF44_(scannerView){
-      scannerView.innerHTML = `
-        <div style="
-          width:min(820px, 96vw);
-          background:#0b0b0c;
-          border:2px solid #673ab7;
-          border-radius:16px;
-          padding:14px;
-          box-shadow:0 18px 70px rgba(103,58,183,.25);
-        ">
-          <div id="html5-nf44" style="width:100%; border-radius:12px; overflow:hidden;"></div>
-          <div style="
-            margin-top:10px; font-size:13px; color:#cbd5e1;
-            background:rgba(31,41,55,.55);
-            border:1px solid #374151;
-            padding:10px 12px;border-radius:12px;
-          ">
-            Aponte para o <b>código de barras</b> da NF. Ao ler, preenche a chave e fecha automaticamente.
-          </div>
-        </div>
-      `;
-
-      html5ScannerNF = new Html5Qrcode("html5-nf44");
-
-      const config = {
-        fps: 14,
-        qrbox: { width: 320, height: 220 },
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-        rememberLastUsedCamera: true
-      };
-
-      let travadoNF = false;
+      let jaProcessou = false;
 
       await html5ScannerNF.start(
         { facingMode: "environment" },
         config,
         async (decodedText) => {
           if(modoScanner !== "NF") return;
-          if(travadoNF) return;
+          if(jaProcessou) return;
 
           const chave = extrairChave44(decodedText);
           if(!chave) return;
 
-          travadoNF = true;
+          jaProcessou = true;
           document.getElementById("chave").value = chave;
           beepOk();
 
-          await new Promise(r => setTimeout(r, 120));
+          // Pequeno delay para mostrar que capturou
+          await new Promise(r => setTimeout(r, 300));
           await fecharLeitor();
         },
-        ()=>{}
+        (errorMessage) => {
+          // Apenas loga erros, não mostra para o usuário
+          console.log("Scanner NF error:", errorMessage);
+        }
       );
     }
 
@@ -1200,43 +980,36 @@
       setTimeout(()=>{ if(el.parentNode) el.remove(); }, 2600);
     }
 
-    // ✅ FUNÇÃO RADICALMENTE DIFERENTE - IMPEDE 100% BIPES DUPLOS
+    // ✅ FUNÇÃO SIMPLIFICADA PARA EAN - MAIS CONFIÁVEL
     async function iniciarHtml5EAN_Bonito_(scannerView, info){
       scannerView.innerHTML = `<div id="html5-ean" style="width:min(720px, 92vw); border-radius:12px; overflow:hidden;"></div>`;
       html5ScannerEAN = new Html5Qrcode("html5-ean");
 
       const config = {
-        fps: 5, // ✅ FPS MUITO BAIXO - IMPEDE MÚLTIPLOS FRAMES
-        qrbox: { width: 280, height: 280 },
-        experimentalFeatures: { 
-          useBarCodeDetectorIfSupported: true 
-        },
-        rememberLastUsedCamera: true
+        fps: 8, // FPS baixo para evitar processamento excessivo
+        qrbox: { width: 220, height: 220 }, // Tamanho quadrado para EAN
+        rememberLastUsedCamera: true,
+        formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13]
       };
 
-      // ✅ VARIÁVEL DE CONTROLE EXTREMO
       let emProcessamento = false;
-      let filaDeLeituras = [];
-      let timeoutProcessamento = null;
 
-      // ✅ FUNÇÃO QUE PROCESSA UMA LEITURA COM SEGURANÇA EXTREMA
-      async function processarLeituraSegura(ean13) {
-        if (emProcessamento) return false; // Já está processando outra
-        
+      // ✅ FUNÇÃO DE CONTROLE SIMPLES
+      async function processarLeitura(ean13) {
+        if (emProcessamento) return false;
         emProcessamento = true;
-        scannerTravadoAbsolutamente = true;
         
         try {
-          // ✅ 1. REGISTRA NO SERVIDOR
+          // ✅ REGISTRA NO SERVIDOR
           await registrarBipeServidor_(ean13);
           
-          // ✅ 2. BEEP
+          // ✅ BEEP
           beepOk();
           
-          // ✅ 3. NOTIFICAÇÃO VISUAL
+          // ✅ NOTIFICAÇÃO VISUAL
           _mostrarNotificacaoEAN_(ean13);
           
-          // ✅ 4. ATUALIZA UI
+          // ✅ ATUALIZA UI
           scannerView.classList.add("scanner-paused");
           info.classList.add("scanner-info-paused");
           info.innerHTML = `
@@ -1244,46 +1017,13 @@
             Toque em <span class="scanner-info-highlight">QUALQUER LUGAR</span> da tela para continuar.
           `;
           
-          // ✅ 5. LIMPA CACHE DE LEITURAS
-          cacheLeiturasInstantaneas = {};
-          
           return true;
         } catch (error) {
           console.error("Erro no processamento:", error);
           return false;
         } finally {
-          // NÃO LIBERA O scannerTravadoAbsolutamente AQUI - só no clique
+          emProcessamento = false;
         }
-      }
-
-      // ✅ DEBOUNCE AGGRESSIVO - 1 LEITURA POR SEGUNDO NO MÁXIMO
-      function debounceLeitura(ean13) {
-        const agora = Date.now();
-        
-        // ✅ 1. SE ESTÁ ABSOLUTAMENTE TRAVADO, IGNORA TUDO
-        if (scannerTravadoAbsolutamente) {
-          return false;
-        }
-        
-        // ✅ 2. SE É O MESMO EAN EM MENOS DE 1500ms, IGNORA
-        if (ean13 === ultimoEanProcessado && (agora - timestampUltimoProcessamento) < 1500) {
-          return false;
-        }
-        
-        // ✅ 3. VERIFICA NO CACHE DE LEITURAS INSTANTÂNEAS
-        if (cacheLeiturasInstantaneas[ean13]) {
-          const tempoCache = cacheLeiturasInstantaneas[ean13];
-          if (agora - tempoCache < 800) { // 800ms de cache
-            return false;
-          }
-        }
-        
-        // ✅ 4. ATUALIZA CACHE E TIMESTAMP
-        cacheLeiturasInstantaneas[ean13] = agora;
-        ultimoEanProcessado = ean13;
-        timestampUltimoProcessamento = agora;
-        
-        return true;
       }
 
       await html5ScannerEAN.start(
@@ -1302,14 +1042,21 @@
           // ✅ VERIFICAÇÃO DUPLA DO EAN
           if(ean13.length !== 13 || !isValidEAN13(ean13)) return;
           
-          // ✅ DEBOUNCE EXTREMO - REJEITA SE FOR MUITO RÁPIDO
-          if (!debounceLeitura(ean13)) return;
+          // ✅ DEBOUNCE SIMPLES
+          const agora = Date.now();
+          if(ean13 === ultimoEanProcessado && (agora - timestampUltimoProcessamento) < 800) {
+            return;
+          }
           
-          // ✅ PROCESSAMENTO SEGURO
-          await processarLeituraSegura(ean13);
+          ultimoEanProcessado = ean13;
+          timestampUltimoProcessamento = agora;
+          
+          // ✅ PROCESSAMENTO
+          await processarLeitura(ean13);
         },
         (errorMsg) => {
-          // Ignora erros
+          // Ignora erros de scanner
+          console.log("Scanner EAN error:", errorMsg);
         }
       );
     }
@@ -1355,7 +1102,7 @@
       }
     }
 
-    // ✅ EVENTO DE CLIQUE PARA LIBERAR - AGORA COM LIMPEZA TOTAL
+    // ✅ EVENTO DE CLIQUE PARA LIBERAR - SIMPLIFICADO
     document.addEventListener("click", async (e)=>{
       const scannerDiv = document.getElementById("scanner");
       if(scannerDiv.style.display !== "flex") return;
@@ -1364,23 +1111,17 @@
       if(e.target.closest(".scanner-close")) return;
       
       e.stopPropagation();
-      e.preventDefault();
       
-      // ✅ LIBERAÇÃO RADICAL
+      // ✅ LIBERAÇÃO
       scannerTravadoAbsolutamente = false;
       ultimoEanProcessado = "";
-      timestampUltimoProcessamento = 0;
-      cacheLeiturasInstantaneas = {};
       
       const scannerView = document.getElementById("scanner-view");
       const info = document.getElementById("scanner-info");
       
       scannerView.classList.remove("scanner-paused");
       info.classList.remove("scanner-info-paused");
-      info.innerHTML = `
-        ✅ <span class="scanner-info-highlight">Scanner liberado!</span><br/>
-        Aponte para o próximo EAN-13.
-      `;
+      info.innerHTML = `✅ Scanner liberado! Aponte para o próximo EAN-13.`;
       
       setTimeout(() => {
         if(modoScanner === "EAN" && scannerDiv.style.display === "flex") {
