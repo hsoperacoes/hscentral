@@ -6,8 +6,7 @@
   <title>GERENCIAL HS - Recebimento de Nota Fiscal</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <!-- ✅ Usar versão MAIS RECENTE do html5-qrcode -->
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
     * { box-sizing: border-box; }
@@ -171,79 +170,162 @@
       background: #0f0f12;
     }
 
-    /* ===================== SCANNER SIMPLIFICADO ===================== */
+    /* ===================== SCANNER FULLSCREEN (PORTRAIT) ===================== */
     #scannerOverlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: #000;
+      inset: 0;
       z-index: 100000;
       display: none;
-      flex-direction: column;
-    }
-
-    .scan-header {
-      background: rgba(0,0,0,0.9);
-      padding: 15px;
-      display: flex;
-      justify-content: space-between;
+      background: rgba(0,0,0,.92);
       align-items: center;
-      border-bottom: 1px solid #333;
+      justify-content: center;
+      padding: 12px;
+      backdrop-filter: blur(2px);
     }
 
+    .scan-card {
+      width: min(520px, 96vw);
+      height: min(820px, 92vh);
+      background: #0b0b0c;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 18px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .scan-top {
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(20,20,22,.95), rgba(10,10,12,.95));
+    }
     .scan-title {
-      color: white;
-      font-weight: bold;
-      font-size: 18px;
+      display:flex; align-items:center; gap:10px;
+      font-weight: 900;
+      color: #e5e7eb;
+      font-size: 14px;
+      letter-spacing:.2px;
     }
+    .scan-title i { color: #bbf7d0; }
 
-    .scan-close {
-      background: #673ab7;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 5px;
-      font-weight: bold;
+    .scan-actions { display:flex; gap:8px; align-items:center; }
+    .scan-btn {
+      width: auto !important;
+      padding: 10px 12px !important;
+      margin-top: 0 !important;
+      border-radius: 12px !important;
+      background: rgba(2,6,23,.88) !important;
+      border: 1px solid rgba(255,255,255,.14) !important;
+      color: #e5e7eb !important;
+      font-weight: 800 !important;
+      font-size: 12px !important;
       cursor: pointer;
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      min-height: 44px; /* iOS touch target */
+    }
+    .scan-btn:hover { filter: brightness(1.07); }
+    .scan-btn.primary {
+      background: rgba(103,58,183,.92) !important;
+      border-color: rgba(103,58,183,.55) !important;
     }
 
-    #reader {
+    .scan-body {
+      position: relative;
+      flex: 1;
+      padding: 10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .scan-frame {
+      position: relative;
       width: 100%;
       height: 100%;
-      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 2px solid rgba(103,58,183,.6);
+      box-shadow: 0 14px 40px rgba(103,58,183,.12);
+      background: #000;
+    }
+
+    #html5-reader { width: 100%; height: 100%; }
+
+    /* ✅ não corta o vídeo (melhora MUITO Code128) */
+    #html5-reader video, #html5-reader canvas {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+      background: #000;
+      -webkit-transform: scaleX(1); /* iOS fix */
+      transform: scaleX(1);
     }
 
     .scan-guide {
       position: absolute;
-      top: 50%;
       left: 50%;
+      top: 56%;
       transform: translate(-50%, -50%);
-      width: 80%;
-      height: 200px;
-      border: 2px solid #00ff00;
-      border-radius: 10px;
-      box-shadow: 0 0 0 1000px rgba(0,0,0,0.5);
-      z-index: 10;
+      width: min(92%, 520px);
+      height: 22%;
+      border: 2px solid rgba(187,247,208,.55);
+      border-radius: 14px;
+      box-shadow: 0 0 0 2000px rgba(0,0,0,.10) inset;
       pointer-events: none;
+    }
+    .scan-line {
+      position:absolute;
+      left: 8%;
+      right: 8%;
+      top: 50%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(187,247,208,.95), transparent);
+      box-shadow: 0 0 18px rgba(187,247,208,.35);
+      pointer-events: none;
+      animation: sweep 1.6s linear infinite;
+    }
+    @keyframes sweep {
+      0% { transform: translateY(-26px); opacity: .35; }
+      50% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(26px); opacity: .35; }
     }
 
     .scan-status {
-      position: absolute;
-      bottom: 20px;
-      left: 0;
-      right: 0;
-      text-align: center;
-      color: white;
-      background: rgba(0,0,0,0.7);
-      padding: 10px;
-      font-size: 14px;
+      padding: 10px 12px;
+      border-top: 1px solid rgba(255,255,255,.10);
+      background: rgba(10,10,12,.95);
+      font-size: 12px;
+      color: #cbd5e1;
+      line-height: 1.4;
     }
+    .scan-status b { color:#bbf7d0; }
 
+    input, button { touch-action: manipulation; }
+    
     /* iOS specific */
     input, select, textarea {
       font-size: 16px !important; /* Prevents iOS zoom */
+    }
+
+    /* Estilos específicos para iOS */
+    body.ios-device {
+      -webkit-tap-highlight-color: transparent;
+    }
+    body.ios-device button,
+    body.ios-device .scan-btn {
+      min-height: 44px !important;
+      cursor: pointer !important;
+    }
+    body.ios-device input[type="text"],
+    body.ios-device input[type="number"] {
+      font-size: 16px !important;
     }
   </style>
 </head>
@@ -309,21 +391,38 @@
     </div>
   </div>
 
-  <!-- ✅ SCANNER SIMPLIFICADO -->
+  <!-- ✅ SCANNER FULLSCREEN -->
   <div id="scannerOverlay">
-    <div class="scan-header">
-      <div class="scan-title">📷 Leitor de Código de Barras</div>
-      <button class="scan-close" id="btn-fechar-scan">Fechar</button>
+    <div class="scan-card">
+      <div class="scan-top">
+        <div class="scan-title">
+          <i class="fas fa-barcode"></i>
+          Leitor de Código (Chave 44)
+        </div>
+        <div class="scan-actions">
+          <button class="scan-btn" id="btn-zoom-out" title="Diminuir zoom"><i class="fas fa-search-minus"></i></button>
+          <button class="scan-btn" id="btn-zoom-in" title="Aumentar zoom"><i class="fas fa-search-plus"></i></button>
+          <button class="scan-btn" id="btn-torch" title="Lanterna"><i class="fas fa-bolt"></i></button>
+          <button class="scan-btn primary" id="btn-fechar-scan"><i class="fas fa-times"></i> Fechar</button>
+        </div>
+      </div>
+
+      <div class="scan-body">
+        <div class="scan-frame">
+          <div id="html5-reader"></div>
+          <div class="scan-guide"></div>
+          <div class="scan-line"></div>
+        </div>
+      </div>
+
+      <div class="scan-status" id="scanStatus">Status: <b>pronto</b></div>
     </div>
-    <div id="reader"></div>
-    <div class="scan-guide"></div>
-    <div class="scan-status" id="scanStatus">Aponte para o código de barras</div>
   </div>
 
   <script>
-    // ✅ SEU APPWEB
+    // ✅ SEU APPWEB (AGORA DO JEITO QUE O script_nf.js NORMALMENTE ESPERA)
     const URL_API = "https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec";
-    window.URL_API = URL_API;
+    window.URL_API = URL_API; // compat
     window.__HS_DISABLE_DYNAMSOFT__ = true;
 
     function abrirOverlayRecusa(mensagem) {
@@ -333,13 +432,11 @@
       ov.style.display = 'flex';
       document.body.style.overflow = 'hidden';
     }
-    
     function fecharOverlayRecusa() {
       const ov = document.getElementById('recusaOverlay');
       ov.style.display = 'none';
       document.body.style.overflow = '';
     }
-    
     document.addEventListener('DOMContentLoaded', () => {
       const btn = document.getElementById('btn-fechar-recusa');
       const ov = document.getElementById('recusaOverlay');
@@ -350,9 +447,10 @@
       });
     });
 
-    // ✅ LOGOUT FORÇADO
+    // ✅ LOGOUT FORÇADO (pra voltar e trocar filial SEM travar)
     function logoutNF_forcado(){
       try{
+        // remove só chaves do NF, sem apagar outras coisas do HS Central
         const toRemove = [];
         for(let i=0; i<localStorage.length; i++){
           const k = localStorage.key(i);
@@ -372,11 +470,13 @@
         toRemove.forEach(k => localStorage.removeItem(k));
       }catch(e){}
 
+      // volta telas
       const login = document.getElementById("login-nf");
       const principal = document.getElementById("principal-nf");
       if(login) login.classList.remove("hidden");
       if(principal) principal.classList.add("hidden");
 
+      // limpa campos
       const chave = document.getElementById("chave-nf");
       if(chave) chave.value = "";
       const res = document.getElementById("resultado-nf");
@@ -386,6 +486,7 @@
       const err1 = document.getElementById("erro-nf");
       if(err1) err1.textContent = "";
 
+      // garante foco
       const cod = document.getElementById("codigo-nf");
       if(cod) cod.focus();
     }
@@ -395,319 +496,493 @@
   <script src="script_nf.js?v=1.0.4"></script>
 
   <script>
-    // ========= SCANNER SIMPLIFICADO PARA iOS =========
-    let html5QrCode = null;
+    // ========= Scanner COMPLETO - OTIMIZADO PARA iOS =========
+    let html5Scanner = null;
     let scannerOpen = false;
-    
+    let travado = false;
+
+    let currentTrack = null;
+    let zoomLevel = 1;
+    let zoomMin = 1;
+    let zoomMax = 1;
+    let torchOn = false;
+    let torchSupported = false;
+    let zoomSupported = false;
+
     // Detectar iOS
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    
-    console.log("📱 Sistema:", isIOS ? "iOS" : "Android/Desktop");
-    
-    function status_(mensagem) {
-      const statusEl = document.getElementById("scanStatus");
-      if(statusEl) statusEl.textContent = mensagem;
+
+    // ✅ DEBUG iOS
+    if (isIOS) {
+      console.log("📱 iOS detectado - Aplicando otimizações");
+      console.log("User Agent:", navigator.userAgent);
+      console.log("iOS Version:", navigator.userAgent.match(/OS (\d+)_/)?.[1]);
+      console.log("Safari Version:", navigator.userAgent.match(/Version\/(\d+)/)?.[1]);
+      console.log("MediaDevices available:", !!navigator.mediaDevices);
+      console.log("getUserMedia available:", !!navigator.mediaDevices?.getUserMedia);
+      
+      // Adicionar classe iOS ao body
+      document.body.classList.add('ios-device');
+      
+      // Forçar meta tag viewport para iOS
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 
+          'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
+        );
+      }
     }
-    
-    // ✅ FUNÇÃO SIMPLIFICADA para extrair chave de 44 dígitos
-    function extrairChave44(texto) {
-      if(!texto) return "";
+
+    function status_(html){
+      const statusEl = document.getElementById("scanStatus");
+      if(statusEl) statusEl.innerHTML = "Status: " + html;
+    }
+
+    // ✅ FUNÇÃO CRÍTICA: Extrair chave de 44 dígitos (MELHORADA)
+    function extrairChave44(texto){
+      console.log("📄 Texto recebido para extração:", texto);
       
       // Remove tudo que não é número
-      const numeros = texto.replace(/\D/g, "");
+      const only = String(texto || "").replace(/\D/g, "");
+      console.log("🔢 Apenas números:", only);
       
-      // Procura por exatamente 44 dígitos consecutivos
-      if(numeros.length >= 44) {
-        // Tenta encontrar 44 dígitos consecutivos
-        for(let i = 0; i <= numeros.length - 44; i++) {
-          const candidato = numeros.substr(i, 44);
-          if(/^\d{44}$/.test(candidato)) {
-            return candidato;
-          }
+      // Se não tem pelo menos 44 dígitos, retorna vazio
+      if (only.length < 44) {
+        console.log("⚠️ Texto com menos de 44 dígitos:", only.length);
+        return "";
+      }
+      
+      // Procura por 44 dígitos consecutivos
+      for (let i = 0; i <= only.length - 44; i++) {
+        const cand = only.slice(i, i + 44);
+        if (/^\d{44}$/.test(cand)) {
+          console.log("✅ Chave encontrada:", cand.substring(0, 10) + "...");
+          return cand;
         }
       }
       
+      console.log("❌ Nenhuma sequência de 44 dígitos encontrada");
       return "";
     }
-    
-    // ✅ FUNÇÃO para preencher o campo
-    function preencherChave(chave) {
-      const campo = document.getElementById("chave-nf");
-      if(campo) {
-        campo.value = chave;
-        
-        // Disparar eventos para garantir que outros scripts vejam a mudança
-        campo.dispatchEvent(new Event('input', { bubbles: true }));
-        campo.dispatchEvent(new Event('change', { bubbles: true }));
-        
-        // Focar no campo
-        setTimeout(() => {
-          campo.focus();
-          campo.setSelectionRange(chave.length, chave.length);
-        }, 100);
-        
-        return true;
-      }
-      return false;
+
+    function beepOk(){
+      try{
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "square"; o.frequency.value = 880;
+        g.gain.value = 0.10;
+        o.connect(g); g.connect(ctx.destination);
+        o.start(); setTimeout(()=>o.stop(), 120);
+      }catch(e){}
+      try{ if(navigator.vibrate) navigator.vibrate(60); }catch(e){}
     }
-    
-    // ✅ FUNÇÃO para processar leitura
-    function processarLeitura(textoLido) {
-      console.log("📖 Texto lido:", textoLido);
+
+    async function applyZoom_(z){
+      if(!currentTrack || !zoomSupported) return;
+      try{
+        await currentTrack.applyConstraints({ advanced: [{ zoom: z }] });
+        zoomLevel = z;
+        status_(`<b>lendo…</b><br/>Zoom: ${zoomLevel.toFixed(1)}x`);
+      }catch(e){}
+    }
+
+    async function toggleTorch_(){
+      if(!currentTrack || !torchSupported) return;
+      try{
+        torchOn = !torchOn;
+        await currentTrack.applyConstraints({ advanced: [{ torch: torchOn }] });
+        status_(`<b>lendo…</b><br/>Lanterna: ${torchOn ? "ON" : "OFF"}`);
+      }catch(e){}
+    }
+
+    async function fecharScanner(){
+      scannerOpen = false;
+      travado = false;
+      torchOn = false;
+      currentTrack = null;
+      zoomSupported = false;
+      torchSupported = false;
+
+      const ov = document.getElementById("scannerOverlay");
+      if(ov) ov.style.display = "none";
+      document.body.style.overflow = "";
+
+      try{
+        if(html5Scanner){
+          await html5Scanner.stop().catch(()=>{});
+          await html5Scanner.clear().catch(()=>{});
+          html5Scanner = null;
+        }
+        
+        // Liberar stream de câmera
+        const video = document.querySelector("#html5-reader video");
+        if (video && video.srcObject) {
+          const stream = video.srcObject;
+          const tracks = stream.getTracks();
+          tracks.forEach(track => track.stop());
+          video.srcObject = null;
+        }
+      }catch(e){
+        console.warn("Erro ao fechar scanner:", e);
+      }
+
+      status_("<b>fechado</b>");
+    }
+
+    // ✅ FUNÇÃO CRÍTICA: Processar leitura com validação melhorada
+    async function processarLeitura(decodedText) {
+      console.log("🔍 Processando leitura:", decodedText);
       
-      const chave = extrairChave44(textoLido);
+      if(!scannerOpen || travado) {
+        console.log("⚠️ Scanner fechado ou travado");
+        return false;
+      }
+      
+      const chave = extrairChave44(decodedText);
       console.log("🔑 Chave extraída:", chave);
       
-      if(chave && chave.length === 44) {
-        status_("✅ Código lido com sucesso!");
+      if(!chave){
+        status_(`<b>leu algo</b><br/>"${decodedText.substring(0, 20)}..."<br/>Procurando 44 dígitos...`);
+        return false;
+      }
+
+      // Valida se realmente tem 44 dígitos
+      if (chave.length !== 44 || !/^\d{44}$/.test(chave)) {
+        status_(`<b style="color:#ff6b6b">Formato inválido</b><br/>Encontrado: ${chave.length} dígitos`);
+        return false;
+      }
+
+      travado = true;
+      
+      // Mostrar que capturou
+      status_(`<b style="color:#bbf7d0">✅ CAPTURADO!</b><br/>Chave: ${chave.substring(0, 10)}...`);
+      
+      // ✅ MÉTODO DIRETO para preencher o campo
+      const chaveInput = document.getElementById("chave-nf");
+      if (chaveInput) {
+        console.log("📝 Preenchendo campo chave-nf com:", chave);
+        chaveInput.value = chave;
         
-        // Preencher o campo
-        if(preencherChave(chave)) {
-          // Fechar scanner após 0.5 segundos
-          setTimeout(fecharScanner, 500);
-          return true;
-        }
+        // Disparar eventos para atualizar qualquer validação
+        chaveInput.dispatchEvent(new Event('input', { bubbles: true }));
+        chaveInput.dispatchEvent(new Event('change', { bubbles: true }));
+        chaveInput.dispatchEvent(new Event('blur', { bubbles: true }));
+        
+        // Foco no campo
+        setTimeout(() => {
+          chaveInput.focus();
+          // Mover cursor para o final
+          chaveInput.setSelectionRange(chave.length, chave.length);
+        }, 100);
       } else {
-        status_("❌ Não encontrei uma chave de 44 dígitos. Tente novamente.");
-        console.log("Texto não contém 44 dígitos:", textoLido);
+        console.error("❌ Campo chave-nf não encontrado!");
       }
       
-      return false;
+      // Beep de confirmação
+      beepOk();
+      
+      // Pequeno delay para mostrar confirmação
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Fechar scanner
+      await fecharScanner();
+      
+      return true;
     }
-    
-    // ✅ FUNÇÃO para iniciar scanner
-    async function iniciarScanner() {
-      if(scannerOpen) return;
+
+    // ✅ Função auxiliar para mostrar erro no iOS
+    function mostrarErroIOS(error) {
+      let mensagem = "";
       
-      console.log("🚀 Iniciando scanner...");
+      if (error.name === 'NotAllowedError') {
+        mensagem = `
+          <b style="color:#ff6b6b">❌ Permissão negada</b><br/>
+          Para usar o scanner no iOS:<br/><br/>
+          1. Toque em <b>"Permitir"</b> quando o iOS perguntar<br/>
+          2. Se negou antes: Ajustes > Safari > Câmera > Permitir<br/>
+          3. Tente novamente
+        `;
+      } else if (error.name === 'NotFoundError') {
+        mensagem = `
+          <b style="color:#ff6b6b">📷 Câmera não encontrada</b><br/>
+          Verifique se há uma câmera disponível.
+        `;
+      } else if (error.message.includes('requestDevice')) {
+        mensagem = `
+          <b style="color:#ff6b6b">🚫 Problema de hardware</b><br/>
+          Reinicie o Safari e tente novamente.
+        `;
+      } else {
+        mensagem = `
+          <b style="color:#ff6b6b">Erro: ${error.message || "Desconhecido"}</b><br/>
+          Tente:<br/>
+          1. Fechar e abrir o scanner<br/>
+          2. Reiniciar o Safari<br/>
+          3. Usar digitação manual
+        `;
+      }
       
-      // Limpar campo se necessário
-      const campoChave = document.getElementById("chave-nf");
-      if(campoChave && campoChave.value.trim() !== '') {
-        if(!confirm("Já existe um código no campo. Deseja limpar e escanear um novo?")) {
+      status_(mensagem);
+      
+      setTimeout(() => {
+        fecharScanner();
+        
+        // Mostrar erro também na tela principal
+        const erroDiv = document.getElementById("erro-nf2");
+        if (erroDiv) {
+          erroDiv.innerHTML = `<small>⚠️ Problema no scanner iOS. Use digitação manual ou tente em outro dispositivo.</small>`;
+        }
+      }, 5000);
+    }
+
+    async function abrirScanner(){
+      console.log("🚀 Abrindo scanner...");
+      
+      const chaveInput = document.getElementById("chave-nf");
+      
+      // Verificar se já tem conteúdo
+      if (chaveInput && chaveInput.value.trim() !== '') {
+        if (!confirm("O campo já contém um código. Deseja limpar e escanear um novo?")) {
           return;
         }
-        campoChave.value = "";
+        chaveInput.value = "";
       }
-      
-      // Mostrar overlay
-      const overlay = document.getElementById("scannerOverlay");
-      if(overlay) overlay.style.display = 'flex';
-      document.body.style.overflow = 'hidden';
-      
+
+      const ov = document.getElementById("scannerOverlay");
+      if(ov) ov.style.display = "flex";
+      document.body.style.overflow = "hidden";
+
       scannerOpen = true;
-      status_("🔄 Iniciando câmera...");
-      
+      travado = false;
+      status_("<b>abrindo câmera…</b>");
+
+      try{
+        if(html5Scanner){
+          await html5Scanner.stop().catch(()=>{});
+          await html5Scanner.clear().catch(()=>{});
+          html5Scanner = null;
+        }
+      }catch(e){}
+
+      html5Scanner = new Html5Qrcode("html5-reader");
+      console.log("📷 Html5Qrcode instanciado");
+
+      // ✅ CONFIGURAÇÃO OTIMIZADA
+      const config = {
+        fps: isIOS ? 10 : 30, // iOS funciona melhor com FPS mais baixo
+        qrbox: { 
+          width: isIOS ? 250 : 300,
+          height: isIOS ? 150 : 200
+        },
+        aspectRatio: 1.0,
+        disableFlip: false,
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: !isIOS // Desativar apenas no iOS
+        },
+        rememberLastUsedCamera: true,
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E
+        ]
+      };
+
+      status_("<b>procurando o código…</b><br/>Aproxime e alinhe no retângulo.");
+
       try {
-        // Criar nova instância
-        html5QrCode = new Html5Qrcode("reader");
-        
-        // ✅ CONFIGURAÇÃO SIMPLIFICADA que FUNCIONA no iOS
-        const config = {
-          fps: isIOS ? 10 : 30,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
-          disableFlip: false
+        // ✅ Callback direto e simples
+        const onScanSuccess = async (decodedText, decodedResult) => {
+          console.log("✅ Código detectado:", decodedText);
+          console.log("📊 Resultado detalhado:", decodedResult);
+          
+          // Processar imediatamente
+          await processarLeitura(decodedText);
         };
-        
-        // ✅ Câmera a usar
-        const cameraConfig = { 
-          facingMode: "environment" 
-        };
-        
-        // ✅ Função de sucesso
-        const onSuccess = (decodedText, decodedResult) => {
-          console.log(`✅ Leitura bem-sucedida: ${decodedText}`);
-          processarLeitura(decodedText);
-        };
-        
-        // ✅ Função de erro (silenciosa)
-        const onError = (error) => {
-          // Ignorar erros comuns
-          if(error && !error.includes("NotFoundException")) {
-            console.warn("Erro no scanner:", error);
+
+        const onScanFailure = (error) => {
+          // Ignorar erros normais (como "NotFoundException")
+          if (error && !error.toString().includes("NotFound")) {
+            console.log("Scanner error:", error);
           }
         };
-        
-        // Iniciar scanner
-        await html5QrCode.start(
-          cameraConfig,
+
+        // ✅ Iniciar scanner
+        await html5Scanner.start(
+          { facingMode: "environment" },
           config,
-          onSuccess,
-          onError
+          onScanSuccess,
+          onScanFailure
         );
-        
-        status_("👁️ Aponte a câmera para o código de barras");
+
         console.log("✅ Scanner iniciado com sucesso!");
-        
-      } catch(error) {
+        status_("<b>✅ Scanner pronto!</b><br/>Aponte para o código de barras.");
+
+      } catch (error) {
         console.error("❌ Erro ao iniciar scanner:", error);
         
-        // ✅ TENTATIVA ALTERNATIVA com câmera frontal
-        if(error.message && error.message.includes("environment")) {
+        // ✅ TENTATIVA ALTERNATIVA se "environment" falhar
+        if (error.message && error.message.includes("environment")) {
           console.log("🔄 Tentando câmera frontal...");
-          status_("Tentando câmera frontal...");
+          status_("<b>Tentando câmera frontal…</b>");
           
           try {
-            await html5QrCode.start(
-              { facingMode: "user" },
+            await html5Scanner.start(
+              { facingMode: "user" }, // Tentar câmera frontal
               config,
-              onSuccess,
-              onError
+              async (decodedText) => {
+                await processarLeitura(decodedText);
+              }
             );
-            status_("👁️ Usando câmera frontal - Aponte para o código");
-          } catch(error2) {
-            mostrarErroScanner(error2);
+            status_("<b>✅ Usando câmera frontal</b><br/>Aponte para o código.");
+          } catch (error2) {
+            console.error("❌ Erro com câmera frontal:", error2);
+            mostrarErroIOS(error2);
           }
         } else {
-          mostrarErroScanner(error);
+          mostrarErroIOS(error);
         }
       }
     }
-    
-    // ✅ FUNÇÃO para mostrar erro
-    function mostrarErroScanner(error) {
-      let mensagem = "Erro ao acessar a câmera";
-      
-      if(error.name === 'NotAllowedError') {
-        mensagem = "Permissão da câmera negada. Verifique as configurações do navegador.";
-      } else if(error.name === 'NotFoundError') {
-        mensagem = "Câmera não encontrada.";
-      } else if(error.name === 'NotSupportedError') {
-        mensagem = "Recurso não suportado neste navegador.";
-      } else if(error.name === 'NotReadableError') {
-        mensagem = "Câmera já em uso por outro aplicativo.";
-      }
-      
-      status_(`❌ ${mensagem}`);
-      
-      // Mostrar alerta
-      alert(`Erro no scanner: ${mensagem}\n\nUse a digitação manual.`);
-      
-      // Fechar scanner após 3 segundos
-      setTimeout(fecharScanner, 3000);
+
+    async function toggleScanner(){
+      if(scannerOpen) return fecharScanner();
+      return abrirScanner();
     }
-    
-    // ✅ FUNÇÃO para fechar scanner
-    async function fecharScanner() {
-      console.log("🛑 Fechando scanner...");
-      
-      if(html5QrCode) {
-        try {
-          await html5QrCode.stop();
-          await html5QrCode.clear();
-        } catch(error) {
-          console.warn("Erro ao parar scanner:", error);
-        }
-        html5QrCode = null;
-      }
-      
-      const overlay = document.getElementById("scannerOverlay");
-      if(overlay) overlay.style.display = 'none';
-      document.body.style.overflow = '';
-      
-      scannerOpen = false;
-      status_("Pronto");
-    }
-    
-    // ✅ CONFIGURAR BOTÃO do scanner
-    function configurarBotaoScanner() {
-      const botao = document.getElementById("btn-leitor-nf");
-      
-      if(!botao) {
-        console.warn("Botão scanner não encontrado, tentando novamente...");
-        setTimeout(configurarBotaoScanner, 500);
+
+    // ✅ Configuração ROBUSTA do botão
+    function configurarBotaoLeitor() {
+      const btn = document.getElementById("btn-leitor-nf");
+      if(!btn) {
+        console.warn("Botão btn-leitor-nf não encontrado, tentando novamente...");
+        setTimeout(configurarBotaoLeitor, 500);
         return;
       }
+
+      // Remover qualquer evento anterior
+      const oldBtn = btn;
+      const newBtn = oldBtn.cloneNode(true);
+      oldBtn.parentNode.replaceChild(newBtn, oldBtn);
       
-      // Remover event listeners antigos
-      const novoBotao = botao.cloneNode(true);
-      botao.parentNode.replaceChild(novoBotao, botao);
-      
-      // Adicionar novo listener
-      novoBotao.addEventListener('click', async function(e) {
+      // Adicionar evento direto e SIMPLES
+      newBtn.addEventListener('click', async function(e) {
         e.preventDefault();
         e.stopPropagation();
         
         console.log("📸 Botão scanner clicado!");
         
-        // Limpar mensagens de erro
+        // Limpar mensagens de erro anteriores
         const errorDiv = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
         if(errorDiv) errorDiv.textContent = "";
         
         try {
-          await iniciarScanner();
-        } catch(error) {
-          console.error("Erro ao abrir scanner:", error);
-          alert("Não foi possível abrir o scanner. Use a digitação manual.");
+          await toggleScanner();
+        } catch(ex) {
+          console.error("Erro no scanner:", ex);
+          if(errorDiv) {
+            errorDiv.textContent = "Erro: " + (ex.message || ex);
+          }
+          await fecharScanner();
         }
-      });
+      }, { passive: true });
       
-      console.log("✅ Botão scanner configurado!");
+      console.log("✅ Botão scanner configurado com sucesso!");
     }
-    
-    // ✅ INICIALIZAR quando o DOM estiver pronto
-    document.addEventListener("DOMContentLoaded", function() {
-      console.log("🚀 Inicializando sistema...");
+
+    document.addEventListener("DOMContentLoaded", function(){
+      console.log("🚀 DOMContentLoaded - Iniciando configuração...");
       
-      // Configurar botão scanner
-      configurarBotaoScanner();
+      // Configurar botão leitor
+      configurarBotaoLeitor();
       
-      // Configurar botão fechar scanner
-      const btnFechar = document.getElementById("btn-fechar-scan");
-      if(btnFechar) {
-        btnFechar.addEventListener('click', fecharScanner);
-      }
-      
-      // Configurar botão logout
+      // Reconfigurar após delays (caso script_nf.js altere o DOM)
+      setTimeout(configurarBotaoLeitor, 300);
+      setTimeout(configurarBotaoLeitor, 1000);
+      setTimeout(configurarBotaoLeitor, 2000);
+
+      // ✅ logout funcional
       const btnSair = document.getElementById("btn-sair-nf");
-      if(btnSair) {
-        btnSair.onclick = function(e) {
+      if(btnSair){
+        btnSair.onclick = function(e){
           e.preventDefault();
           logoutNF_forcado();
         };
       }
+
+      // ✅ Botões do scanner
+      const btnFecharScan = document.getElementById("btn-fechar-scan");
+      if(btnFecharScan) btnFecharScan.addEventListener('click', fecharScanner);
       
-      // Fechar com ESC
-      document.addEventListener("keydown", function(e) {
+      const btnZoomIn = document.getElementById("btn-zoom-in");
+      if(btnZoomIn) btnZoomIn.addEventListener('click', async function(){
+        if(!zoomSupported) {
+          status_("<b>zoom não suportado</b>");
+          return;
+        }
+        const step = 0.5;
+        await applyZoom_(Math.min(zoomMax, zoomLevel + step));
+      });
+
+      const btnZoomOut = document.getElementById("btn-zoom-out");
+      if(btnZoomOut) btnZoomOut.addEventListener('click', async function(){
+        if(!zoomSupported) {
+          status_("<b>zoom não suportado</b>");
+          return;
+        }
+        const step = 0.5;
+        await applyZoom_(Math.max(zoomMin, zoomLevel - step));
+      });
+
+      const btnTorch = document.getElementById("btn-torch");
+      if(btnTorch) btnTorch.addEventListener('click', async function(){
+        if(!torchSupported) {
+          status_("<b>lanterna não suportada</b>");
+          return;
+        }
+        await toggleTorch_();
+      });
+
+      // ✅ Fechar com ESC
+      document.addEventListener("keydown", function(e){
         if(e.key === "Escape" && scannerOpen) {
           fecharScanner();
         }
       });
-      
-      // Fechar ao clicar fora (no overlay)
-      const overlay = document.getElementById("scannerOverlay");
-      if(overlay) {
-        overlay.addEventListener('click', function(e) {
-          if(e.target === overlay) {
+
+      // ✅ Fechar ao clicar fora (no overlay)
+      const scannerOverlay = document.getElementById("scannerOverlay");
+      if(scannerOverlay) {
+        scannerOverlay.addEventListener('click', function(e) {
+          if(e.target === scannerOverlay) {
             fecharScanner();
           }
         });
       }
-      
-      // Reconfigurar após algum tempo (caso outro script altere o DOM)
-      setTimeout(configurarBotaoScanner, 1000);
-      setTimeout(configurarBotaoScanner, 3000);
     });
-    
-    // ✅ EXPORTAR funções para debug
-    window.scannerDebug = {
-      abrir: iniciarScanner,
+
+    // ✅ Expor função para debugging
+    window.debugScanner = {
+      abrir: abrirScanner,
       fechar: fecharScanner,
-      testar: function(texto) {
-        console.log("Testando com:", texto);
+      status: scannerOpen,
+      testarLeitura: function(texto) {
+        console.log("🧪 Testando leitura manual com:", texto);
         return processarLeitura(texto);
       },
-      status: function() {
-        return {
-          aberto: scannerOpen,
-          temScanner: !!html5QrCode,
-          iOS: isIOS
-        };
+      config: function() {
+        console.log("Scanner config:", {
+          isIOS: isIOS,
+          scannerOpen: scannerOpen,
+          html5Scanner: !!html5Scanner,
+          btnLeitor: document.getElementById("btn-leitor-nf"),
+          campoChave: document.getElementById("chave-nf"),
+          hasPermission: navigator.mediaDevices && navigator.mediaDevices.getUserMedia
+        });
       }
     };
-    
-    console.log("✅ Sistema de scanner carregado!");
   </script>
 </body>
 </html>
