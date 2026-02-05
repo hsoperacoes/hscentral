@@ -534,16 +534,34 @@
     }
 
     function status_(html){
-      document.getElementById("scanStatus").innerHTML = "Status: " + html;
+      const statusEl = document.getElementById("scanStatus");
+      if(statusEl) statusEl.innerHTML = "Status: " + html;
     }
 
+    // ✅ FUNÇÃO CRÍTICA: Extrair chave de 44 dígitos (MELHORADA)
     function extrairChave44(texto){
+      console.log("📄 Texto recebido para extração:", texto);
+      
+      // Remove tudo que não é número
       const only = String(texto || "").replace(/\D/g, "");
-      if (only.length < 44) return "";
-      for (let i=0; i<=only.length-44; i++){
-        const cand = only.slice(i, i+44);
-        if (/^\d{44}$/.test(cand)) return cand;
+      console.log("🔢 Apenas números:", only);
+      
+      // Se não tem pelo menos 44 dígitos, retorna vazio
+      if (only.length < 44) {
+        console.log("⚠️ Texto com menos de 44 dígitos:", only.length);
+        return "";
       }
+      
+      // Procura por 44 dígitos consecutivos
+      for (let i = 0; i <= only.length - 44; i++) {
+        const cand = only.slice(i, i + 44);
+        if (/^\d{44}$/.test(cand)) {
+          console.log("✅ Chave encontrada:", cand.substring(0, 10) + "...");
+          return cand;
+        }
+      }
+      
+      console.log("❌ Nenhuma sequência de 44 dígitos encontrada");
       return "";
     }
 
@@ -587,7 +605,7 @@
       torchSupported = false;
 
       const ov = document.getElementById("scannerOverlay");
-      ov.style.display = "none";
+      if(ov) ov.style.display = "none";
       document.body.style.overflow = "";
 
       try{
@@ -612,21 +630,65 @@
       status_("<b>fechado</b>");
     }
 
-    // ✅ FUNÇÃO CRÍTICA: Verifica se há permissão da câmera
-    async function checkCameraPermission() {
-      try {
-        // Método direto para iOS
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: "environment" } 
-        });
-        
-        // Se chegou aqui, tem permissão
-        stream.getTracks().forEach(track => track.stop());
-        return true;
-      } catch (error) {
-        console.log("Permissão não concedida:", error);
+    // ✅ FUNÇÃO CRÍTICA: Processar leitura com validação melhorada
+    async function processarLeitura(decodedText) {
+      console.log("🔍 Processando leitura:", decodedText);
+      
+      if(!scannerOpen || travado) {
+        console.log("⚠️ Scanner fechado ou travado");
         return false;
       }
+      
+      const chave = extrairChave44(decodedText);
+      console.log("🔑 Chave extraída:", chave);
+      
+      if(!chave){
+        status_(`<b>leu algo</b><br/>"${decodedText.substring(0, 20)}..."<br/>Procurando 44 dígitos...`);
+        return false;
+      }
+
+      // Valida se realmente tem 44 dígitos
+      if (chave.length !== 44 || !/^\d{44}$/.test(chave)) {
+        status_(`<b style="color:#ff6b6b">Formato inválido</b><br/>Encontrado: ${chave.length} dígitos`);
+        return false;
+      }
+
+      travado = true;
+      
+      // Mostrar que capturou
+      status_(`<b style="color:#bbf7d0">✅ CAPTURADO!</b><br/>Chave: ${chave.substring(0, 10)}...`);
+      
+      // ✅ MÉTODO DIRETO para preencher o campo
+      const chaveInput = document.getElementById("chave-nf");
+      if (chaveInput) {
+        console.log("📝 Preenchendo campo chave-nf com:", chave);
+        chaveInput.value = chave;
+        
+        // Disparar eventos para atualizar qualquer validação
+        chaveInput.dispatchEvent(new Event('input', { bubbles: true }));
+        chaveInput.dispatchEvent(new Event('change', { bubbles: true }));
+        chaveInput.dispatchEvent(new Event('blur', { bubbles: true }));
+        
+        // Foco no campo
+        setTimeout(() => {
+          chaveInput.focus();
+          // Mover cursor para o final
+          chaveInput.setSelectionRange(chave.length, chave.length);
+        }, 100);
+      } else {
+        console.error("❌ Campo chave-nf não encontrado!");
+      }
+      
+      // Beep de confirmação
+      beepOk();
+      
+      // Pequeno delay para mostrar confirmação
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Fechar scanner
+      await fecharScanner();
+      
+      return true;
     }
 
     // ✅ Função auxiliar para mostrar erro no iOS
@@ -674,47 +736,9 @@
       }, 5000);
     }
 
-    // ✅ NOVA FUNÇÃO: Processar leitura com validação melhorada
-    async function processarLeitura(decodedText) {
-      if(!scannerOpen || travado) return false;
-      
-      const chave = extrairChave44(decodedText);
-      if(!chave){
-        status_(`<b>leu algo</b><br/>"${decodedText.substring(0, 20)}..."<br/>Procurando 44 dígitos...`);
-        return false;
-      }
-
-      // Valida se realmente tem 44 dígitos
-      if (chave.length !== 44 || !/^\d{44}$/.test(chave)) {
-        status_(`<b style="color:#ff6b6b">Formato inválido</b><br/>Encontrado: ${chave.length} dígitos`);
-        return false;
-      }
-
-      travado = true;
-      
-      // Mostrar que capturou
-      status_(`<b style="color:#bbf7d0">✅ CAPTURADO!</b><br/>Chave: ${chave.substring(0, 10)}...`);
-      
-      // Preencher campo
-      const chaveInput = document.getElementById("chave-nf");
-      if (chaveInput) {
-        chaveInput.value = chave;
-        chaveInput.focus();
-      }
-      
-      // Beep de confirmação
-      beepOk();
-      
-      // Pequeno delay para mostrar confirmação
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Fechar scanner
-      await fecharScanner();
-      
-      return true;
-    }
-
     async function abrirScanner(){
+      console.log("🚀 Abrindo scanner...");
+      
       const chaveInput = document.getElementById("chave-nf");
       
       // Verificar se já tem conteúdo
@@ -726,7 +750,7 @@
       }
 
       const ov = document.getElementById("scannerOverlay");
-      ov.style.display = "flex";
+      if(ov) ov.style.display = "flex";
       document.body.style.overflow = "hidden";
 
       scannerOpen = true;
@@ -742,53 +766,67 @@
       }catch(e){}
 
       html5Scanner = new Html5Qrcode("html5-reader");
+      console.log("📷 Html5Qrcode instanciado");
 
-      // ✅ CONFIGURAÇÃO ESPECIAL PARA iOS QUE FUNCIONA
+      // ✅ CONFIGURAÇÃO OTIMIZADA
       const config = {
-        fps: 10, // iOS funciona melhor com FPS mais baixo
+        fps: isIOS ? 10 : 30, // iOS funciona melhor com FPS mais baixo
         qrbox: { 
-          width: 250,
-          height: 150
+          width: isIOS ? 250 : 300,
+          height: isIOS ? 150 : 200
         },
         aspectRatio: 1.0,
-        disableFlip: false, // IMPORTANTE: deixar false no iOS
+        disableFlip: false,
         experimentalFeatures: {
-          useBarCodeDetectorIfSupported: false // DESATIVAR no iOS
+          useBarCodeDetectorIfSupported: !isIOS // Desativar apenas no iOS
         },
-        rememberLastUsedCamera: false,
+        rememberLastUsedCamera: true,
         formatsToSupport: [
           Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.QR_CODE
-        ],
-        // ✅ Configurações específicas do iOS
-        useBarCodeDetectorIfSupported: false
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E
+        ]
       };
 
       status_("<b>procurando o código…</b><br/>Aproxime e alinhe no retângulo.");
 
       try {
-        // ✅ Método SIMPLIFICADO para iOS
-        await html5Scanner.start(
-          { facingMode: "environment" }, // SIMPLES assim
-          config,
-          async (decodedText) => {
-            await processarLeitura(decodedText);
-          },
-          (error) => {
-            // Ignorar erros normais
-            if (error && !error.includes("NotFound")) {
-              console.log("Scanner error:", error);
-            }
+        // ✅ Callback direto e simples
+        const onScanSuccess = async (decodedText, decodedResult) => {
+          console.log("✅ Código detectado:", decodedText);
+          console.log("📊 Resultado detalhado:", decodedResult);
+          
+          // Processar imediatamente
+          await processarLeitura(decodedText);
+        };
+
+        const onScanFailure = (error) => {
+          // Ignorar erros normais (como "NotFoundException")
+          if (error && !error.toString().includes("NotFound")) {
+            console.log("Scanner error:", error);
           }
+        };
+
+        // ✅ Iniciar scanner
+        await html5Scanner.start(
+          { facingMode: "environment" },
+          config,
+          onScanSuccess,
+          onScanFailure
         );
 
+        console.log("✅ Scanner iniciado com sucesso!");
         status_("<b>✅ Scanner pronto!</b><br/>Aponte para o código de barras.");
 
       } catch (error) {
-        console.error("Erro ao iniciar scanner no iOS:", error);
+        console.error("❌ Erro ao iniciar scanner:", error);
         
         // ✅ TENTATIVA ALTERNATIVA se "environment" falhar
         if (error.message && error.message.includes("environment")) {
+          console.log("🔄 Tentando câmera frontal...");
           status_("<b>Tentando câmera frontal…</b>");
           
           try {
@@ -801,6 +839,7 @@
             );
             status_("<b>✅ Usando câmera frontal</b><br/>Aponte para o código.");
           } catch (error2) {
+            console.error("❌ Erro com câmera frontal:", error2);
             mostrarErroIOS(error2);
           }
         } else {
@@ -874,9 +913,11 @@
       }
 
       // ✅ Botões do scanner
-      document.getElementById("btn-fechar-scan").addEventListener('click', fecharScanner);
+      const btnFecharScan = document.getElementById("btn-fechar-scan");
+      if(btnFecharScan) btnFecharScan.addEventListener('click', fecharScanner);
       
-      document.getElementById("btn-zoom-in").addEventListener('click', async function(){
+      const btnZoomIn = document.getElementById("btn-zoom-in");
+      if(btnZoomIn) btnZoomIn.addEventListener('click', async function(){
         if(!zoomSupported) {
           status_("<b>zoom não suportado</b>");
           return;
@@ -885,7 +926,8 @@
         await applyZoom_(Math.min(zoomMax, zoomLevel + step));
       });
 
-      document.getElementById("btn-zoom-out").addEventListener('click', async function(){
+      const btnZoomOut = document.getElementById("btn-zoom-out");
+      if(btnZoomOut) btnZoomOut.addEventListener('click', async function(){
         if(!zoomSupported) {
           status_("<b>zoom não suportado</b>");
           return;
@@ -894,7 +936,8 @@
         await applyZoom_(Math.max(zoomMin, zoomLevel - step));
       });
 
-      document.getElementById("btn-torch").addEventListener('click', async function(){
+      const btnTorch = document.getElementById("btn-torch");
+      if(btnTorch) btnTorch.addEventListener('click', async function(){
         if(!torchSupported) {
           status_("<b>lanterna não suportada</b>");
           return;
@@ -908,6 +951,16 @@
           fecharScanner();
         }
       });
+
+      // ✅ Fechar ao clicar fora (no overlay)
+      const scannerOverlay = document.getElementById("scannerOverlay");
+      if(scannerOverlay) {
+        scannerOverlay.addEventListener('click', function(e) {
+          if(e.target === scannerOverlay) {
+            fecharScanner();
+          }
+        });
+      }
     });
 
     // ✅ Expor função para debugging
@@ -915,12 +968,17 @@
       abrir: abrirScanner,
       fechar: fecharScanner,
       status: scannerOpen,
+      testarLeitura: function(texto) {
+        console.log("🧪 Testando leitura manual com:", texto);
+        return processarLeitura(texto);
+      },
       config: function() {
         console.log("Scanner config:", {
           isIOS: isIOS,
           scannerOpen: scannerOpen,
           html5Scanner: !!html5Scanner,
           btnLeitor: document.getElementById("btn-leitor-nf"),
+          campoChave: document.getElementById("chave-nf"),
           hasPermission: navigator.mediaDevices && navigator.mediaDevices.getUserMedia
         });
       }
