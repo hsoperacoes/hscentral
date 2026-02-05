@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
   <title>GERENCIAL HS - Recebimento de Nota Fiscal</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
@@ -327,12 +327,6 @@
     body.ios-device input[type="number"] {
       font-size: 16px !important;
     }
-    
-    /* Melhorar visualização do scanner no iOS */
-    .ios-scanner-fix {
-      transform: scaleX(1) !important;
-      -webkit-transform: scaleX(1) !important;
-    }
   </style>
 </head>
 
@@ -526,14 +520,14 @@
       console.log("Safari Version:", navigator.userAgent.match(/Version\/(\d+)/)?.[1]);
       console.log("MediaDevices available:", !!navigator.mediaDevices);
       console.log("getUserMedia available:", !!navigator.mediaDevices?.getUserMedia);
-      
+
       // Adicionar classe iOS ao body
       document.body.classList.add('ios-device');
-      
+
       // Forçar meta tag viewport para iOS
       const viewport = document.querySelector('meta[name="viewport"]');
       if (viewport) {
-        viewport.setAttribute('content', 
+        viewport.setAttribute('content',
           'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
         );
       }
@@ -544,22 +538,20 @@
       if(statusEl) statusEl.innerHTML = "Status: " + html;
     }
 
-    // ✅ FUNÇÃO CRÍTICA: Extrair chave de 44 dígitos
+    // ✅ FUNÇÃO CRÍTICA: Extrair chave de 44 dígitos (MELHORADA)
     function extrairChave44(texto){
       console.log("📄 Texto recebido para extração:", texto);
-      
-      if (!texto) return "";
-      
+
       // Remove tudo que não é número
-      const only = String(texto).replace(/\D/g, "");
+      const only = String(texto || "").replace(/\D/g, "");
       console.log("🔢 Apenas números:", only);
-      
+
       // Se não tem pelo menos 44 dígitos, retorna vazio
       if (only.length < 44) {
         console.log("⚠️ Texto com menos de 44 dígitos:", only.length);
         return "";
       }
-      
+
       // Procura por 44 dígitos consecutivos
       for (let i = 0; i <= only.length - 44; i++) {
         const cand = only.slice(i, i + 44);
@@ -568,7 +560,7 @@
           return cand;
         }
       }
-      
+
       console.log("❌ Nenhuma sequência de 44 dígitos encontrada");
       return "";
     }
@@ -604,9 +596,39 @@
       }catch(e){}
     }
 
+    // ✅ iOS SAFE: preencher campo DEPOIS que fechar o scanner (2 frames + delay)
+    function preencherCampoChaveIOSSafe(chave){
+      const chaveInput = document.getElementById("chave-nf");
+      if (!chaveInput) {
+        console.error("❌ Campo chave-nf não encontrado!");
+        return;
+      }
+
+      const apply = () => {
+        chaveInput.value = chave;
+        chaveInput.setAttribute("value", chave);
+
+        // eventos para qualquer validação/listener do script_nf.js
+        chaveInput.dispatchEvent(new Event("input", { bubbles: true }));
+        chaveInput.dispatchEvent(new Event("change", { bubbles: true }));
+      };
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          apply();
+          setTimeout(() => {
+            try {
+              chaveInput.focus();
+              if (chaveInput.setSelectionRange) {
+                chaveInput.setSelectionRange(chave.length, chave.length);
+              }
+            } catch(e){}
+          }, 80);
+        });
+      });
+    }
+
     async function fecharScanner(){
-      console.log("🛑 Fechando scanner...");
-      
       scannerOpen = false;
       travado = false;
       torchOn = false;
@@ -624,7 +646,7 @@
           await html5Scanner.clear().catch(()=>{});
           html5Scanner = null;
         }
-        
+
         // Liberar stream de câmera
         const video = document.querySelector("#html5-reader video");
         if (video && video.srcObject) {
@@ -640,18 +662,18 @@
       status_("<b>fechado</b>");
     }
 
-    // ✅ FUNÇÃO CRÍTICA: Processar leitura com validação melhorada
+    // ✅ FUNÇÃO CRÍTICA: Processar leitura com validação melhorada (iOS FIX: fecha antes e preenche depois)
     async function processarLeitura(decodedText) {
       console.log("🔍 Processando leitura:", decodedText);
-      
+
       if(!scannerOpen || travado) {
         console.log("⚠️ Scanner fechado ou travado");
         return false;
       }
-      
+
       const chave = extrairChave44(decodedText);
       console.log("🔑 Chave extraída:", chave);
-      
+
       if(!chave){
         status_(`<b>leu algo</b><br/>"${decodedText.substring(0, 20)}..."<br/>Procurando 44 dígitos...`);
         return false;
@@ -664,48 +686,31 @@
       }
 
       travado = true;
-      
+
       // Mostrar que capturou
       status_(`<b style="color:#bbf7d0">✅ CAPTURADO!</b><br/>Chave: ${chave.substring(0, 10)}...`);
-      
-      // ✅ MÉTODO DIRETO para preencher o campo
-      const chaveInput = document.getElementById("chave-nf");
-      if (chaveInput) {
-        console.log("📝 Preenchendo campo chave-nf com:", chave);
-        chaveInput.value = chave;
-        
-        // Disparar eventos para atualizar qualquer validação
-        chaveInput.dispatchEvent(new Event('input', { bubbles: true }));
-        chaveInput.dispatchEvent(new Event('change', { bubbles: true }));
-        chaveInput.dispatchEvent(new Event('blur', { bubbles: true }));
-        
-        // Foco no campo
-        setTimeout(() => {
-          chaveInput.focus();
-          // Mover cursor para o final
-          chaveInput.setSelectionRange(chave.length, chave.length);
-        }, 100);
-      } else {
-        console.error("❌ Campo chave-nf não encontrado!");
-      }
-      
-      // Beep de confirmação
+
+      // Beep de confirmação (ok ainda aberto)
       beepOk();
-      
-      // Pequeno delay para mostrar confirmação
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Fechar scanner
+
+      // ✅ iOS: fecha o scanner primeiro (Safari engole updates de input com vídeo ativo)
+      await new Promise(resolve => setTimeout(resolve, 120));
       await fecharScanner();
-      
+
+      // ✅ só depois preenche o campo (mais confiável no Safari iOS)
+      setTimeout(() => {
+        console.log("📝 Preenchendo (pós-fechamento) chave-nf:", chave);
+        preencherCampoChaveIOSSafe(chave);
+      }, 150);
+
       return true;
     }
 
     // ✅ Função auxiliar para mostrar erro no iOS
     function mostrarErroIOS(error) {
       let mensagem = "";
-      
-      if (error.name === 'NotAllowedError') {
+
+      if (error && error.name === 'NotAllowedError') {
         mensagem = `
           <b style="color:#ff6b6b">❌ Permissão negada</b><br/>
           Para usar o scanner no iOS:<br/><br/>
@@ -713,31 +718,31 @@
           2. Se negou antes: Ajustes > Safari > Câmera > Permitir<br/>
           3. Tente novamente
         `;
-      } else if (error.name === 'NotFoundError') {
+      } else if (error && error.name === 'NotFoundError') {
         mensagem = `
           <b style="color:#ff6b6b">📷 Câmera não encontrada</b><br/>
           Verifique se há uma câmera disponível.
         `;
-      } else if (error.message.includes('requestDevice')) {
+      } else if (error && error.message && String(error.message).includes('requestDevice')) {
         mensagem = `
           <b style="color:#ff6b6b">🚫 Problema de hardware</b><br/>
           Reinicie o Safari e tente novamente.
         `;
       } else {
         mensagem = `
-          <b style="color:#ff6b6b">Erro: ${error.message || "Desconhecido"}</b><br/>
+          <b style="color:#ff6b6b">Erro: ${(error && error.message) ? error.message : "Desconhecido"}</b><br/>
           Tente:<br/>
           1. Fechar e abrir o scanner<br/>
           2. Reiniciar o Safari<br/>
           3. Usar digitação manual
         `;
       }
-      
+
       status_(mensagem);
-      
+
       setTimeout(() => {
         fecharScanner();
-        
+
         // Mostrar erro também na tela principal
         const erroDiv = document.getElementById("erro-nf2");
         if (erroDiv) {
@@ -746,12 +751,11 @@
       }, 5000);
     }
 
-    // ✅ NOVA ABORDAGEM: Scanner SIMPLIFICADO para iOS
-    async function abrirScannerIOS(){
-      console.log("📱 Abrindo scanner otimizado para iOS...");
-      
+    async function abrirScanner(){
+      console.log("🚀 Abrindo scanner...");
+
       const chaveInput = document.getElementById("chave-nf");
-      
+
       // Verificar se já tem conteúdo
       if (chaveInput && chaveInput.value.trim() !== '') {
         if (!confirm("O campo já contém um código. Deseja limpar e escanear um novo?")) {
@@ -777,61 +781,74 @@
       }catch(e){}
 
       html5Scanner = new Html5Qrcode("html5-reader");
+      console.log("📷 Html5Qrcode instanciado");
 
-      // ✅ CONFIGURAÇÃO ESPECÍFICA PARA iOS QUE FUNCIONA
+      // ✅ CONFIGURAÇÃO OTIMIZADA
       const config = {
-        fps: 10, // iOS funciona melhor com FPS mais baixo
-        qrbox: { 
-          width: 280,
-          height: 180
+        fps: isIOS ? 10 : 30, // iOS funciona melhor com FPS mais baixo
+        qrbox: {
+          width: isIOS ? 250 : 300,
+          height: isIOS ? 150 : 200
         },
         aspectRatio: 1.0,
-        disableFlip: false, // IMPORTANTE: deixar false no iOS
+        disableFlip: false,
         experimentalFeatures: {
-          useBarCodeDetectorIfSupported: false // DESATIVAR no iOS
+          useBarCodeDetectorIfSupported: !isIOS // Desativar apenas no iOS
         },
+        rememberLastUsedCamera: true,
         formatsToSupport: [
           Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.QR_CODE
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E
         ]
       };
 
       status_("<b>procurando o código…</b><br/>Aproxime e alinhe no retângulo.");
 
       try {
-        // ✅ Método SIMPLIFICADO para iOS
+        // ✅ Callback direto e simples
+        const onScanSuccess = async (decodedText, decodedResult) => {
+          console.log("✅ Código detectado:", decodedText);
+          console.log("📊 Resultado detalhado:", decodedResult);
+
+          // Processar imediatamente
+          await processarLeitura(decodedText);
+        };
+
+        const onScanFailure = (error) => {
+          // Ignorar erros normais (como "NotFoundException")
+          if (error && !error.toString().includes("NotFound")) {
+            console.log("Scanner error:", error);
+          }
+        };
+
+        // ✅ Iniciar scanner
         await html5Scanner.start(
           { facingMode: "environment" },
           config,
-          async (decodedText) => {
-            console.log("📖 iOS leu:", decodedText);
-            await processarLeitura(decodedText);
-          },
-          (error) => {
-            // Ignorar erros normais
-            if (error && !error.includes("NotFound")) {
-              console.log("Scanner error:", error);
-            }
-          }
+          onScanSuccess,
+          onScanFailure
         );
 
-        console.log("✅ Scanner iOS iniciado com sucesso!");
+        console.log("✅ Scanner iniciado com sucesso!");
         status_("<b>✅ Scanner pronto!</b><br/>Aponte para o código de barras.");
 
       } catch (error) {
-        console.error("❌ Erro ao iniciar scanner iOS:", error);
-        
+        console.error("❌ Erro ao iniciar scanner:", error);
+
         // ✅ TENTATIVA ALTERNATIVA se "environment" falhar
-        if (error.message && error.message.includes("environment")) {
+        if (error && error.message && error.message.includes("environment")) {
           console.log("🔄 Tentando câmera frontal...");
           status_("<b>Tentando câmera frontal…</b>");
-          
+
           try {
             await html5Scanner.start(
-              { facingMode: "user" },
+              { facingMode: "user" }, // Tentar câmera frontal
               config,
               async (decodedText) => {
-                console.log("📖 iOS (frontal) leu:", decodedText);
                 await processarLeitura(decodedText);
               }
             );
@@ -846,92 +863,9 @@
       }
     }
 
-    // ✅ Scanner para Android/Desktop (mantém configuração original)
-    async function abrirScannerNormal(){
-      console.log("📱 Abrindo scanner normal...");
-      
-      const chaveInput = document.getElementById("chave-nf");
-      
-      if (chaveInput && chaveInput.value.trim() !== '') {
-        if (!confirm("O campo já contém um código. Deseja limpar e escanear um novo?")) {
-          return;
-        }
-        chaveInput.value = "";
-      }
-
-      const ov = document.getElementById("scannerOverlay");
-      if(ov) ov.style.display = "flex";
-      document.body.style.overflow = "hidden";
-
-      scannerOpen = true;
-      travado = false;
-      status_("<b>abrindo câmera…</b>");
-
-      try{
-        if(html5Scanner){
-          await html5Scanner.stop().catch(()=>{});
-          await html5Scanner.clear().catch(()=>{});
-          html5Scanner = null;
-        }
-      }catch(e){}
-
-      html5Scanner = new Html5Qrcode("html5-reader");
-
-      const config = {
-        fps: 30,
-        qrbox: { width: 300, height: 200 },
-        aspectRatio: 1.0,
-        disableFlip: false,
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true
-        },
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.QR_CODE,
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.EAN_8
-        ]
-      };
-
-      status_("<b>procurando o código…</b><br/>Aproxime e alinhe no retângulo.");
-
-      try {
-        await html5Scanner.start(
-          { facingMode: "environment" },
-          config,
-          async (decodedText) => {
-            console.log("📖 Normal leu:", decodedText);
-            await processarLeitura(decodedText);
-          },
-          (error) => {
-            if (error && !error.includes("NotFound")) {
-              console.log("Scanner error:", error);
-            }
-          }
-        );
-
-        console.log("✅ Scanner normal iniciado com sucesso!");
-        status_("<b>✅ Scanner pronto!</b><br/>Aponte para o código de barras.");
-
-      } catch (error) {
-        console.error("❌ Erro ao iniciar scanner normal:", error);
-        alert("Erro ao iniciar scanner: " + (error.message || error));
-        fecharScanner();
-      }
-    }
-
-    // ✅ Função principal que escolhe o scanner correto
-    async function abrirScanner(){
-      if(scannerOpen) {
-        await fecharScanner();
-        return;
-      }
-      
-      if(isIOS) {
-        await abrirScannerIOS();
-      } else {
-        await abrirScannerNormal();
-      }
+    async function toggleScanner(){
+      if(scannerOpen) return fecharScanner();
+      return abrirScanner();
     }
 
     // ✅ Configuração ROBUSTA do botão
@@ -947,20 +881,20 @@
       const oldBtn = btn;
       const newBtn = oldBtn.cloneNode(true);
       oldBtn.parentNode.replaceChild(newBtn, oldBtn);
-      
-      // Adicionar evento direto e SIMPLES
+
+      // ✅ (FIX) não usar passive:true (em iOS pode atrapalhar preventDefault)
       newBtn.addEventListener('click', async function(e) {
         e.preventDefault();
         e.stopPropagation();
-        
+
         console.log("📸 Botão scanner clicado!");
-        
+
         // Limpar mensagens de erro anteriores
         const errorDiv = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
         if(errorDiv) errorDiv.textContent = "";
-        
+
         try {
-          await abrirScanner();
+          await toggleScanner();
         } catch(ex) {
           console.error("Erro no scanner:", ex);
           if(errorDiv) {
@@ -968,17 +902,17 @@
           }
           await fecharScanner();
         }
-      }, { passive: true });
+      });
       
       console.log("✅ Botão scanner configurado com sucesso!");
     }
 
     document.addEventListener("DOMContentLoaded", function(){
       console.log("🚀 DOMContentLoaded - Iniciando configuração...");
-      
+
       // Configurar botão leitor
       configurarBotaoLeitor();
-      
+
       // Reconfigurar após delays (caso script_nf.js altere o DOM)
       setTimeout(configurarBotaoLeitor, 300);
       setTimeout(configurarBotaoLeitor, 1000);
@@ -996,7 +930,7 @@
       // ✅ Botões do scanner
       const btnFecharScan = document.getElementById("btn-fechar-scan");
       if(btnFecharScan) btnFecharScan.addEventListener('click', fecharScanner);
-      
+
       const btnZoomIn = document.getElementById("btn-zoom-in");
       if(btnZoomIn) btnZoomIn.addEventListener('click', async function(){
         if(!zoomSupported) {
@@ -1042,17 +976,6 @@
           }
         });
       }
-      
-      // ✅ Aplicar fix para iOS
-      if (isIOS) {
-        // Aplicar classe fix para elementos de vídeo
-        setTimeout(() => {
-          const videos = document.querySelectorAll('#html5-reader video');
-          videos.forEach(video => {
-            video.classList.add('ios-scanner-fix');
-          });
-        }, 1000);
-      }
     });
 
     // ✅ Expor função para debugging
@@ -1073,22 +996,8 @@
           campoChave: document.getElementById("chave-nf"),
           hasPermission: navigator.mediaDevices && navigator.mediaDevices.getUserMedia
         });
-      },
-      // ✅ TESTE DIRETO: Forçar preenchimento de chave
-      preencherChaveTeste: function() {
-        const chaveTeste = "12345678901234567890123456789012345678901234";
-        const campo = document.getElementById("chave-nf");
-        if(campo) {
-          campo.value = chaveTeste;
-          campo.dispatchEvent(new Event('input', { bubbles: true }));
-          console.log("✅ Chave de teste preenchida:", chaveTeste);
-          return true;
-        }
-        return false;
       }
     };
-    
-    console.log("✅ Sistema de scanner completamente carregado!");
   </script>
 </body>
 </html>
