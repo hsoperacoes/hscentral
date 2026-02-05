@@ -2,799 +2,504 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>GERENCIAL HS - Recebimento de Nota Fiscal</title>
 
-  <title>Conferência de Nota Fiscal - HS</title>
-
-  <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css?version=2.2" />
-
-  <!-- ✅ Html5Qrcode (usado para NF 44 e EAN) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
-    /* [MANTENHA TODO O CSS ANTERIOR IGUAL] */
-    *{box-sizing:border-box}
-    body{
+    * { box-sizing: border-box; }
+    body {
       font-family: Arial, sans-serif;
-      background:#000;color:#fff;margin:0;padding:0;
-      min-height:100vh;display:flex;flex-direction:column;align-items:center;
+      background-color: #000;
+      color: #fff;
+      margin: 0; padding: 0;
+      display: flex; flex-direction: column; align-items: center;
+      min-height: 100vh;
     }
 
-    .top-nav{width:100%;display:flex;justify-content:center;margin:24px 0 4px}
-    .back-button{
-      position:static!important;display:inline-flex;align-items:center;gap:8px;
-      padding:8px 18px;border-radius:999px;border:1px solid #1f2937;background:#111827;
-      color:#e5e7eb;font-size:.9rem;text-decoration:none;box-shadow:0 10px 40px rgba(15,23,42,.6);
+    .back-button {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #020617;
+      color: #e5e7eb;
+      border: 1px solid #111827;
+      padding: 10px 22px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 14px;
+      z-index: 2000;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background-color 0.2s ease, transform 0.1s ease;
     }
-    .back-button:hover{background:#1f2937}
-    .logo-topo{width:100px;height:auto;margin:10px 0 10px}
-
-    .container{
-      width:100%;max-width:980px;background:#2c2c2c;
-      padding:30px 20px 25px;border-radius:12px;box-shadow:0 0 10px rgba(0,0,0,.5);
-      margin:20px 10px;
-    }
-    .form-container{
-      max-width:820px;margin:0 auto;background:#1e1e1e;padding:25px 20px;border-radius:8px;
-      box-shadow:0 2px 10px rgba(0,0,0,.3);
-    }
-    h1,h2{margin:0 0 12px;text-align:center}
-    label{font-size:14px;font-weight:600;display:block;margin:10px 0 6px;color:#ccc}
-    input{
-      width:100%;padding:10px 12px;font-size:14px;border:1px solid #444;border-radius:6px;
-      background:#2a2a2a;color:#fff;margin-bottom:8px;
-    }
-    input:focus{outline:none;border-color:#43b0ff;box-shadow:0 0 0 2px rgba(67,176,255,.25)}
-
-    button{
-      background:#673ab7;color:#fff;border:none;padding:10px 18px;border-radius:8px;
-      font-size:14px;cursor:pointer;font-weight:700;transition:.2s;display:inline-flex;gap:8px;align-items:center;justify-content:center
-    }
-    button:hover{background:#5e35b1}
-    .btn-secundario{background:#5f6368}
-    .btn-secundario:hover{background:#3c4043}
-    .btn-ok{background:#0f766e}
-    .btn-ok:hover{background:#115e59}
-    .btn-full{width:100%;margin-top:8px}
-    .linha-botoes{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 5px}
-    .linha-botoes button{flex:1;min-width:160px}
-
-    .hidden{display:none}
-
-    .login-box{margin-bottom:15px;border-bottom:1px solid #333;padding-bottom:15px}
-    .logout{text-align:right;margin-bottom:10px}
-    .info-filial{font-size:13px;color:#bbb;margin-bottom:6px}
-    .info-conferente{font-size:13px;color:#bbb;margin-bottom:10px}
-    .loading{font-style:italic;color:#1a73e8;font-size:13px;margin-top:10px;text-align:center}
-    .erro{color:#f97373;font-size:13px;margin-top:8px}
-
-    .cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-    .card{background:#252525;border:1px solid #3b3b3b;border-radius:10px;padding:12px}
-    .kpi{
-      display:flex;justify-content:space-between;align-items:center;
-      padding:8px 10px;border-radius:10px;background:#202020;border:1px solid #303030;
-      margin-top:8px;font-size:14px;
-    }
-    .kpi strong{color:#e5e7eb}
-    .kpi span{color:#cbd5e1;font-weight:700}
-
-    .titulo{margin-top:18px;margin-bottom:8px;font-size:15px;font-weight:800;display:flex;justify-content:space-between;align-items:center}
-    .titulo small{color:#cbd5e1;font-weight:600}
-
-    .lista{
-      margin-top:6px;display:flex;flex-direction:column;gap:8px;
-      max-height:360px;overflow:auto;padding-right:4px;
-    }
-    .item{
-      background:#262626;border:1px solid #3b3b3b;border-radius:10px;padding:10px;
-      display:flex;flex-direction:column;gap:6px;font-size:13px;
-    }
-    .row{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
-    .muted{color:#cbd5e1}
-    .badge{
-      font-size:12px;padding:4px 10px;border-radius:999px;font-weight:800;
-      background:#374151;color:#e5e7eb;display:inline-flex;align-items:center;gap:6px;
-    }
-    .ok{background:#064e3b;color:#bbf7d0}
-    .faltando{background:#78350f;color:#fed7aa}
-    .passando{background:#7f1d1d;color:#fecaca}
-    .extra{background:#1f2937;color:#e5e7eb;border:1px solid #374151}
-
-    .campo-pesquisa{margin-top:14px}
-
-    /* =========================================================
-       ✅ SCANNER OVERLAY
-    ========================================================= */
-    #scanner{
-      width:100vw;height:100vh;position:fixed;inset:0;z-index:1000;
-      display:none;justify-content:center;align-items:center;flex-direction:column;
-      background:rgba(0,0,0,.75);
-      backdrop-filter: blur(6px);
-    }
-    #scanner *{pointer-events:auto}
-
-    .scanner-close{
-      position:absolute;top:15px;right:15px;
-      background:rgba(17,24,39,.92);
-      border:1px solid #374151;
-      border-radius:999px;padding:10px 14px;font-size:12px;
-      z-index:99999;
-      box-shadow:0 10px 25px rgba(0,0,0,.35);
-    }
-    .scanner-close:hover{filter:brightness(1.05)}
-
-    #scanner-view{
-      width:min(720px, 92vw);
-      background:#000;
-      border:2px solid #673ab7;
-      border-radius:16px;
-      padding:14px;
-      box-shadow:0 20px 70px rgba(103,58,183,.25);
-      position:relative;
-      overflow:hidden;
-    }
-    #scanner-view::before{
-      content:'';
-      position:absolute;top:0;left:0;right:0;height:4px;
-      background:linear-gradient(90deg,#673ab7,#0f766e,#673ab7);
-      background-size:200% 100%;
-      animation:scanner-glow 3s linear infinite;
-    }
-    @keyframes scanner-glow{
-      0%{background-position:0% 0}
-      100%{background-position:200% 0}
+    .back-button i { margin-right: 6px; }
+    .back-button:hover {
+      background-color: #111827;
+      transform: translateX(-50%) translateY(-1px);
     }
 
-    #scanner video,#scanner canvas{
-      width:100%!important;height:auto!important;
-      border-radius:12px;
-      max-width:none!important;max-height:none!important;
+    .logo-topo {
+      width: 100px;
+      height: auto;
+      margin: 90px 0 10px;
     }
 
-    .scanner-info{
-      margin-top:14px;
-      font-size:14px;
-      text-align:center;
-      color:#e5e7eb;
-      width:min(720px, 92vw);
-      padding:12px 14px;
-      background:rgba(31,41,55,.55);
-      border:1px solid #374151;
-      border-radius:14px;
-      box-shadow:0 10px 30px rgba(0,0,0,.25);
-    }
-    .scanner-info-highlight{
-      color:#bbf7d0;
-      font-weight:800;
-      background:rgba(15,118,110,.22);
-      padding:2px 8px;
-      border-radius:8px;
-      display:inline-block;
-      margin:0 4px;
+    .form-container {
+      max-width: 600px; width: 95%;
+      background: #1e1e1e; padding: 30px; border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.3); color: #fff; margin: 20px auto;
     }
 
-    .scanner-paused{
-      border-color:#0f766e!important;
-      box-shadow:0 20px 70px rgba(15,118,110,.22)!important;
-    }
-    .scanner-info-paused{
-      background:rgba(15,118,110,.18)!important;
-      border-color:#0f766e!important;
-      color:#bbf7d0!important;
+    .form-container h2 { text-align: center; color: #fff; margin-bottom: 20px; }
+
+    input, button {
+      width: 100%; padding: 12px; font-size: 14px;
+      border: 1px solid #444; border-radius: 4px;
+      background-color: #2a2a2a; color: #fff;
     }
 
-    .scanner-notification{
+    button { border: none; background-color: #673ab7; cursor: pointer; font-weight: 600; margin-top: 10px; }
+    button:hover { background-color: #5e35b1; }
+
+    .hidden { display: none; }
+
+    .logout { text-align: right; margin-bottom: 10px; }
+    .logout button {
+      background-color: #5f6368;
+      width: auto;
+      padding: 8px 16px;
+      margin-top: 0;
+    }
+
+    .result { background: #111; border: 1px solid #333; padding: 12px; border-radius: 6px; }
+
+    .history {
+      margin-top: 20px;
+      background: #141414;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .history ul { list-style: none; padding: 0; margin: 0; }
+    .history li { padding: 6px 8px; border-bottom: 1px solid #222; cursor: pointer; }
+    .history li:hover { background: #1d1d1d; }
+
+    #loading-nf { margin-top: 10px; color: #9bdcff; font-style: italic; }
+    #erro-nf2, #erro-nf { margin-top: 8px; }
+
+    footer {
+      text-align:center; font-size:14px; color:#ccc;
+      background:#2c2c2c; padding:15px;
+      border-radius:6px; margin: 20px auto;
+      max-width: 900px; width: 100%;
+    }
+
+    /* ===================== OVERLAY RECUSA ===================== */
+    #recusaOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.88);
+      z-index: 99999;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      backdrop-filter: blur(2px);
+    }
+    .recusa-card {
+      width: 100%;
+      max-width: 880px;
+      border: 1px solid #2a2a2f;
+      border-radius: 18px;
+      background: #0b0b0c;
+      box-shadow: 0 8px 30px rgba(0,0,0,.55);
+      overflow: hidden;
+    }
+    .recusa-topo {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid #2a2a2f;
+      background: linear-gradient(180deg, #141416, #0f0f12);
+    }
+    .recusa-titulo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 900;
+      color: #ff3b3b;
+      letter-spacing: .2px;
+    }
+    .recusa-btn-fechar {
+      border: 1px solid #2a2a2f;
+      background: transparent;
+      color: #fff;
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 800;
+      width: auto;
+      margin-top: 0;
+    }
+    .recusa-btn-fechar:hover { background: rgba(255,255,255,.06); }
+    .recusa-conteudo { padding: 16px; background: #0b0b0c; }
+    .recusa-texto {
+      white-space: pre-wrap;
+      font-size: 16px;
+      line-height: 1.55;
+      color: #fff;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid #2a2a2f;
+      background: #101012;
+    }
+    .recusa-rodape {
+      padding: 14px 16px;
+      border-top: 1px solid #2a2a2f;
+      color: #b9b9c2;
+      font-size: 13px;
+      background: #0f0f12;
+    }
+
+    /* ===================== SCANNER FULLSCREEN (PORTRAIT) ===================== */
+    #scannerOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100000;
+      display: none;
+      background: rgba(0,0,0,.92);
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      backdrop-filter: blur(2px);
+    }
+
+    .scan-card {
+      width: min(520px, 96vw);
+      height: min(820px, 92vh);
+      background: #0b0b0c;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 18px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .scan-top {
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(20,20,22,.95), rgba(10,10,12,.95));
+    }
+    .scan-title {
+      display:flex; align-items:center; gap:10px;
+      font-weight: 900;
+      color: #e5e7eb;
+      font-size: 14px;
+      letter-spacing:.2px;
+    }
+    .scan-title i { color: #bbf7d0; }
+
+    .scan-actions { display:flex; gap:8px; align-items:center; }
+    .scan-btn {
+      width: auto !important;
+      padding: 10px 12px !important;
+      margin-top: 0 !important;
+      border-radius: 12px !important;
+      background: rgba(2,6,23,.88) !important;
+      border: 1px solid rgba(255,255,255,.14) !important;
+      color: #e5e7eb !important;
+      font-weight: 800 !important;
+      font-size: 12px !important;
+      cursor: pointer;
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      min-height: 44px; /* iOS touch target */
+    }
+    .scan-btn:hover { filter: brightness(1.07); }
+    .scan-btn.primary {
+      background: rgba(103,58,183,.92) !important;
+      border-color: rgba(103,58,183,.55) !important;
+    }
+
+    .scan-body {
+      position: relative;
+      flex: 1;
+      padding: 10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .scan-frame {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 2px solid rgba(103,58,183,.6);
+      box-shadow: 0 14px 40px rgba(103,58,183,.12);
+      background: #000;
+    }
+
+    #html5-reader { width: 100%; height: 100%; }
+
+    /* ✅ não corta o vídeo (melhora MUITO Code128) */
+    #html5-reader video, #html5-reader canvas {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+      background: #000;
+      -webkit-transform: scaleX(1); /* iOS fix */
+      transform: scaleX(1);
+    }
+
+    .scan-guide {
+      position: absolute;
+      left: 50%;
+      top: 56%;
+      transform: translate(-50%, -50%);
+      width: min(92%, 520px);
+      height: 22%;
+      border: 2px solid rgba(187,247,208,.55);
+      border-radius: 14px;
+      box-shadow: 0 0 0 2000px rgba(0,0,0,.10) inset;
+      pointer-events: none;
+    }
+    .scan-line {
       position:absolute;
-      top:18px;left:50%;
-      transform:translateX(-50%);
-      background:linear-gradient(135deg,#0f766e 0%,#115e59 100%);
-      color:#fff;
-      padding:12px 18px;
-      border-radius:14px;
-      border:2px solid rgba(187,247,208,.25);
-      box-shadow:0 12px 30px rgba(15,118,110,.35);
-      display:flex;align-items:center;gap:12px;
-      z-index:100000;
-      max-width:90vw;
-      text-align:center;
-      animation:slide-in .35s ease-out;
+      left: 8%;
+      right: 8%;
+      top: 50%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(187,247,208,.95), transparent);
+      box-shadow: 0 0 18px rgba(187,247,208,.35);
+      pointer-events: none;
+      animation: sweep 1.6s linear infinite;
     }
-    @keyframes slide-in{
-      from{opacity:0;transform:translateX(-50%) translateY(-16px)}
-      to{opacity:1;transform:translateX(-50%) translateY(0)}
-    }
-    .scanner-notification i{font-size:20px;color:#bbf7d0}
-    .scanner-notification .title{font-weight:900;letter-spacing:.5px}
-    .scanner-notification .sub{font-size:12px;opacity:.9}
-    .scanner-notification .ean{
-      margin-top:6px;
-      font-family:monospace;
-      font-size:16px;
-      font-weight:900;
-      letter-spacing:2px;
-      background:rgba(0,0,0,.25);
-      border:1px solid rgba(187,247,208,.2);
-      border-radius:10px;
-      padding:6px 10px;
+    @keyframes sweep {
+      0% { transform: translateY(-26px); opacity: .35; }
+      50% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(26px); opacity: .35; }
     }
 
-    .mini-teste{
-      margin-top:10px;padding:10px;border:1px dashed #444;border-radius:10px;background:#1b1b1b;
+    .scan-status {
+      padding: 10px 12px;
+      border-top: 1px solid rgba(255,255,255,.10);
+      background: rgba(10,10,12,.95);
+      font-size: 12px;
+      color: #cbd5e1;
+      line-height: 1.4;
     }
-    .mini-teste .row{align-items:center}
-    .mini-teste input{margin:0}
-    .mini-teste button{min-width:160px}
+    .scan-status b { color:#bbf7d0; }
 
-    .btn-ajuste{
-      background:#374151;color:#fff;
-      padding:4px 8px;font-size:11px;border-radius:6px;
-      cursor:pointer;
-      border:1px solid #4b5563;
-    }
-    .btn-ajuste:hover{background:#4b5563}
-
-    .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.85);
-      display: none; justify-content: center; align-items: center; z-index: 2000;
-    }
-    .modal-content {
-      background: #1e1e1e; padding: 25px; border-radius: 12px; width: 90%; max-width: 600px;
-      border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
-    .modal-header { color: #f97373; font-size: 1.2rem; font-weight: 800; margin-bottom: 15px; text-align: center; }
-    .modal-body { max-height: 300px; overflow-y: auto; margin-bottom: 20px; font-size: 14px; }
-    .modal-item { padding: 10px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; gap:10px; }
-    .modal-footer { text-align: center; }
-
-    footer{
-      text-align:center;font-size:13px;color:#ccc;background:#2c2c2c;padding:10px 15px;border-radius:6px;margin:10px;max-width:980px;width:100%;
-    }
-
-    @media (max-width: 860px){
-      .cards{grid-template-columns:1fr}
-      .linha-botoes{flex-direction:column}
+    input, button { touch-action: manipulation; }
+    
+    /* iOS specific */
+    input, select, textarea {
+      font-size: 16px !important; /* Prevents iOS zoom */
     }
   </style>
 </head>
+
 <body>
+  <a href="index.html" class="back-button">
+    <i class="fas fa-arrow-left"></i> Voltar à Home
+  </a>
 
-  <div class="top-nav">
-    <a href="index.html?version=2.2" class="back-button">
-      <i class="fas fa-arrow-left"></i> Voltar à Home
-    </a>
-  </div>
+  <img src="logo.png" alt="Logo HS" class="logo-topo" />
 
-  <img src="logo.png?version=2.2" alt="Logo HS" class="logo-topo" />
+  <div class="form-container">
+    <!-- LOGIN FILIAL -->
+    <div id="login-nf">
+      <h2>Login da Filial</h2>
+      <label for="codigo-nf">Código da Filial</label>
+      <input type="text" id="codigo-nf" placeholder="Digite o código da sua filial" />
+      <button id="btn-entrar-nf">Entrar</button>
+      <div id="erro-nf" style="color:#ff6b6b;margin-top:8px;"></div>
+    </div>
 
-  <div class="container">
-    <div class="form-container">
-
-      <div id="login" class="login-box">
-        <h2>Login da Filial</h2>
-
-        <label for="codigo-filial">Código da Filial</label>
-        <input id="codigo-filial" type="text" placeholder="Ex: 293, 488, 287, 288, 761" />
-
-        <label for="nome-conferente">Conferente</label>
-        <input id="nome-conferente" type="text" placeholder="Ex: WILL" />
-
-        <button class="btn-full" onclick="entrar()">
-          <i class="fas fa-door-open"></i> Entrar
-        </button>
+    <!-- TELA PRINCIPAL -->
+    <div id="principal-nf" class="hidden">
+      <div class="logout">
+        <button id="btn-sair-nf">Sair</button>
       </div>
 
-      <div id="principal" class="hidden">
-        <div class="logout">
-          <button class="btn-secundario" onclick="sair()">
-            <i class="fas fa-sign-out-alt"></i> Sair
-          </button>
-        </div>
+      <h2>Consulta de Nota Fiscal</h2>
 
-        <h1>Conferência de Nota Fiscal</h1>
-        <div class="info-filial" id="info-filial"></div>
-        <div class="info-conferente" id="info-conferente"></div>
+      <label for="chave-nf">Chave de Acesso (44 dígitos)</label>
+      <input type="text" id="chave-nf" placeholder="Digite a chave completa" maxlength="44" />
 
-        <label for="chave">Chave de Acesso (44 dígitos)</label>
-        <input id="chave" type="text" maxlength="44" placeholder="Digite ou leia o código de barras da NF" />
+      <button id="btn-leitor-nf">📷 Ler Código de Barras</button>
 
-        <div class="linha-botoes">
-          <button onclick="abrirLeitor('NF')">
-            <i class="fas fa-camera"></i> Ler Chave da NF
-          </button>
-          <button onclick="carregarNF()">
-            <i class="fas fa-cloud-download-alt"></i> Carregar Itens da NF
-          </button>
-        </div>
+      <button id="btn-consultar-nf">Consultar</button>
+      <div id="loading-nf" class="hidden">⏳ Consultando nota fiscal...</div>
+      <div id="resultado-nf" class="result hidden"></div>
+      <div id="erro-nf2" style="color: #ff6b6b; margin-top: 8px;"></div>
 
-        <div id="loading" class="loading hidden">⏳ Carregando itens da NF...</div>
-        <div id="erro" class="erro"></div>
-
-        <div id="painel" class="hidden">
-          <div class="cards">
-            <div class="card">
-              <div class="titulo">Resumo da NF</div>
-              <div class="muted" id="resumo-nf"></div>
-
-              <div class="kpi"><strong>Total itens na NF</strong><span id="kpi-nf">0</span></div>
-              <div class="kpi"><strong>Total escaneado</strong><span id="kpi-scan">0</span></div>
-              <div class="kpi"><strong>Sync (tempo real)</strong><span id="kpi-sync">—</span></div>
-            </div>
-
-            <div class="card">
-              <div class="titulo">Scanner de Peças</div>
-              <div class="muted">Escaneie os EANs das etiquetas. Vai somando automático <strong>(multiusuário na mesma NF)</strong>.</div>
-
-              <div class="linha-botoes" style="margin-top:10px">
-                <button class="btn-ok" onclick="abrirLeitor('EAN')">
-                  <i class="fas fa-barcode"></i> Escanear EAN (Peças)
-                </button>
-                <button class="btn-secundario" onclick="limparScans()">
-                  <i class="fas fa-eraser"></i> Zerar Scans
-                </button>
-              </div>
-
-              <div class="mini-teste">
-                <div class="muted" style="margin-bottom:6px"><strong>Teste sem câmera:</strong> cole um EAN e clique em Adicionar</div>
-                <div id="buffer-ean" class="loading hidden" style="margin-bottom:5px">🔍 Buscando dados no banco...</div>
-                <div class="row" style="gap:10px">
-                  <input id="ean-manual" type="text" placeholder="Cole aqui o EAN (somente números)" />
-                  <button class="btn-ok" onclick="adicionarEANManual()">
-                    <i class="fas fa-plus"></i> Adicionar
-                  </button>
-                </div>
-              </div>
-
-              <div class="linha-botoes">
-                <button class="btn-full" onclick="fazerConferencia()">
-                  <i class="fas fa-clipboard-check"></i> Fazer Conferência
-                </button>
-                <button id="btn-enviar" class="btn-full hidden" onclick="enviarConferencia()">
-                  <i class="fas fa-paper-plane"></i> Enviar Resultado
-                </button>
-              </div>
-
-              <div id="msg" class="loading hidden"></div>
-            </div>
-          </div>
-
-          <div class="campo-pesquisa">
-            <label for="filtro">Buscar (EAN / referência / cor / tamanho)</label>
-            <input id="filtro" type="text" placeholder="Digite para filtrar..." />
-          </div>
-
-          <div class="titulo">
-            Resultado da Conferência
-            <small id="resumo-div"></small>
-          </div>
-
-          <div id="lista" class="lista"></div>
-        </div>
+      <div class="history">
+        <h3>Histórico da Filial</h3>
+        <ul id="historicoLista-nf"></ul>
+        <button id="btn-limpar-nf">🗑 Limpar Histórico Local</button>
       </div>
     </div>
   </div>
 
-  <div id="scanner">
-    <button class="scanner-close" onclick="fecharLeitor(); event.stopPropagation();">
-      <i class="fas fa-times"></i> Fechar
-    </button>
+  <footer>HS Operações © 2025 - Todos os direitos reservados</footer>
 
-    <div id="scanner-view"></div>
-    <div id="scanner-info" class="scanner-info"></div>
-  </div>
-
-  <div id="modal-divergencia" class="modal-overlay">
-    <div class="modal-content">
-      <div class="modal-header">⚠️ DIVERGÊNCIAS IDENTIFICADAS</div>
-      <div class="modal-body" id="modal-lista"></div>
-      <div class="modal-footer">
-        <p style="font-size: 13px; color: #bbb; margin-bottom: 15px;">Favor fazer uma conferência dos mesmos.</p>
-        <button onclick="fecharModal()">Entendido</button>
+  <!-- OVERLAY RECUSA -->
+  <div id="recusaOverlay">
+    <div class="recusa-card" role="dialog" aria-modal="true">
+      <div class="recusa-topo">
+        <div class="recusa-titulo">🚫 NOTA MARCADA PARA RECUSA</div>
+        <button class="recusa-btn-fechar" id="btn-fechar-recusa">Fechar</button>
+      </div>
+      <div class="recusa-conteudo">
+        <div class="recusa-texto" id="recusaTexto"></div>
+      </div>
+      <div class="recusa-rodape">
+        Se houver confirmação da recusa, realize também a recusa no controle de transporte e na via física destinada ao escritório.
       </div>
     </div>
   </div>
 
-  <footer>
-    &copy; 2025 HS - Sistema de Conferência de Notas Fiscais. Versão 2.2
-  </footer>
+  <!-- ✅ SCANNER FULLSCREEN -->
+  <div id="scannerOverlay">
+    <div class="scan-card">
+      <div class="scan-top">
+        <div class="scan-title">
+          <i class="fas fa-barcode"></i>
+          Leitor de Código (Chave 44)
+        </div>
+        <div class="scan-actions">
+          <button class="scan-btn" id="btn-zoom-out" title="Diminuir zoom"><i class="fas fa-search-minus"></i></button>
+          <button class="scan-btn" id="btn-zoom-in" title="Aumentar zoom"><i class="fas fa-search-plus"></i></button>
+          <button class="scan-btn" id="btn-torch" title="Lanterna"><i class="fas fa-bolt"></i></button>
+          <button class="scan-btn primary" id="btn-fechar-scan"><i class="fas fa-times"></i> Fechar</button>
+        </div>
+      </div>
+
+      <div class="scan-body">
+        <div class="scan-frame">
+          <div id="html5-reader"></div>
+          <div class="scan-guide"></div>
+          <div class="scan-line"></div>
+        </div>
+      </div>
+
+      <div class="scan-status" id="scanStatus">Status: <b>pronto</b></div>
+    </div>
+  </div>
 
   <script>
-    const APP_VERSION = "2.2";
+    // ✅ SEU APPWEB (AGORA DO JEITO QUE O script_nf.js NORMALMENTE ESPERA)
+    const URL_API = "https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec";
+    window.URL_API = URL_API; // compat
+    window.__HS_DISABLE_DYNAMSOFT__ = true;
 
-    const URL_API = "https://script.google.com/macros/s/AKfycbx1HDzA2b478DAhi5ONS6TstKieKf4lvFM9wzib9McUrdP7Z4Xwhb6SrUt5KW1YcR3x/exec";
-
-    const filiaisValidas = ["293", "488", "287", "288", "761"];
-    const nomesFiliais = { "293":"ARTUR","488":"FLORIANO","287":"JOTA","288":"PONTO","761":"MODA" };
-
-    let filialAtual = "";
-    let conferenteAtual = "";
-
-    let cabecalhoAtual = null;
-    let itensNF = [];
-    let mapaScan = {};
-    let termoFiltro = "";
-
-    // Scanner
-    let html5ScannerEAN = null;
-    let html5ScannerNF = null;
-    let modoScanner = "";
-    let audioCtx = null;
-
-    let cacheInfoEAN = {};
-
-    // ✅ SISTEMA RADICAL CONTRA BIPES DUPLOS
-    let scannerTravadoAbsolutamente = false;
-    let ultimoEanProcessado = "";
-    let timestampUltimoProcessamento = 0;
-    let cacheLeiturasInstantaneas = {}; // Cache de leituras nos últimos segundos
-
-    // Sync
-    let syncTimer = null;
-    let syncAtivo = false;
-    let ultimoSyncHash = "";
-
-    async function postJSON_(payload){
-      const resp = await fetch(URL_API, {
-        method: "POST",
-        headers: { "Content-Type":"text/plain;charset=utf-8" },
-        body: JSON.stringify(payload)
+    function abrirOverlayRecusa(mensagem) {
+      const ov = document.getElementById('recusaOverlay');
+      const tx = document.getElementById('recusaTexto');
+      tx.textContent = (mensagem || '').toString().trim();
+      ov.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+    function fecharOverlayRecusa() {
+      const ov = document.getElementById('recusaOverlay');
+      ov.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('btn-fechar-recusa');
+      const ov = document.getElementById('recusaOverlay');
+      btn.addEventListener('click', fecharOverlayRecusa);
+      ov.addEventListener('click', (e) => { if (e.target === ov) fecharOverlayRecusa(); });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && ov.style.display === 'flex') fecharOverlayRecusa();
       });
-      return await resp.json();
-    }
+    });
 
-    function entrar(){
-      const f = document.getElementById("codigo-filial").value.trim();
-      const nome = document.getElementById("nome-conferente").value.trim();
-
-      if(!filiaisValidas.includes(f)){ alert("Código de filial inválido."); return; }
-      if(!nome){ alert("Informe o nome do conferente."); return; }
-
-      filialAtual = f;
-      conferenteAtual = nome;
-
-      localStorage.setItem("filial_conf_nf", f);
-      localStorage.setItem("conferente_conf_nf", nome);
-
-      document.getElementById("login").classList.add("hidden");
-      document.getElementById("principal").classList.remove("hidden");
-
-      atualizarInfoTopo_();
-    }
-
-    function atualizarInfoTopo_(){
-      document.getElementById("info-filial").textContent = `Filial logada: ${filialAtual} - ${nomesFiliais[filialAtual] || ""}`;
-      document.getElementById("info-conferente").textContent = `Conferente: ${conferenteAtual || "—"}`;
-    }
-
-    function sair(){
-      if(!confirm("Deseja sair?")) return;
-      pararSync_();
-      localStorage.removeItem("filial_conf_nf");
-      localStorage.removeItem("conferente_conf_nf");
-      location.reload();
-    }
-
-    async function carregarNF(){
-      const chave = document.getElementById("chave").value.trim();
-      const erro = document.getElementById("erro");
-      const loading = document.getElementById("loading");
-      const painel = document.getElementById("painel");
-
-      if(chave.length !== 44){ alert("A chave deve ter 44 dígitos."); return; }
-
-      erro.textContent = "";
-      loading.classList.remove("hidden");
-      painel.classList.add("hidden");
-
-      pararSync_();
-      document.getElementById("kpi-sync").textContent = "—";
-
-      try {
-        const resp = await fetch(`${URL_API}?api=consultarConferenciaNF&filial=${encodeURIComponent(filialAtual)}&chave=${encodeURIComponent(chave)}&v=${APP_VERSION}&t=${Date.now()}`);
-        const data = await resp.json();
-        if(!data.success) throw new Error(data.message || "Erro ao buscar NF.");
-
-        cabecalhoAtual = data.cabecalho;
-        itensNF = data.itens || [];
-        mapaScan = {};
-
-        document.getElementById("resumo-nf").innerHTML = `
-          <strong>NF:</strong> ${cabecalhoAtual.numeroNF} |
-          <strong>Emitente:</strong> ${cabecalhoAtual.nomeEmitente} |
-          <strong>Data:</strong> ${cabecalhoAtual.dataEmissao}
-        `;
-
-        atualizarKPIs();
-        document.getElementById("painel").classList.remove("hidden");
-        document.getElementById("btn-enviar").classList.add("hidden");
-        render(montarListaConferencia(false));
-
-        iniciarSync_();
-      } catch(err) {
-        erro.textContent = err.message;
-      } finally {
-        loading.classList.add("hidden");
-      }
-    }
-
-    function atualizarKPIs(){
-      let totalNF = Number(cabecalhoAtual?.totalItensNF || 0);
-      if(!totalNF){
-        totalNF = 0;
-        itensNF.forEach(i => totalNF += Number(i.quantidade || 0));
-      }
-
-      let totalScan = 0;
-      Object.values(mapaScan).forEach(v => totalScan += Number(v || 0));
-
-      document.getElementById("kpi-nf").textContent = totalNF;
-      document.getElementById("kpi-scan").textContent = totalScan;
-    }
-
-    function montarListaConferencia(jaConferido){
-      const lista = [];
-      const eansNaNota = new Set();
-
-      itensNF.forEach(i => {
-        const ean = String(i.ean || "").trim();
-        if(!ean) return;
-        eansNaNota.add(ean);
-
-        const qtdScan = Number(mapaScan[ean] || 0);
-        const qtdNF = Number(i.quantidade || 0);
-        const diff = qtdScan - qtdNF;
-
-        let status = "";
-        if(jaConferido){
-          if(diff === 0) status = "OK";
-          else if(diff < 0) status = "FALTANDO";
-          else status = "PASSANDO";
-        }
-
-        lista.push({
-          ean,
-          codigo:i.codigo, cor:i.cor, tamanho:i.tamanho,
-          qtdNF, qtdScan, diff, status, tipo:"nota"
-        });
-      });
-
-      Object.keys(mapaScan).forEach(ean => {
-        if(!eansNaNota.has(ean)){
-          const info = cacheInfoEAN[ean] || { codigo:"---", cor:"---", tamanho:"---" };
-          lista.push({
-            ean,
-            codigo: info.codigo,
-            cor: info.cor,
-            tamanho: info.tamanho,
-            qtdNF: 0,
-            qtdScan: Number(mapaScan[ean] || 0),
-            diff: Number(mapaScan[ean] || 0),
-            status: jaConferido ? "EXTRA" : "",
-            tipo:"extra"
-          });
-        }
-      });
-
-      if(termoFiltro){
-        const t = termoFiltro.toLowerCase();
-        return lista.filter(i =>
-          String(i.ean).includes(t) ||
-          String(i.codigo).toLowerCase().includes(t) ||
-          String(i.cor).toLowerCase().includes(t) ||
-          String(i.tamanho).toLowerCase().includes(t)
-        );
-      }
-
-      return lista;
-    }
-
-    function render(lista){
-      const container = document.getElementById("lista");
-      container.innerHTML = "";
-
-      let faltam = 0;
-      let passam = 0;
-
-      lista.forEach(i => {
-        if(i.status === "FALTANDO") faltam++;
-        if(i.status === "PASSANDO" || i.status === "EXTRA") passam++;
-
-        const div = document.createElement("div");
-        div.className = "item";
-
-        let badgeClass = "badge";
-        if(i.status === "OK") badgeClass += " ok";
-        else if(i.status === "FALTANDO") badgeClass += " faltando";
-        else if(i.status === "PASSANDO") badgeClass += " passando";
-        else if(i.status === "EXTRA") badgeClass += " extra";
-
-        div.innerHTML = `
-          <div class="row" style="align-items:center">
-            <strong>EAN: ${i.ean}</strong>
-            <div style="display:flex;gap:8px;align-items:center">
-              ${i.status ? `<span class="${badgeClass}">${i.status}</span>` : ""}
-              <button class="btn-ajuste" onclick="ajusteManualServidor('${i.ean}')">
-                <i class="fas fa-edit"></i> Ajustar
-              </button>
-            </div>
-          </div>
-          <div class="row muted">
-            <span>Ref/Cor: ${i.codigo} / ${i.cor}</span>
-            <span>Tam: ${i.tamanho}</span>
-            <span>NF: ${i.qtdNF}</span>
-            <span>Scan: ${i.qtdScan}</span>
-            <span>Dif: ${i.diff}</span>
-          </div>
-        `;
-        container.appendChild(div);
-      });
-
-      const resumoDiv = document.getElementById("resumo-div");
-      if(faltam > 0 || passam > 0){
-        resumoDiv.innerHTML = `
-          <span style="color:#f97373">${faltam} itens FALTANDO</span>,
-          <span style="color:#43b0ff">${passam} itens PASSANDO</span>
-        `;
-      } else {
-        resumoDiv.textContent = "";
-      }
-    }
-
-    function fazerConferencia(){
-      const lista = montarListaConferencia(true);
-      render(lista);
-      document.getElementById("btn-enviar").classList.remove("hidden");
-
-      const divergencias = lista.filter(i => i.diff !== 0);
-      if(divergencias.length > 0) abrirModal(divergencias);
-    }
-
-    function abrirModal(divergencias){
-      const modal = document.getElementById("modal-divergencia");
-      const listaModal = document.getElementById("modal-lista");
-      listaModal.innerHTML = "";
-
-      divergencias.forEach(i => {
-        const div = document.createElement("div");
-        div.className = "modal-item";
-        const cor = i.diff < 0 ? "#f97373" : "#43b0ff";
-        const labelExtra = i.status === "EXTRA" ? " (EXTRA)" : "";
-        div.innerHTML = `
-          <span><strong>${i.codigo} / ${i.cor} / ${i.tamanho}</strong>${labelExtra}</span>
-          <span style="color:${cor}; font-weight:900">Dif: ${i.diff}</span>
-        `;
-        listaModal.appendChild(div);
-      });
-
-      modal.style.display = "flex";
-    }
-
-    function fecharModal(){
-      document.getElementById("modal-divergencia").style.display = "none";
-    }
-
-    async function limparScans(){
-      if(!cabecalhoAtual) return;
-      if(!confirm("Zerar TODA a contagem dessa NF (para todos os usuários)?")) return;
-
+    // ✅ LOGOUT FORÇADO (pra voltar e trocar filial SEM travar)
+    function logoutNF_forcado(){
       try{
-        await postJSON_({
-          api:"zerarSyncNF",
-          chaveAcesso: String(cabecalhoAtual.chaveAcesso || "").trim()
-        });
+        // remove só chaves do NF, sem apagar outras coisas do HS Central
+        const toRemove = [];
+        for(let i=0; i<localStorage.length; i++){
+          const k = localStorage.key(i);
+          if(!k) continue;
+          const kl = k.toLowerCase();
+          if(
+            kl.startsWith("hs_nf") ||
+            kl.startsWith("hs-nf") ||
+            kl.startsWith("nf_") ||
+            kl.includes("nf_filial") ||
+            kl.includes("filial_nf") ||
+            kl.includes("hsnf")
+          ){
+            toRemove.push(k);
+          }
+        }
+        toRemove.forEach(k => localStorage.removeItem(k));
       }catch(e){}
 
-      puxarSyncAgora_();
-      alert("Zerado no servidor (e o Sync vai atualizar a tela).");
+      // volta telas
+      const login = document.getElementById("login-nf");
+      const principal = document.getElementById("principal-nf");
+      if(login) login.classList.remove("hidden");
+      if(principal) principal.classList.add("hidden");
+
+      // limpa campos
+      const chave = document.getElementById("chave-nf");
+      if(chave) chave.value = "";
+      const res = document.getElementById("resultado-nf");
+      if(res){ res.classList.add("hidden"); res.innerHTML = ""; }
+      const err = document.getElementById("erro-nf2");
+      if(err) err.textContent = "";
+      const err1 = document.getElementById("erro-nf");
+      if(err1) err1.textContent = "";
+
+      // garante foco
+      const cod = document.getElementById("codigo-nf");
+      if(cod) cod.focus();
     }
+  </script>
 
-    async function ajusteManualServidor(ean){
-      if(!cabecalhoAtual || !cabecalhoAtual.chaveAcesso){
-        alert("Carregue a NF primeiro.");
-        return;
-      }
+  <!-- ✅ seu sistema (login/consulta/histórico) -->
+  <script src="script_nf.js?v=1.0.4"></script>
 
-      const atual = Number(mapaScan[ean] || 0);
-      const nova = prompt(`Ajustar quantidade para o EAN ${ean}\n\nAtual no servidor: ${atual}\n\nDigite a NOVA quantidade (0 para excluir):`, String(atual));
-      if(nova === null) return;
+  <script>
+    // ========= Scanner COMPLETO - SEM PERMISSÃO ANTECIPADA =========
+    let html5Scanner = null;
+    let scannerOpen = false;
+    let travado = false;
 
-      const n = parseInt(String(nova).trim(), 10);
-      if(isNaN(n) || n < 0){
-        alert("Valor inválido.");
-        return;
-      }
+    let currentTrack = null;
+    let zoomLevel = 1;
+    let zoomMin = 1;
+    let zoomMax = 1;
+    let torchOn = false;
+    let torchSupported = false;
+    let zoomSupported = false;
 
-      try{
-        const data = await postJSON_({
-          api:"ajustarBipeManual",
-          chaveAcesso: String(cabecalhoAtual.chaveAcesso || "").trim(),
-          ean: String(ean||"").trim(),
-          novaQtd: n,
-          senha: "1",
-          conferente: conferenteAtual || "Usuário"
-        });
+    // Detectar iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-        if(!data || !data.success){
-          alert(data?.message || "Não consegui ajustar no servidor.");
-          return;
-        }
-
-        await puxarSyncAgora_();
-        alert("Ajuste aplicado no servidor!");
-      }catch(e){
-        alert("Erro ao ajustar no servidor.");
-      }
-    }
-
-    function beepOk(){
-      try{
-        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const o = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        o.type = "square";
-        o.frequency.value = 880;
-        g.gain.value = 0.08;
-        o.connect(g);
-        g.connect(audioCtx.destination);
-        o.start();
-        setTimeout(()=>{ o.stop(); }, 110);
-      }catch(e){}
-      try{ if(navigator.vibrate) navigator.vibrate(50); }catch(e){}
-    }
-
-    function isValidEAN13(ean){
-      if(!ean || typeof ean !== 'string') return false;
-      
-      // Verifica se tem exatamente 13 dígitos
-      if(!/^\d{13}$/.test(ean)) return false;
-      
-      // Evita EANs "genéricos" ou inválidos
-      const primeirosDigitos = ean.substring(0, 3);
-      const ultimosDigitos = ean.substring(7);
-      
-      // Filtra códigos suspeitos (muitos zeros, padrões repetidos)
-      if(ean === '0000000000000') return false;
-      if(/^(\d)\1{12}$/.test(ean)) return false; // Todos dígitos iguais
-      if(primeirosDigitos === '000' && ultimosDigitos === '0000000') return false;
-      
-      // Cálculo do dígito verificador
-      const digits = ean.split('').map(n => parseInt(n,10));
-      const check = digits[12];
-      let sum = 0;
-      for(let i=0; i<12; i++){
-        sum += digits[i] * (i%2===0 ? 1 : 3);
-      }
-      const calc = (10 - (sum % 10)) % 10;
-      
-      return calc === check;
-    }
-
-    function extrairEAN13DoTexto(texto){
-      if(!texto || typeof texto !== 'string') return "";
-      
-      // Remove todos os não-dígitos
-      const only = texto.replace(/\D/g,"");
-      
-      // Mínimo 13 caracteres
-      if(only.length < 13) return "";
-      
-      // Procura sequência de 13 dígitos que seja um EAN válido
-      for(let i=0; i<=only.length-13; i++){
-        const cand = only.substring(i, i+13);
-        
-        // Filtro rápido: não pode ser tudo zeros ou padrão repetido
-        if(cand === '0000000000000') continue;
-        if(/^(\d)\1{12}$/.test(cand)) continue;
-        
-        if(isValidEAN13(cand)) {
-          return cand;
-        }
-      }
-      
-      return "";
+    function status_(html){
+      document.getElementById("scanStatus").innerHTML = "Status: " + html;
     }
 
     function extrairChave44(texto){
@@ -807,455 +512,385 @@
       return "";
     }
 
-    function iniciarSync_(){
-      if(!cabecalhoAtual || !cabecalhoAtual.chaveAcesso) return;
-      syncAtivo = true;
-      ultimoSyncHash = "";
-      puxarSyncAgora_();
-      syncTimer = setInterval(() => puxarSyncAgora_(), 1100);
+    function beepOk(){
+      try{
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "square"; o.frequency.value = 880;
+        g.gain.value = 0.10;
+        o.connect(g); g.connect(ctx.destination);
+        o.start(); setTimeout(()=>o.stop(), 120);
+      }catch(e){}
+      try{ if(navigator.vibrate) navigator.vibrate(60); }catch(e){}
     }
 
-    function pararSync_(){
-      syncAtivo = false;
-      if(syncTimer){ clearInterval(syncTimer); syncTimer = null; }
-      document.getElementById("kpi-sync").textContent = "—";
+    async function applyZoom_(z){
+      if(!currentTrack || !zoomSupported) return;
+      try{
+        await currentTrack.applyConstraints({ advanced: [{ zoom: z }] });
+        zoomLevel = z;
+        status_(`<b>lendo…</b><br/>Zoom: ${zoomLevel.toFixed(1)}x`);
+      }catch(e){}
     }
 
-    function _hashMapa_(obj){
-      const keys = Object.keys(obj || {}).sort();
-      let s = "";
-      for(const k of keys){ s += k + ":" + String(obj[k]) + ";"; }
-      return s;
+    async function toggleTorch_(){
+      if(!currentTrack || !torchSupported) return;
+      try{
+        torchOn = !torchOn;
+        await currentTrack.applyConstraints({ advanced: [{ torch: torchOn }] });
+        status_(`<b>lendo…</b><br/>Lanterna: ${torchOn ? "ON" : "OFF"}`);
+      }catch(e){}
     }
 
-    async function puxarSyncAgora_(){
-      if(!syncAtivo || !cabecalhoAtual) return;
-      const chave = String(cabecalhoAtual.chaveAcesso || "").trim();
-      if(!chave || chave.length !== 44) return;
+    async function fecharScanner(){
+      scannerOpen = false;
+      travado = false;
+      torchOn = false;
+      currentTrack = null;
+      zoomSupported = false;
+      torchSupported = false;
+
+      const ov = document.getElementById("scannerOverlay");
+      ov.style.display = "none";
+      document.body.style.overflow = "";
 
       try{
-        const resp = await fetch(`${URL_API}?api=sincronizarBipes&chave=${encodeURIComponent(chave)}&v=${APP_VERSION}&t=${Date.now()}`);
-        const data = await resp.json();
-        if(!data || !data.success) throw new Error("sync fail");
-
-        const bipes = data.bipes || {};
-        const hash = _hashMapa_(bipes);
-
-        if(hash !== ultimoSyncHash){
-          ultimoSyncHash = hash;
-          mapaScan = bipes;
-          atualizarKPIs();
-          const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
-          render(montarListaConferencia(jaConferido));
+        if(html5Scanner){
+          await html5Scanner.stop().catch(()=>{});
+          await html5Scanner.clear().catch(()=>{});
+          html5Scanner = null;
         }
-
-        document.getElementById("kpi-sync").textContent = "OK";
+        
+        // Liberar stream de câmera
+        const video = document.querySelector("#html5-reader video");
+        if (video && video.srcObject) {
+          const stream = video.srcObject;
+          const tracks = stream.getTracks();
+          tracks.forEach(track => track.stop());
+          video.srcObject = null;
+        }
       }catch(e){
-        document.getElementById("kpi-sync").textContent = "OFF";
+        console.warn("Erro ao fechar scanner:", e);
+      }
+
+      status_("<b>fechado</b>");
+    }
+
+    async function abrirScanner(){
+      const chaveInput = document.getElementById("chave-nf");
+      
+      // Verificar se já tem conteúdo
+      if (chaveInput && chaveInput.value.trim() !== '') {
+        if (!confirm("O campo já contém um código. Deseja limpar e escanear um novo?")) {
+          return;
+        }
+        chaveInput.value = "";
+      }
+
+      const ov = document.getElementById("scannerOverlay");
+      ov.style.display = "flex";
+      document.body.style.overflow = "hidden";
+
+      scannerOpen = true;
+      travado = false;
+      status_("<b>abrindo câmera…</b>");
+
+      try{
+        if(html5Scanner){
+          await html5Scanner.stop().catch(()=>{});
+          await html5Scanner.clear().catch(()=>{});
+          html5Scanner = null;
+        }
+      }catch(e){}
+
+      html5Scanner = new Html5Qrcode("html5-reader");
+
+      let formats = undefined;
+      try{
+        if(window.Html5QrcodeSupportedFormats){
+          formats = [
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.EAN_13
+          ];
+        }
+      }catch(e){}
+
+      // Configurações otimizadas para iOS
+      const config = {
+        fps: isIOS ? 20 : 30,
+        qrbox: (view) => {
+          const w = Math.min(view.width, 520);
+          const h = Math.min(view.height, 820);
+          const boxW = Math.floor(w * 0.92);
+          const boxH = Math.floor(h * 0.22);
+          return { width: boxW, height: boxH };
+        },
+        aspectRatio: isIOS ? 1.0 : 0.75,
+        disableFlip: true,
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        rememberLastUsedCamera: true,
+        ...(formats ? { formatsToSupport: formats } : {})
+      };
+
+      // Constraints SIMPLES - SEM verificação antecipada de permissões
+      const constraints = { 
+        facingMode: "environment"
+      };
+
+      status_("<b>procurando o código…</b><br/>Aproxime e alinhe no retângulo.");
+
+      try {
+        // ✅ MUDANÇA CRÍTICA: NÃO verificar permissões antecipadamente!
+        // O HTML5-QRCode vai pedir permissão DENTRO do .start()
+        await html5Scanner.start(
+          constraints,
+          config,
+          async (decodedText) => {
+            if(!scannerOpen) return;
+            if(travado) return;
+
+            const chave = extrairChave44(decodedText);
+            if(!chave){
+              status_("<b>lendo…</b><br/>Detectei algo, procurando 44 dígitos…");
+              return;
+            }
+
+            travado = true;
+            document.getElementById("chave-nf").value = chave;
+            status_("<b>capturado!</b><br/>Chave 44 preenchida ✅");
+            beepOk();
+
+            await new Promise(r => setTimeout(r, 200));
+            await fecharScanner();
+          },
+          (error) => {
+            // ✅ Tratar erros de permissão DENTRO do scanner
+            if (error && error.name === 'NotAllowedError') {
+              console.warn("Permissão de câmera negada pelo usuário");
+              status_("<b style='color:#ff6b6b'>Permissão negada</b><br/>Permita o acesso à câmera");
+              
+              // Mostrar instruções para iOS
+              if (isIOS) {
+                status_("<b style='color:#ff6b6b'>📱 iOS:</b><br/>Ajustes > Safari > Câmera");
+              }
+              
+              // Fechar após 3 segundos
+              setTimeout(() => fecharScanner(), 3000);
+            } else if (error && error !== "NotFoundException") {
+              console.warn("Erro do scanner:", error);
+            }
+          }
+        );
+
+        // Verificar recursos da câmera (zoom, lanterna) após iniciar
+        setTimeout(async ()=>{
+          try{
+            const video = document.querySelector("#html5-reader video");
+            const stream = video && video.srcObject;
+            if(!stream) return;
+            const t = stream.getVideoTracks && stream.getVideoTracks()[0];
+            if(!t) return;
+
+            currentTrack = t;
+            const caps = currentTrack.getCapabilities ? currentTrack.getCapabilities() : {};
+
+            if(caps.zoom){
+              zoomSupported = true;
+              zoomMin = caps.zoom.min;
+              zoomMax = caps.zoom.max;
+              zoomLevel = Math.min(Math.max(1.5, zoomMin), zoomMax);
+              await applyZoom_(zoomLevel);
+            }
+            if(caps.torch !== undefined){
+              torchSupported = true;
+            }
+          }catch(e){}
+        }, 800);
+
+      } catch (error) {
+        console.error("Erro ao iniciar scanner:", error);
+        
+        // ✅ TRATAMENTO ESPECÍFICO PARA ERROS DE PERMISSÃO
+        if (error.name === 'NotAllowedError' || error.message.includes('Permission')) {
+          status_("<b style='color:#ff6b6b'>❌ Permissão necessária</b><br/>Permita o acesso à câmera para usar o scanner");
+          
+          if (isIOS) {
+            status_("<b>📱 iOS:</b><br/>1. Toque em 'Permitir'<br/>2. Ou vá em Ajustes > Safari > Câmera");
+          }
+          
+          // Mostrar mensagem amigável por 3 segundos e fechar
+          setTimeout(() => {
+            fecharScanner();
+            
+            // Mostrar alerta explicativo
+            setTimeout(() => {
+              const errorDiv = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
+              if (errorDiv) {
+                errorDiv.innerHTML = `
+                  <div style="color:#ff6b6b; background:#2a2a2a; padding:10px; border-radius:5px; margin-top:10px;">
+                    <strong>Permissão de câmera necessária:</strong><br/>
+                    Para usar o leitor de código, você precisa permitir o acesso à câmera.<br/>
+                    <small>No iOS: Ajustes > Safari > Câmera > "Permitir"</small>
+                  </div>
+                `;
+              }
+            }, 500);
+          }, 3000);
+          
+        } else {
+          // Outros erros
+          status_("<b style='color:#ff6b6b'>Erro na câmera</b><br/>" + (error.message || "Tente novamente"));
+          setTimeout(() => fecharScanner(), 2000);
+        }
       }
     }
 
-    async function abrirLeitor(modo){
-      const scannerDiv = document.getElementById("scanner");
-      const scannerView = document.getElementById("scanner-view");
-      const info = document.getElementById("scanner-info");
+    async function toggleScanner(){
+      if(scannerOpen) return fecharScanner();
+      return abrirScanner();
+    }
 
-      modoScanner = modo;
-      scannerDiv.style.display = "flex";
-
-      // ✅ RESETA TODOS OS CONTROLES RADICALMENTE
-      scannerTravadoAbsolutamente = false;
-      ultimoEanProcessado = "";
-      timestampUltimoProcessamento = 0;
-      cacheLeiturasInstantaneas = {};
-
-      const notif = scannerDiv.querySelector(".scanner-notification");
-      if(notif) notif.remove();
-
-      scannerView.classList.remove("scanner-paused");
-      info.classList.remove("scanner-info-paused");
-
-      if(modoScanner === "EAN" && !cabecalhoAtual){
-        alert("Carregue a NF primeiro.");
-        scannerDiv.style.display = "none";
+    // ✅ Configuração ROBUSTA do botão
+    function configurarBotaoLeitor() {
+      const btn = document.getElementById("btn-leitor-nf");
+      if(!btn) {
+        console.warn("Botão btn-leitor-nf não encontrado, tentando novamente...");
+        setTimeout(configurarBotaoLeitor, 500);
         return;
       }
 
-      scannerView.innerHTML = "";
-
-      info.innerHTML = (modoScanner === "NF")
-        ? `Aponte para o código de barras da NF (chave <span class="scanner-info-highlight">44 dígitos</span>).<br/>Ao ler, <span class="scanner-info-highlight">fecha automaticamente</span>.`
-        : `Aponte para o <span class="scanner-info-highlight">EAN-13</span> das peças.<br/>Após ler, o scanner <span class="scanner-info-highlight">pausa</span>. Toque na tela para ler o próximo.`;
-
-      try{
-        await pararScannerAtual_();
-
-        if(modoScanner === "EAN"){
-          await iniciarHtml5EAN_Bonito_(scannerView, info);
-        } else {
-          await iniciarHtml5NF44_Simples_(scannerView);
-        }
-      }catch(ex){
-        console.error("Erro ao iniciar scanner:", ex);
-        alert("Erro ao iniciar a câmera. Verifique as permissões.");
-        scannerDiv.style.display = "none";
-      }
-    }
-
-    async function pararScannerAtual_(){
-      try{
-        if(html5ScannerNF){
-          await html5ScannerNF.stop().catch(()=>{});
-          await html5ScannerNF.clear().catch(()=>{});
-          html5ScannerNF = null;
-        }
-      }catch(e){}
-
-      try{
-        if(html5ScannerEAN){
-          await html5ScannerEAN.stop().catch(()=>{});
-          await html5ScannerEAN.clear().catch(()=>{});
-          html5ScannerEAN = null;
-        }
-      }catch(e){}
-    }
-
-    // ✅ VERSÃO SIMPLIFICADA PARA NF - MAIS CONFIÁVEL
-    async function iniciarHtml5NF44_Simples_(scannerView){
-      scannerView.innerHTML = `<div id="html5-nf44" style="width:100%; border-radius:12px; overflow:hidden;"></div>`;
-      html5ScannerNF = new Html5Qrcode("html5-nf44");
-
-      const config = {
-        fps: 10, // FPS mais baixo para maior confiabilidade
-        qrbox: { width: 250, height: 180 }, // Tamanho adequado para códigos longos
-        rememberLastUsedCamera: true,
-        formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.EAN_13]
-      };
-
-      let jaProcessou = false;
-
-      await html5ScannerNF.start(
-        { facingMode: "environment" },
-        config,
-        async (decodedText) => {
-          if(modoScanner !== "NF") return;
-          if(jaProcessou) return;
-
-          const chave = extrairChave44(decodedText);
-          if(!chave) return;
-
-          jaProcessou = true;
-          document.getElementById("chave").value = chave;
-          beepOk();
-
-          // Pequeno delay para mostrar que capturou
-          await new Promise(r => setTimeout(r, 300));
-          await fecharLeitor();
-        },
-        (errorMessage) => {
-          // Apenas loga erros, não mostra para o usuário
-          console.log("Scanner NF error:", errorMessage);
-        }
-      );
-    }
-
-    function _mostrarNotificacaoEAN_(ean13){
-      const scannerDiv = document.getElementById("scanner");
-
-      const old = scannerDiv.querySelector(".scanner-notification");
-      if(old) old.remove();
-
-      const el = document.createElement("div");
-      el.className = "scanner-notification";
-      el.innerHTML = `
-        <i class="fas fa-check-circle"></i>
-        <div style="display:flex;flex-direction:column;gap:4px;align-items:center">
-          <div class="title">CÓDIGO CAPTURADO!</div>
-          <div class="sub">Toque na tela para escanear o próximo</div>
-          <div class="ean">${ean13}</div>
-        </div>
-      `;
-      scannerDiv.appendChild(el);
-
-      setTimeout(()=>{ if(el.parentNode) el.remove(); }, 2600);
-    }
-
-    // ✅ FUNÇÃO SIMPLIFICADA PARA EAN - MAIS CONFIÁVEL
-    async function iniciarHtml5EAN_Bonito_(scannerView, info){
-      scannerView.innerHTML = `<div id="html5-ean" style="width:min(720px, 92vw); border-radius:12px; overflow:hidden;"></div>`;
-      html5ScannerEAN = new Html5Qrcode("html5-ean");
-
-      const config = {
-        fps: 8, // FPS baixo para evitar processamento excessivo
-        qrbox: { width: 220, height: 220 }, // Tamanho quadrado para EAN
-        rememberLastUsedCamera: true,
-        formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13]
-      };
-
-      let emProcessamento = false;
-
-      // ✅ FUNÇÃO DE CONTROLE SIMPLES
-      async function processarLeitura(ean13) {
-        if (emProcessamento) return false;
-        emProcessamento = true;
+      // Remover qualquer evento anterior
+      const oldBtn = btn;
+      const newBtn = oldBtn.cloneNode(true);
+      oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+      
+      // Adicionar evento direto
+      newBtn.onclick = async function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log("📸 Botão scanner clicado!");
+        
+        // Limpar mensagens de erro anteriores
+        const errorDiv = document.getElementById("erro-nf2") || document.getElementById("erro-nf");
+        if(errorDiv) errorDiv.textContent = "";
         
         try {
-          // ✅ REGISTRA NO SERVIDOR
-          await registrarBipeServidor_(ean13);
-          
-          // ✅ BEEP
-          beepOk();
-          
-          // ✅ NOTIFICAÇÃO VISUAL
-          _mostrarNotificacaoEAN_(ean13);
-          
-          // ✅ ATUALIZA UI
-          scannerView.classList.add("scanner-paused");
-          info.classList.add("scanner-info-paused");
-          info.innerHTML = `
-            ✅ <strong>EAN ${ean13}</strong> registrado!<br/>
-            Toque em <span class="scanner-info-highlight">QUALQUER LUGAR</span> da tela para continuar.
-          `;
-          
-          return true;
-        } catch (error) {
-          console.error("Erro no processamento:", error);
-          return false;
-        } finally {
-          emProcessamento = false;
+          await toggleScanner();
+        } catch(ex) {
+          console.error("Erro no scanner:", ex);
+          if(errorDiv) {
+            errorDiv.textContent = "Erro: " + (ex.message || ex);
+          }
+          await fecharScanner();
         }
+      };
+      
+      console.log("✅ Botão scanner configurado com sucesso!");
+    }
+
+    document.addEventListener("DOMContentLoaded", function(){
+      console.log("🚀 DOMContentLoaded - Iniciando configuração...");
+      
+      // Configurar botão leitor
+      configurarBotaoLeitor();
+      
+      // Reconfigurar após delays (caso script_nf.js altere o DOM)
+      setTimeout(configurarBotaoLeitor, 300);
+      setTimeout(configurarBotaoLeitor, 1000);
+      setTimeout(configurarBotaoLeitor, 2000);
+
+      // ✅ logout funcional
+      const btnSair = document.getElementById("btn-sair-nf");
+      if(btnSair){
+        btnSair.onclick = function(e){
+          e.preventDefault();
+          logoutNF_forcado();
+        };
       }
 
-      await html5ScannerEAN.start(
-        { facingMode: "environment" },
-        config,
-        async (decodedText) => {
-          if(modoScanner !== "EAN") return;
-          
-          // ✅ FILTRO RÁPIDO DE TEXTO
-          const textoLimpo = String(decodedText || "").trim();
-          if(textoLimpo.length < 10) return;
-          
-          const ean13 = extrairEAN13DoTexto(textoLimpo);
-          if(!ean13) return;
-          
-          // ✅ VERIFICAÇÃO DUPLA DO EAN
-          if(ean13.length !== 13 || !isValidEAN13(ean13)) return;
-          
-          // ✅ DEBOUNCE SIMPLES
-          const agora = Date.now();
-          if(ean13 === ultimoEanProcessado && (agora - timestampUltimoProcessamento) < 800) {
-            return;
+      // ✅ Botões do scanner
+      document.getElementById("btn-fechar-scan").onclick = fecharScanner;
+      
+      document.getElementById("btn-zoom-in").onclick = async function(){
+        if(!zoomSupported) {
+          status_("<b>zoom não suportado</b>");
+          return;
+        }
+        const step = 0.5;
+        await applyZoom_(Math.min(zoomMax, zoomLevel + step));
+      };
+
+      document.getElementById("btn-zoom-out").onclick = async function(){
+        if(!zoomSupported) {
+          status_("<b>zoom não suportado</b>");
+          return;
+        }
+        const step = 0.5;
+        await applyZoom_(Math.max(zoomMin, zoomLevel - step));
+      };
+
+      document.getElementById("btn-torch").onclick = async function(){
+        if(!torchSupported) {
+          status_("<b>lanterna não suportada</b>");
+          return;
+        }
+        await toggleTorch_();
+      };
+
+      // ✅ Fechar com ESC
+      document.addEventListener("keydown", function(e){
+        if(e.key === "Escape" && scannerOpen) {
+          fecharScanner();
+        }
+      });
+
+      // ✅ Adicionar estilos para iOS
+      if (isIOS) {
+        const style = document.createElement('style');
+        style.textContent = `
+          /* Melhorar toques no iOS */
+          button, .scan-btn {
+            min-height: 44px !important;
+            cursor: pointer !important;
           }
           
-          ultimoEanProcessado = ean13;
-          timestampUltimoProcessamento = agora;
+          /* Garantir que botões sejam clicáveis */
+          button {
+            -webkit-tap-highlight-color: transparent;
+          }
           
-          // ✅ PROCESSAMENTO
-          await processarLeitura(ean13);
-        },
-        (errorMsg) => {
-          // Ignora erros de scanner
-          console.log("Scanner EAN error:", errorMsg);
-        }
-      );
-    }
-
-    async function registrarBipeServidor_(ean){
-      if(!cabecalhoAtual || !cabecalhoAtual.chaveAcesso) return;
-
-      const payload = {
-        api: "registrarBipeIndividual",
-        chaveAcesso: String(cabecalhoAtual.chaveAcesso || "").trim(),
-        ean: String(ean || "").trim(),
-        qtd: 1,
-        conferente: conferenteAtual || "Usuário"
-      };
-
-      try{
-        const data = await postJSON_(payload);
-        if(data && data.success){
-          const naNota = itensNF.some(i => String(i.ean||"") === String(ean));
-          if(!naNota && !cacheInfoEAN[ean]) buscarEANNoBanco(ean);
-          puxarSyncAgora_();
-        }
-      }catch(e){}
-    }
-
-    async function buscarEANNoBanco(ean){
-      const buffer = document.getElementById("buffer-ean");
-      buffer.classList.remove("hidden");
-      try{
-        const data = await postJSON_({
-          api:"buscarInfoEAN",
-          filial: filialAtual,
-          eans:[ean]
-        });
-        if(data.success && data.itens && data.itens[ean]){
-          cacheInfoEAN[ean] = data.itens[ean];
-          const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
-          render(montarListaConferencia(jaConferido));
-        }
-      }catch(e){
-      }finally{
-        buffer.classList.add("hidden");
+          /* Scanner overlay específico para iOS */
+          #scannerOverlay {
+            -webkit-overflow-scrolling: touch;
+          }
+          
+          /* Evitar zoom em inputs */
+          input[type="text"], input[type="number"] {
+            font-size: 16px !important;
+          }
+        `;
+        document.head.appendChild(style);
       }
-    }
-
-    // ✅ EVENTO DE CLIQUE PARA LIBERAR - SIMPLIFICADO
-    document.addEventListener("click", async (e)=>{
-      const scannerDiv = document.getElementById("scanner");
-      if(scannerDiv.style.display !== "flex") return;
-      if(modoScanner !== "EAN") return;
-      
-      if(e.target.closest(".scanner-close")) return;
-      
-      e.stopPropagation();
-      
-      // ✅ LIBERAÇÃO
-      scannerTravadoAbsolutamente = false;
-      ultimoEanProcessado = "";
-      
-      const scannerView = document.getElementById("scanner-view");
-      const info = document.getElementById("scanner-info");
-      
-      scannerView.classList.remove("scanner-paused");
-      info.classList.remove("scanner-info-paused");
-      info.innerHTML = `✅ Scanner liberado! Aponte para o próximo EAN-13.`;
-      
-      setTimeout(() => {
-        if(modoScanner === "EAN" && scannerDiv.style.display === "flex") {
-          info.innerHTML = `Aponte para o <span class="scanner-info-highlight">EAN-13</span> das peças.<br/>Após ler, pausa automaticamente.`;
-        }
-      }, 1500);
-      
-    }, true);
-
-    async function adicionarEANManual(){
-      if(!cabecalhoAtual){ alert("Carregue a NF primeiro."); return; }
-
-      const inp = document.getElementById("ean-manual");
-      const ean13 = extrairEAN13DoTexto(inp.value || "");
-      if(!ean13){
-        inp.value = ""; inp.focus(); return;
-      }
-
-      await registrarBipeServidor_(ean13);
-      beepOk();
-      inp.value = ""; inp.focus();
-    }
-
-    async function fecharLeitor(){
-      scannerTravadoAbsolutamente = false;
-      ultimoEanProcessado = "";
-      timestampUltimoProcessamento = 0;
-      cacheLeiturasInstantaneas = {};
-      
-      await pararScannerAtual_();
-      const scannerDiv = document.getElementById("scanner");
-      scannerDiv.style.display = "none";
-
-      const notif = scannerDiv.querySelector(".scanner-notification");
-      if(notif) notif.remove();
-
-      modoScanner = "";
-    }
-
-    async function enviarConferencia(){
-      const erro = document.getElementById("erro");
-      const msg = document.getElementById("msg");
-      erro.textContent = "";
-
-      if(!cabecalhoAtual){ erro.textContent = "Nenhuma NF carregada."; return; }
-      if(!confirm("Deseja enviar o resultado da conferência para o banco?")) return;
-
-      msg.textContent = "Enviando resultado da conferência...";
-      msg.classList.remove("hidden");
-
-      const listaFinal = montarListaConferencia(true);
-
-      const payload = {
-        api: "registrarConferenciaNF",
-        filialCodigo: filialAtual,
-        filialNome: nomesFiliais[filialAtual] || "",
-        numeroNF: cabecalhoAtual.numeroNF || "",
-        chaveAcesso: cabecalhoAtual.chaveAcesso || document.getElementById("chave").value.trim(),
-        dataConferencia: new Date().toISOString(),
-        totalNF: Number(document.getElementById("kpi-nf").textContent || 0),
-        totalScan: Number(document.getElementById("kpi-scan").textContent || 0),
-        versaoApp: APP_VERSION,
-        conferente: conferenteAtual || "Usuário",
-        itens: listaFinal.map(i => ({
-          ean: i.ean,
-          codigo: i.codigo,
-          cor: i.cor,
-          tamanho: i.tamanho,
-          qtdNF: i.qtdNF,
-          qtdScan: i.qtdScan,
-          diff: i.diff,
-          status: i.status
-        }))
-      };
-
-      try{
-        const data = await postJSON_(payload);
-        if(!data.success) throw new Error(data.message || "Falha ao registrar conferência.");
-        alert("Conferência registrada com sucesso!");
-        limparTela();
-      }catch(err){
-        erro.textContent = "Erro ao enviar: " + (err.message || err);
-      }finally{
-        msg.classList.add("hidden");
-      }
-    }
-
-    function limparTela(){
-      pararSync_();
-
-      cabecalhoAtual = null;
-      mapaScan = {};
-      itensNF = [];
-      termoFiltro = "";
-      cacheInfoEAN = {};
-
-      document.getElementById("chave").value = "";
-      document.getElementById("filtro").value = "";
-      document.getElementById("ean-manual").value = "";
-
-      document.getElementById("painel").classList.add("hidden");
-      document.getElementById("btn-enviar").classList.add("hidden");
-      document.getElementById("resumo-div").textContent = "";
-      document.getElementById("lista").innerHTML = "";
-
-      document.getElementById("chave").focus();
-    }
-
-    window.addEventListener("load", ()=>{
-      const f = localStorage.getItem("filial_conf_nf");
-      const nome = localStorage.getItem("conferente_conf_nf");
-
-      if(f && filiaisValidas.includes(f) && nome){
-        filialAtual = f;
-        conferenteAtual = nome;
-
-        document.getElementById("login").classList.add("hidden");
-        document.getElementById("principal").classList.remove("hidden");
-        atualizarInfoTopo_();
-      }
-
-      document.getElementById("filtro").addEventListener("input", (e)=>{
-        termoFiltro = e.target.value.trim();
-        const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
-        render(montarListaConferencia(jaConferido));
-      });
-
-      document.getElementById("ean-manual").addEventListener("keydown", (e)=>{
-        if(e.key === "Enter"){
-          e.preventDefault();
-          adicionarEANManual();
-        }
-      });
     });
+
+    // ✅ Expor função para debugging
+    window.debugScanner = {
+      abrir: abrirScanner,
+      fechar: fecharScanner,
+      status: scannerOpen,
+      config: function() {
+        console.log("Scanner config:", {
+          isIOS: isIOS,
+          scannerOpen: scannerOpen,
+          html5Scanner: !!html5Scanner,
+          btnLeitor: document.getElementById("btn-leitor-nf"),
+          hasPermission: navigator.mediaDevices && navigator.mediaDevices.getUserMedia
+        });
+      }
+    };
   </script>
 </body>
 </html>
