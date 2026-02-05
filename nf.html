@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
   <title>GERENCIAL HS - Recebimento de Nota Fiscal</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
@@ -313,6 +313,20 @@
     input, select, textarea {
       font-size: 16px !important; /* Prevents iOS zoom */
     }
+
+    /* Estilos específicos para iOS */
+    body.ios-device {
+      -webkit-tap-highlight-color: transparent;
+    }
+    body.ios-device button,
+    body.ios-device .scan-btn {
+      min-height: 44px !important;
+      cursor: pointer !important;
+    }
+    body.ios-device input[type="text"],
+    body.ios-device input[type="number"] {
+      font-size: 16px !important;
+    }
   </style>
 </head>
 
@@ -498,6 +512,27 @@
     // Detectar iOS
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
+    // ✅ DEBUG iOS
+    if (isIOS) {
+      console.log("📱 iOS detectado - Aplicando otimizações");
+      console.log("User Agent:", navigator.userAgent);
+      console.log("iOS Version:", navigator.userAgent.match(/OS (\d+)_/)?.[1]);
+      console.log("Safari Version:", navigator.userAgent.match(/Version\/(\d+)/)?.[1]);
+      console.log("MediaDevices available:", !!navigator.mediaDevices);
+      console.log("getUserMedia available:", !!navigator.mediaDevices?.getUserMedia);
+      
+      // Adicionar classe iOS ao body
+      document.body.classList.add('ios-device');
+      
+      // Forçar meta tag viewport para iOS
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 
+          'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
+        );
+      }
+    }
+
     function status_(html){
       document.getElementById("scanStatus").innerHTML = "Status: " + html;
     }
@@ -580,27 +615,63 @@
     // ✅ FUNÇÃO CRÍTICA: Verifica se há permissão da câmera
     async function checkCameraPermission() {
       try {
-        // Método mais direto para iOS
-        if (isIOS) {
-          // No iOS, tentamos uma abordagem mais simples
-          const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment" } 
-          });
-          
-          // Se chegou aqui, tem permissão
-          stream.getTracks().forEach(track => track.stop());
-          return true;
-        } else {
-          // Para Android/desktop, verificação normal
-          const devices = await navigator.mediaDevices.enumerateDevices();
-          const videoDevices = devices.filter(device => device.kind === 'videoinput');
-          const hasPermission = videoDevices.some(device => device.label);
-          return hasPermission;
-        }
+        // Método direto para iOS
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: "environment" } 
+        });
+        
+        // Se chegou aqui, tem permissão
+        stream.getTracks().forEach(track => track.stop());
+        return true;
       } catch (error) {
         console.log("Permissão não concedida:", error);
         return false;
       }
+    }
+
+    // ✅ Função auxiliar para mostrar erro no iOS
+    function mostrarErroIOS(error) {
+      let mensagem = "";
+      
+      if (error.name === 'NotAllowedError') {
+        mensagem = `
+          <b style="color:#ff6b6b">❌ Permissão negada</b><br/>
+          Para usar o scanner no iOS:<br/><br/>
+          1. Toque em <b>"Permitir"</b> quando o iOS perguntar<br/>
+          2. Se negou antes: Ajustes > Safari > Câmera > Permitir<br/>
+          3. Tente novamente
+        `;
+      } else if (error.name === 'NotFoundError') {
+        mensagem = `
+          <b style="color:#ff6b6b">📷 Câmera não encontrada</b><br/>
+          Verifique se há uma câmera disponível.
+        `;
+      } else if (error.message.includes('requestDevice')) {
+        mensagem = `
+          <b style="color:#ff6b6b">🚫 Problema de hardware</b><br/>
+          Reinicie o Safari e tente novamente.
+        `;
+      } else {
+        mensagem = `
+          <b style="color:#ff6b6b">Erro: ${error.message || "Desconhecido"}</b><br/>
+          Tente:<br/>
+          1. Fechar e abrir o scanner<br/>
+          2. Reiniciar o Safari<br/>
+          3. Usar digitação manual
+        `;
+      }
+      
+      status_(mensagem);
+      
+      setTimeout(() => {
+        fecharScanner();
+        
+        // Mostrar erro também na tela principal
+        const erroDiv = document.getElementById("erro-nf2");
+        if (erroDiv) {
+          erroDiv.innerHTML = `<small>⚠️ Problema no scanner iOS. Use digitação manual ou tente em outro dispositivo.</small>`;
+        }
+      }, 5000);
     }
 
     // ✅ NOVA FUNÇÃO: Processar leitura com validação melhorada
@@ -609,7 +680,6 @@
       
       const chave = extrairChave44(decodedText);
       if(!chave){
-        // Status informativo para códigos inválidos
         status_(`<b>leu algo</b><br/>"${decodedText.substring(0, 20)}..."<br/>Procurando 44 dígitos...`);
         return false;
       }
@@ -673,165 +743,68 @@
 
       html5Scanner = new Html5Qrcode("html5-reader");
 
-      // ✅ CONFIGURAÇÕES OTIMIZADAS PARA iOS
-      let config;
-      if (isIOS) {
-        // Configurações ESPECÍFICAS para iOS que FUNCIONAM
-        config = {
-          fps: 15, // FPS mais baixo para iOS (estabilidade)
-          qrbox: { 
-            width: 280, // Largura fixa para iOS
-            height: 180  // Altura adequada para códigos longos
-          },
-          aspectRatio: 1.0, // Quadrado funciona melhor no iOS
-          disableFlip: true,
-          experimentalFeatures: { 
-            useBarCodeDetectorIfSupported: false // DESATIVADO para iOS
-          },
-          rememberLastUsedCamera: true,
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.QR_CODE
-          ]
-        };
-      } else {
-        // Configurações normais para Android/Desktop
-        config = {
-          fps: 30,
-          qrbox: (view) => {
-            const w = Math.min(view.width, 520);
-            const h = Math.min(view.height, 820);
-            const boxW = Math.floor(w * 0.92);
-            const boxH = Math.floor(h * 0.22);
-            return { width: boxW, height: boxH };
-          },
-          aspectRatio: 0.75,
-          disableFlip: true,
-          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-          rememberLastUsedCamera: true,
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.QR_CODE,
-            Html5QrcodeSupportedFormats.EAN_13
-          ]
-        };
-      }
-
-      // Constraints otimizados para iOS
-      const constraints = { 
-        facingMode: "environment",
-        ...(isIOS ? {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 }
-        } : {})
+      // ✅ CONFIGURAÇÃO ESPECIAL PARA iOS QUE FUNCIONA
+      const config = {
+        fps: 10, // iOS funciona melhor com FPS mais baixo
+        qrbox: { 
+          width: 250,
+          height: 150
+        },
+        aspectRatio: 1.0,
+        disableFlip: false, // IMPORTANTE: deixar false no iOS
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: false // DESATIVAR no iOS
+        },
+        rememberLastUsedCamera: false,
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.QR_CODE
+        ],
+        // ✅ Configurações específicas do iOS
+        useBarCodeDetectorIfSupported: false
       };
 
       status_("<b>procurando o código…</b><br/>Aproxime e alinhe no retângulo.");
 
       try {
-        // ✅ CONTADOR DE TENTATIVAS PARA iOS
-        let tentativas = 0;
-        const maxTentativas = 2;
+        // ✅ Método SIMPLIFICADO para iOS
+        await html5Scanner.start(
+          { facingMode: "environment" }, // SIMPLES assim
+          config,
+          async (decodedText) => {
+            await processarLeitura(decodedText);
+          },
+          (error) => {
+            // Ignorar erros normais
+            if (error && !error.includes("NotFound")) {
+              console.log("Scanner error:", error);
+            }
+          }
+        );
+
+        status_("<b>✅ Scanner pronto!</b><br/>Aponte para o código de barras.");
+
+      } catch (error) {
+        console.error("Erro ao iniciar scanner no iOS:", error);
         
-        while (tentativas < maxTentativas) {
+        // ✅ TENTATIVA ALTERNATIVA se "environment" falhar
+        if (error.message && error.message.includes("environment")) {
+          status_("<b>Tentando câmera frontal…</b>");
+          
           try {
             await html5Scanner.start(
-              constraints,
+              { facingMode: "user" }, // Tentar câmera frontal
               config,
               async (decodedText) => {
                 await processarLeitura(decodedText);
-              },
-              (error) => {
-                // Ignorar erros normais do scanner
-                if (error && error !== "NotFoundException") {
-                  console.log("Scanner error:", error);
-                }
               }
             );
-            
-            // Se chegou aqui, iniciou com sucesso
-            break;
-            
-          } catch (startError) {
-            tentativas++;
-            console.log(`Tentativa ${tentativas} falhou:`, startError);
-            
-            if (tentativas >= maxTentativas) {
-              throw startError;
-            }
-            
-            // Aguardar um pouco antes de tentar novamente
-            await new Promise(resolve => setTimeout(resolve, 500));
+            status_("<b>✅ Usando câmera frontal</b><br/>Aponte para o código.");
+          } catch (error2) {
+            mostrarErroIOS(error2);
           }
-        }
-
-        // Verificar recursos da câmera (zoom, lanterna) após iniciar
-        setTimeout(async ()=>{
-          try{
-            const video = document.querySelector("#html5-reader video");
-            const stream = video && video.srcObject;
-            if(!stream) return;
-            const t = stream.getVideoTracks && stream.getVideoTracks()[0];
-            if(!t) return;
-
-            currentTrack = t;
-            const caps = currentTrack.getCapabilities ? currentTrack.getCapabilities() : {};
-
-            if(caps.zoom){
-              zoomSupported = true;
-              zoomMin = caps.zoom.min;
-              zoomMax = caps.zoom.max;
-              zoomLevel = Math.min(Math.max(1.5, zoomMin), zoomMax);
-              await applyZoom_(zoomLevel);
-            }
-            if(caps.torch !== undefined){
-              torchSupported = true;
-            }
-          }catch(e){}
-        }, 800);
-
-      } catch (error) {
-        console.error("Erro ao iniciar scanner:", error);
-        
-        // ✅ MENSAGENS DE ERRO ESPECÍFICAS PARA iOS
-        if (error.name === 'NotAllowedError' || error.message.includes('Permission')) {
-          status_(`
-            <b style="color:#ff6b6b">❌ Permissão de câmera necessária</b><br/>
-            Para usar o scanner, você precisa permitir o acesso à câmera.<br/><br/>
-            ${isIOS ? 
-              '<b>📱 No iOS:</b><br/>1. Toque em "Permitir" quando solicitado<br/>2. Ou vá em Ajustes > Safari > Câmera > "Permitir"' : 
-              'No Android, toque em "Permitir" quando solicitado.'}
-          `);
-          
-          setTimeout(() => {
-            fecharScanner();
-          }, 5000);
-          
-        } else if (error.name === 'NotFoundError' || error.message.includes('device')) {
-          status_(`
-            <b style="color:#ff6b6b">❌ Câmera não encontrada</b><br/>
-            Nenhuma câmera traseira encontrada.<br/><br/>
-            ${isIOS ? 
-              '<b>📱 No iOS:</b><br/>Verifique se a câmera está disponível e tente novamente.' : 
-              'Verifique se há uma câmera disponível.'}
-          `);
-          
-          setTimeout(() => {
-            fecharScanner();
-          }, 3000);
-          
         } else {
-          // Outros erros
-          status_(`
-            <b style="color:#ff6b6b">Erro ao iniciar scanner</b><br/>
-            ${error.message || "Tente novamente"}
-            ${isIOS ? '<br/><br/><b>📱 Dica iOS:</b> Feche e abra novamente o scanner.' : ''}
-          `);
-          
-          setTimeout(() => {
-            fecharScanner();
-          }, 3000);
+          mostrarErroIOS(error);
         }
       }
     }
@@ -935,40 +908,6 @@
           fecharScanner();
         }
       });
-
-      // ✅ Adicionar estilos para iOS
-      if (isIOS) {
-        const style = document.createElement('style');
-        style.textContent = `
-          /* Melhorar toques no iOS */
-          button, .scan-btn {
-            min-height: 44px !important;
-            cursor: pointer !important;
-          }
-          
-          /* Garantir que botões sejam clicáveis */
-          button {
-            -webkit-tap-highlight-color: transparent;
-          }
-          
-          /* Scanner overlay específico para iOS */
-          #scannerOverlay {
-            -webkit-overflow-scrolling: touch;
-          }
-          
-          /* Evitar zoom em inputs */
-          input[type="text"], input[type="number"] {
-            font-size: 16px !important;
-          }
-          
-          /* Melhorar visualização do scanner no iOS */
-          #html5-reader video {
-            transform: scaleX(1) !important;
-            -webkit-transform: scaleX(1) !important;
-          }
-        `;
-        document.head.appendChild(style);
-      }
     });
 
     // ✅ Expor função para debugging
