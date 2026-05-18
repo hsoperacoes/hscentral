@@ -1,0 +1,2540 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <title>Conferência de Nota Fiscal - HS</title>
+
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css?version=3.7" />
+
+  <!-- ✅ Html5Qrcode (usado para NF 44 e EAN) -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+
+    :root{
+      --navy:#071a45;
+      --navy-2:#0f172a;
+      --bg:#edf2f7;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#dbe3ef;
+      --green:#16a34a;
+      --green-dark:#15803d;
+      --red:#dc2626;
+      --red-dark:#b91c1c;
+      --blue:#2563eb;
+      --amber:#f59e0b;
+      --shadow:0 10px 30px rgba(15,23,42,.08);
+    }
+
+    *{box-sizing:border-box}
+    body{
+      font-family: Arial, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      margin:0;
+      padding:0;
+      min-height:100vh;
+    }
+
+    .hidden{display:none!important}
+
+    .top-nav{
+      width:100%;
+      display:flex;
+      justify-content:flex-start;
+      padding:14px 20px 0;
+      margin:0;
+      background:linear-gradient(90deg,#020817,#0f172a,#020617);
+    }
+
+    .back-button{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:9px 18px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.08);
+      color:#e5e7eb;
+      font-size:.9rem;
+      text-decoration:none;
+      box-shadow:0 10px 30px rgba(0,0,0,.18);
+    }
+    .back-button:hover{background:rgba(255,255,255,.14)}
+
+    .logo-topo{display:none}
+
+    .container{
+      width:100%;
+      max-width:none;
+      background:transparent;
+      padding:0;
+      border-radius:0;
+      box-shadow:none;
+      margin:0;
+    }
+
+    .form-container{
+      max-width:none;
+      margin:0;
+      background:transparent;
+      padding:0;
+      border-radius:0;
+      box-shadow:none;
+    }
+
+    #login{
+      max-width:480px;
+      margin:50px auto;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:26px;
+      padding:28px;
+      box-shadow:var(--shadow);
+    }
+
+    #login h2{
+      text-align:left;
+      margin:0 0 20px;
+      font-size:24px;
+      color:var(--navy);
+    }
+
+    #principal{
+      width:100%;
+    }
+
+    #principal::before{
+      content:"CONFERÊNCIA DE NOTA FISCAL";
+      display:block;
+      background:linear-gradient(90deg,#020817,#0f172a,#020617);
+      color:#fff;
+      padding:22px 25px 4px;
+      font-size:28px;
+      font-weight:900;
+      letter-spacing:.3px;
+    }
+
+    #principal::after{
+      content:"ROTINAS OPERACIONAIS";
+      display:block;
+      background:linear-gradient(90deg,#020817,#0f172a,#020617);
+      color:#cbd5e1;
+      padding:0 25px 20px;
+      font-size:13px;
+      font-weight:700;
+      letter-spacing:.8px;
+    }
+
+    .logout{
+      position:absolute;
+      top:14px;
+      right:20px;
+      z-index:5;
+      margin:0;
+    }
+
+    h1{
+      display:none;
+    }
+
+    h2{
+      margin:0 0 12px;
+      text-align:left;
+      color:var(--navy);
+    }
+
+    label{
+      font-size:13px;
+      font-weight:800;
+      display:block;
+      margin:12px 0 7px;
+      color:#334155;
+      text-transform:uppercase;
+      letter-spacing:.3px;
+    }
+
+    input{
+      width:100%;
+      padding:14px 15px;
+      font-size:14px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:#fff;
+      color:var(--text);
+      margin-bottom:8px;
+      outline:none;
+    }
+    input:focus{
+      border-color:var(--blue);
+      box-shadow:0 0 0 4px rgba(37,99,235,.12)
+    }
+
+    button{
+      background:var(--navy);
+      color:#fff;
+      border:none;
+      padding:12px 18px;
+      border-radius:14px;
+      font-size:14px;
+      cursor:pointer;
+      font-weight:800;
+      transition:.2s;
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      justify-content:center;
+    }
+    button:hover{filter:brightness(1.05);transform:translateY(-1px)}
+    .btn-secundario{background:#64748b}
+    .btn-secundario:hover{background:#475569}
+    .btn-ok{background:var(--green)}
+    .btn-ok:hover{background:var(--green-dark)}
+    .btn-full{width:100%;margin-top:8px}
+    .linha-botoes{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 5px}
+    .linha-botoes button{flex:1;min-width:160px}
+
+    .info-filial,
+    .info-conferente{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size:13px;
+      color:#334155;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:10px 14px;
+      margin:10px 8px 0 0;
+      box-shadow:0 4px 12px rgba(15,23,42,.04);
+      font-weight:700;
+    }
+
+    .loading{
+      font-style:normal;
+      color:var(--blue);
+      font-size:13px;
+      margin-top:10px;
+      text-align:center;
+      font-weight:800;
+    }
+    .erro{
+      color:var(--red);
+      font-size:13px;
+      margin-top:8px;
+      font-weight:800;
+    }
+
+    #principal > label[for="chave"],
+    #principal > #chave,
+    #principal > .linha-botoes,
+    #loading,
+    #erro{
+      max-width:420px;
+      margin-left:20px;
+      margin-right:0;
+    }
+
+    #principal > label[for="chave"]{
+      margin-top:20px;
+    }
+
+    #painel{
+      display:grid;
+      grid-template-columns:420px 1fr;
+      gap:20px;
+      padding:20px;
+      align-items:start;
+    }
+
+    .cards{
+      display:flex;
+      flex-direction:column;
+      gap:20px;
+      margin-top:0;
+      grid-column:1;
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:24px;
+      padding:20px;
+      box-shadow:var(--shadow);
+      color:var(--text);
+    }
+
+    .titulo{
+      margin:0 0 14px;
+      font-size:18px;
+      font-weight:900;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      color:var(--navy);
+    }
+    .titulo small{color:var(--muted);font-weight:800}
+
+    .muted{
+      color:var(--muted);
+      line-height:1.45;
+    }
+
+    .kpi{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:15px 16px;
+      border-radius:18px;
+      background:#f8fafc;
+      border:1px solid var(--border);
+      margin-top:10px;
+      font-size:14px;
+    }
+    .kpi strong{color:#334155}
+    .kpi span{color:var(--navy);font-weight:900;font-size:22px}
+
+    .campo-pesquisa{
+      grid-column:2;
+      margin:0;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:24px;
+      box-shadow:var(--shadow);
+      padding:18px 20px 10px;
+    }
+
+    #painel > .titulo{
+      grid-column:2;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:24px 24px 0 0;
+      padding:20px;
+      margin:0;
+      box-shadow:var(--shadow);
+    }
+
+    .lista{
+      grid-column:2;
+      margin-top:-20px;
+      display:flex;
+      flex-direction:column;
+      gap:0;
+      max-height:none;
+      overflow:auto;
+      padding:0;
+      background:#fff;
+      border:1px solid var(--border);
+      border-top:none;
+      border-radius:0 0 24px 24px;
+      box-shadow:var(--shadow);
+    }
+
+    .item{
+      background:#fff;
+      border:none;
+      border-bottom:1px solid #e5e7eb;
+      border-radius:0;
+      padding:16px 20px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      font-size:14px;
+    }
+    .item:last-child{border-bottom:none}
+
+    .row{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .badge{
+      font-size:12px;
+      padding:7px 12px;
+      border-radius:999px;
+      font-weight:900;
+      background:#e2e8f0;
+      color:#334155;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      min-width:90px;
+      justify-content:center;
+    }
+    .ok{background:#dcfce7;color:#166534}
+    .faltando{background:#fee2e2;color:#b91c1c}
+    .passando{background:#fef3c7;color:#b45309}
+    .extra{background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe}
+
+    .mini-teste{
+      margin-top:14px;
+      padding:14px;
+      border:1px solid var(--border);
+      border-radius:18px;
+      background:#f8fafc;
+    }
+    .mini-teste .row{align-items:center}
+    .mini-teste input{margin:0}
+    .mini-teste button{min-width:140px}
+
+    .grupo-ajuste{display:inline-flex;gap:6px;align-items:center}
+    .btn-ajuste{
+      color:#fff;
+      width:36px;height:34px;
+      padding:0;font-size:13px;border-radius:10px;
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow:0 4px 12px rgba(0,0,0,.12);
+    }
+    .btn-ajuste-mais{background:var(--green)}
+    .btn-ajuste-mais:hover{background:var(--green-dark)}
+    .btn-ajuste-menos{background:var(--red)}
+    .btn-ajuste-menos:hover{background:var(--red-dark)}
+    .btn-ajuste:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3)}
+
+    /* Scanner overlay preservado */
+    #scanner{
+      width:100vw;height:100vh;position:fixed;inset:0;z-index:1000;
+      display:none;justify-content:center;align-items:center;flex-direction:column;
+      background:rgba(0,0,0,.75);
+      backdrop-filter: blur(6px);
+    }
+    #scanner *{pointer-events:auto}
+    .scanner-close{
+      position:absolute;top:15px;right:15px;
+      background:rgba(17,24,39,.92);
+      border:1px solid #374151;
+      border-radius:999px;padding:10px 14px;font-size:12px;
+      z-index:99999;
+      box-shadow:0 10px 25px rgba(0,0,0,.35);
+    }
+    .scanner-close:hover{filter:brightness(1.05)}
+    #scanner-view{
+      width:min(720px, 92vw);
+      background:#000;
+      border:2px solid var(--blue);
+      border-radius:16px;
+      padding:14px;
+      box-shadow:0 20px 70px rgba(37,99,235,.25);
+      position:relative;
+      overflow:hidden;
+    }
+    #scanner-view::before{
+      content:'';
+      position:absolute;top:0;left:0;right:0;height:4px;
+      background:linear-gradient(90deg,var(--blue),var(--green),var(--blue));
+      background-size:200% 100%;
+      animation:scanner-glow 3s linear infinite;
+    }
+    @keyframes scanner-glow{
+      0%{background-position:0% 0}
+      100%{background-position:200% 0}
+    }
+    #scanner video,#scanner canvas{
+      width:100%!important;height:auto!important;
+      border-radius:12px;
+      max-width:none!important;max-height:none!important;
+    }
+    .scanner-info{
+      margin-top:14px;
+      font-size:14px;
+      text-align:center;
+      color:#e5e7eb;
+      width:min(720px, 92vw);
+      padding:12px 14px;
+      background:rgba(31,41,55,.75);
+      border:1px solid #374151;
+      border-radius:14px;
+      box-shadow:0 10px 30px rgba(0,0,0,.25);
+    }
+    .scanner-info-highlight{
+      color:#bbf7d0;
+      font-weight:800;
+      background:rgba(15,118,110,.22);
+      padding:2px 8px;
+      border-radius:8px;
+      display:inline-block;
+      margin:0 4px;
+    }
+    .scanner-paused{
+      border-color:var(--green)!important;
+      box-shadow:0 20px 70px rgba(22,163,74,.22)!important;
+    }
+    .scanner-info-paused{
+      background:rgba(22,163,74,.18)!important;
+      border-color:var(--green)!important;
+      color:#bbf7d0!important;
+    }
+    .scanner-notification{
+      position:absolute;
+      top:18px;left:50%;
+      transform:translateX(-50%);
+      background:linear-gradient(135deg,var(--green) 0%,var(--green-dark) 100%);
+      color:#fff;
+      padding:12px 18px;
+      border-radius:14px;
+      border:2px solid rgba(187,247,208,.25);
+      box-shadow:0 12px 30px rgba(15,118,110,.35);
+      display:flex;align-items:center;gap:12px;
+      z-index:100000;
+      max-width:90vw;
+      text-align:center;
+      animation:slide-in .35s ease-out;
+    }
+    @keyframes slide-in{
+      from{opacity:0;transform:translateX(-50%) translateY(-16px)}
+      to{opacity:1;transform:translateX(-50%) translateY(0)}
+    }
+    .scanner-notification i{font-size:20px;color:#bbf7d0}
+    .scanner-notification .title{font-weight:900;letter-spacing:.5px}
+    .scanner-notification .sub{font-size:12px;opacity:.9}
+    .scanner-notification .ean{
+      margin-top:6px;
+      font-family:monospace;
+      font-size:16px;
+      font-weight:900;
+      letter-spacing:2px;
+      background:rgba(0,0,0,.25);
+      border:1px solid rgba(187,247,208,.2);
+      border-radius:10px;
+      padding:6px 10px;
+    }
+
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+      display: none; justify-content: center; align-items: center; z-index: 2000;
+    }
+    .modal-content {
+      background: #fff; color:var(--text); padding: 25px; border-radius: 24px; width: 90%; max-width: 600px;
+      border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    .modal-header { color: var(--red); font-size: 1.2rem; font-weight: 900; margin-bottom: 15px; text-align: center; }
+    .modal-body { max-height: 300px; overflow-y: auto; margin-bottom: 20px; font-size: 14px; }
+    .modal-item { padding: 10px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; gap:10px; }
+    .modal-footer { text-align: center; }
+    .modal-footer .linha-modal{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+    .modal-confirmacao-extra .modal-header{color:#b45309}
+    .modal-confirmacao-extra .codigo-extra{
+      font-family:monospace;font-size:18px;font-weight:900;letter-spacing:1px;
+      background:#f8fafc;border:1px solid var(--border);border-radius:14px;padding:10px;margin:10px 0;text-align:center;
+    }
+    .btn-danger{background:var(--red)}
+    .btn-danger:hover{background:var(--red-dark)}
+    .btn-warning{background:#ca8a04}
+    .btn-warning:hover{background:#a16207}
+
+    footer{
+      text-align:center;
+      font-size:13px;
+      color:#64748b;
+      background:transparent;
+      padding:18px 15px;
+      margin:0;
+      width:100%;
+    }
+
+    @media (max-width: 1100px){
+      #painel{grid-template-columns:1fr}
+      .cards,.campo-pesquisa,#painel > .titulo,.lista{grid-column:1}
+      #principal > label[for="chave"],
+      #principal > #chave,
+      #principal > .linha-botoes,
+      #loading,
+      #erro{
+        max-width:none;
+        margin-left:20px;
+        margin-right:20px;
+      }
+    }
+    @media (max-width: 700px){
+      .logout{position:static;text-align:right;background:#020817;padding:0 20px 10px}
+      #principal::before{font-size:22px}
+      #painel{padding:12px}
+      .info-filial,.info-conferente{margin-left:12px}
+      .row{align-items:flex-start}
+      .linha-botoes{flex-direction:column}
+    }
+
+  
+    /* =========================================================
+       SCANNER NF 44 FUNCIONAL - BLOCO SEPARADO
+       Mantém layout novo e usa a estrutura do modelo que lia rápido.
+    ========================================================= */
+    #scannerOverlayNF44 {
+      position: fixed;
+      inset: 0;
+      z-index: 100000;
+      display: none;
+      background: rgba(0,0,0,.92);
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      backdrop-filter: blur(2px);
+    }
+
+    .scan-card-nf44 {
+      width: min(520px, 96vw);
+      height: min(820px, 92vh);
+      background: #0b0b0c;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 18px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .scan-top-nf44 {
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(20,20,22,.95), rgba(10,10,12,.95));
+    }
+
+    .scan-title-nf44 {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight: 900;
+      color: #e5e7eb;
+      font-size: 14px;
+      letter-spacing:.2px;
+    }
+
+    .scan-title-nf44 i { color: #bbf7d0; }
+
+    .scan-actions-nf44 {
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+
+    .scan-btn-nf44 {
+      width: auto !important;
+      padding: 10px 12px !important;
+      margin-top: 0 !important;
+      border-radius: 12px !important;
+      background: rgba(2,6,23,.88) !important;
+      border: 1px solid rgba(255,255,255,.14) !important;
+      color: #e5e7eb !important;
+      font-weight: 800 !important;
+      font-size: 12px !important;
+      cursor: pointer;
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      min-height: 44px;
+    }
+
+    .scan-btn-nf44:hover { filter: brightness(1.07); }
+
+    .scan-btn-nf44.primary {
+      background: rgba(103,58,183,.92) !important;
+      border-color: rgba(103,58,183,.55) !important;
+    }
+
+    .scan-body-nf44 {
+      position: relative;
+      flex: 1;
+      padding: 10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:0;
+    }
+
+    .scan-frame-nf44 {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 2px solid rgba(103,58,183,.6);
+      box-shadow: 0 14px 40px rgba(103,58,183,.12);
+      background: #000;
+    }
+
+    #html5-reader-nf44 { width: 100%; height: 100%; }
+
+    #html5-reader-nf44 video,
+    #html5-reader-nf44 canvas {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+      background: #000;
+      -webkit-transform: scaleX(1);
+      transform: scaleX(1);
+    }
+
+    .scan-guide-nf44 {
+      position: absolute;
+      left: 50%;
+      top: 56%;
+      transform: translate(-50%, -50%);
+      width: min(92%, 520px);
+      height: 22%;
+      border: 2px solid rgba(187,247,208,.55);
+      border-radius: 14px;
+      box-shadow: 0 0 0 2000px rgba(0,0,0,.10) inset;
+      pointer-events: none;
+    }
+
+    .scan-line-nf44 {
+      position:absolute;
+      left: 8%;
+      right: 8%;
+      top: 50%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(187,247,208,.95), transparent);
+      box-shadow: 0 0 18px rgba(187,247,208,.35);
+      pointer-events: none;
+      animation: sweepNF44 1.6s linear infinite;
+    }
+
+    @keyframes sweepNF44 {
+      0% { transform: translateY(-26px); opacity: .35; }
+      50% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(26px); opacity: .35; }
+    }
+
+    .scan-status-nf44 {
+      padding: 10px 12px;
+      border-top: 1px solid rgba(255,255,255,.10);
+      background: rgba(10,10,12,.95);
+      font-size: 12px;
+      color: #cbd5e1;
+      line-height: 1.4;
+    }
+
+    .scan-status-nf44 b { color:#bbf7d0; }
+
+    @media (max-width:700px){
+      .scan-card-nf44{
+        width:96vw;
+        height:92vh;
+      }
+      .scan-actions-nf44{
+        gap:5px;
+      }
+      .scan-btn-nf44{
+        padding:9px 10px!important;
+        font-size:11px!important;
+      }
+    }
+
+  
+    /* =========================================================
+       AJUSTES V3.5 - LISTA COMPACTA E SEM ESPAÇO EM BRANCO
+    ========================================================= */
+    #painel{
+      grid-template-columns:360px 1fr !important;
+      align-items:start !important;
+      gap:16px !important;
+      padding-top:14px !important;
+    }
+
+    .campo-pesquisa{
+      margin-bottom:0 !important;
+      border-radius:22px 22px 0 0 !important;
+      box-shadow:var(--shadow) !important;
+    }
+
+    #painel > .titulo{
+      margin-top:0 !important;
+      border-radius:0 !important;
+      border-top:none !important;
+      padding-top:12px !important;
+      padding-bottom:12px !important;
+      box-shadow:none !important;
+    }
+
+    .lista{
+      margin-top:0 !important;
+      border-radius:0 0 22px 22px !important;
+      min-height:0 !important;
+      max-height:calc(100vh - 255px) !important;
+      overflow:auto !important;
+    }
+
+    .item{
+      padding:14px 18px !important;
+      gap:7px !important;
+    }
+
+    .item-main-code{
+      font-size:18px;
+      font-weight:900;
+      color:#0f172a;
+      letter-spacing:.4px;
+      display:inline-flex;
+      align-items:center;
+      gap:14px;
+      white-space:nowrap;
+    }
+
+    .item-main-code span{
+      display:inline-block;
+    }
+
+    .item-info-line{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      color:#475569;
+      font-size:13px;
+      font-weight:800;
+    }
+
+    .item-info-left{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+
+    .diff-ok{
+      background:#dcfce7;
+      color:#166534;
+      padding:7px 13px;
+      border-radius:999px;
+      font-weight:900;
+      font-size:12px;
+    }
+
+    .diff-bad{
+      background:#fee2e2;
+      color:#b91c1c;
+      padding:7px 13px;
+      border-radius:999px;
+      font-weight:900;
+      font-size:12px;
+    }
+
+    .diff-passando{
+      background:#fef3c7;
+      color:#b45309;
+      padding:7px 13px;
+      border-radius:999px;
+      font-weight:900;
+      font-size:12px;
+    }
+
+    .mini-teste label.manual-title{
+      margin-top:0 !important;
+      color:#0f172a !important;
+      font-size:13px !important;
+    }
+
+    @media(max-width:1100px){
+      #painel{
+        grid-template-columns:1fr !important;
+      }
+
+      .lista{
+        max-height:none !important;
+      }
+    }
+
+  
+    /* =========================================================
+       AJUSTES V3.6 - OK OCULTO EM TEMPO REAL / LISTA SEM VÃO
+    ========================================================= */
+    #painel{
+      grid-template-columns:240px 1fr !important;
+      gap:12px !important;
+      padding:12px 14px !important;
+      align-items:start !important;
+    }
+
+    .cards{
+      gap:12px !important;
+    }
+
+    .campo-pesquisa{
+      grid-column:2 !important;
+      margin:0 !important;
+      padding:14px 16px 8px !important;
+      border-radius:20px 20px 0 0 !important;
+      box-shadow:none !important;
+    }
+
+    .campo-pesquisa label{
+      margin-top:0 !important;
+      margin-bottom:6px !important;
+    }
+
+    #painel > .titulo{
+      grid-column:2 !important;
+      margin:0 !important;
+      padding:12px 16px !important;
+      border-radius:0 !important;
+      border-top:none !important;
+      box-shadow:none !important;
+    }
+
+    .lista{
+      grid-column:2 !important;
+      margin:0 !important;
+      margin-top:0 !important;
+      border-radius:0 0 20px 20px !important;
+      max-height:calc(100vh - 270px) !important;
+      min-height:0 !important;
+      box-shadow:none !important;
+    }
+
+    .item-main-code{
+      font-size:17px !important;
+      font-weight:800 !important;
+      color:#111827 !important;
+      letter-spacing:.2px !important;
+      gap:10px !important;
+    }
+
+    .item-main-code span{
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      padding:5px 9px;
+      border-radius:10px;
+      font-weight:800;
+    }
+
+    .item-info-left{
+      gap:10px !important;
+    }
+
+    .item-info-line{
+      margin-top:2px;
+    }
+
+    @media(max-width:1100px){
+      #painel{
+        grid-template-columns:1fr !important;
+      }
+      .cards,.campo-pesquisa,#painel > .titulo,.lista{
+        grid-column:1 !important;
+      }
+      .lista{
+        max-height:none !important;
+      }
+    }
+
+  
+    /* =========================================================
+       AJUSTE V3.7 - REMOVE VÃO ENTRE BUSCA E RESULTADO
+       A coluna da esquerda não pode definir a altura da linha do grid.
+    ========================================================= */
+    #painel{
+      display:grid !important;
+      grid-template-columns:240px minmax(0,1fr) !important;
+      grid-template-rows:auto auto minmax(0,1fr) !important;
+      gap:0 12px !important;
+      align-items:start !important;
+      padding:12px 14px !important;
+    }
+
+    #painel .cards{
+      grid-column:1 !important;
+      grid-row:1 / span 3 !important;
+      align-self:start !important;
+      margin:0 !important;
+      gap:12px !important;
+    }
+
+    #painel .campo-pesquisa{
+      grid-column:2 !important;
+      grid-row:1 !important;
+      margin:0 !important;
+      align-self:start !important;
+      border-radius:20px 20px 0 0 !important;
+    }
+
+    #painel > .titulo{
+      grid-column:2 !important;
+      grid-row:2 !important;
+      margin:0 !important;
+      align-self:start !important;
+      border-radius:0 !important;
+    }
+
+    #painel .lista{
+      grid-column:2 !important;
+      grid-row:3 !important;
+      margin:0 !important;
+      align-self:start !important;
+      border-radius:0 0 20px 20px !important;
+      max-height:calc(100vh - 245px) !important;
+    }
+
+    @media(max-width:1100px){
+      #painel{
+        grid-template-columns:1fr !important;
+        grid-template-rows:auto !important;
+        gap:12px !important;
+      }
+
+      #painel .cards,
+      #painel .campo-pesquisa,
+      #painel > .titulo,
+      #painel .lista{
+        grid-column:1 !important;
+        grid-row:auto !important;
+      }
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="top-nav">
+    <a href="index.html?version=3.7" class="back-button">
+      <i class="fas fa-arrow-left"></i> Voltar à Home
+    </a>
+  </div>
+
+  <img src="logo.png?version=3.7" alt="Logo HS" class="logo-topo" />
+
+  <div class="container">
+    <div class="form-container">
+
+      <div id="login" class="login-box">
+        <h2>Login da Filial</h2>
+
+        <label for="codigo-filial">Código da Filial</label>
+        <input id="codigo-filial" type="text" placeholder="Ex: 293, 488, 287, 288, 761" />
+
+        <label for="nome-conferente">Conferente</label>
+        <input id="nome-conferente" type="text" placeholder="Ex: WILL" />
+
+        <button class="btn-full" onclick="entrar()">
+          <i class="fas fa-door-open"></i> Entrar
+        </button>
+      </div>
+
+      <div id="principal" class="hidden">
+        <div class="logout">
+          <button class="btn-secundario" onclick="sair()">
+            <i class="fas fa-sign-out-alt"></i> Sair
+          </button>
+        </div>
+
+        <h1>Conferência de Nota Fiscal</h1>
+        <div class="info-filial" id="info-filial"></div>
+        <div class="info-conferente" id="info-conferente"></div>
+
+        <label for="chave">Chave de Acesso (44 dígitos)</label>
+        <input id="chave" type="text" maxlength="44" placeholder="Digite ou leia o código de barras da NF" />
+
+        <div class="linha-botoes">
+          <button onclick="abrirLeitor('NF')">
+            <i class="fas fa-camera"></i> Ler Chave da NF
+          </button>
+          <button onclick="carregarNF()">
+            <i class="fas fa-cloud-download-alt"></i> Carregar Itens da NF
+          </button>
+        </div>
+
+        <div id="loading" class="loading hidden">⏳ Carregando itens da NF...</div>
+        <div id="erro" class="erro"></div>
+
+        <div id="painel" class="hidden">
+          <div class="cards">
+            <div class="card">
+              <div class="titulo">Resumo da NF</div>
+              <div class="muted" id="resumo-nf"></div>
+
+              <div class="kpi"><strong>Total itens na NF</strong><span id="kpi-nf">0</span></div>
+              <div class="kpi hidden"><strong>Total escaneado</strong><span id="kpi-scan">0</span></div>
+              <div class="kpi"><strong>Sync (tempo real)</strong><span id="kpi-sync">—</span></div>
+            </div>
+
+            <div class="card">
+              <div class="titulo">Scanner de Peças</div>
+              <div class="muted">Escaneie os EANs das etiquetas. Vai somando automático <strong>(multiusuário na mesma NF)</strong>.</div>
+
+              <div class="linha-botoes" style="margin-top:10px">
+                <button class="btn-ok" onclick="abrirLeitor('EAN')">
+                  <i class="fas fa-barcode"></i> Escanear EAN (Peças)
+                </button>
+                <button class="btn-secundario" onclick="limparScans()">
+                  <i class="fas fa-eraser"></i> Zerar Scans
+                </button>
+              </div>
+
+              <div class="mini-teste">
+                <label class="manual-title" for="ean-manual">Campo para inclusão de códigos manuais</label>
+                <div id="buffer-ean" class="loading hidden" style="margin-bottom:5px">🔍 Buscando dados no banco...</div>
+                <div class="row" style="gap:10px">
+                  <input id="ean-manual" type="text" placeholder="Digite aqui o cód da peça" />
+                  <button class="btn-ok" onclick="adicionarEANManual()">
+                    <i class="fas fa-plus"></i> Adicionar
+                  </button>
+                </div>
+              </div>
+
+              <div class="linha-botoes">
+                <button class="btn-full" onclick="fazerConferencia()">
+                  <i class="fas fa-clipboard-check"></i> Fazer Conferência
+                </button>
+                <button id="btn-enviar" class="btn-full hidden" onclick="enviarConferencia()">
+                  <i class="fas fa-paper-plane"></i> Enviar Resultado
+                </button>
+              </div>
+
+              <div id="msg" class="loading hidden"></div>
+            </div>
+          </div>
+
+          <div class="campo-pesquisa">
+            <label for="filtro">Buscar (EAN / referência / cor / tamanho)</label>
+            <input id="filtro" type="text" placeholder="Digite para filtrar..." />
+          </div>
+
+          <div class="titulo">
+            Resultado da Conferência
+            <small id="resumo-div"></small>
+          </div>
+
+          <div id="lista" class="lista"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- SCANNER NF 44 FUNCIONAL - SEPARADO DO LEITOR DE EAN -->
+  <div id="scannerOverlayNF44">
+    <div class="scan-card-nf44">
+      <div class="scan-top-nf44">
+        <div class="scan-title-nf44">
+          <i class="fas fa-barcode"></i>
+          Leitor de Código (Chave 44)
+        </div>
+        <div class="scan-actions-nf44">
+          <button class="scan-btn-nf44" id="btn-zoom-out-nf44" title="Diminuir zoom"><i class="fas fa-search-minus"></i></button>
+          <button class="scan-btn-nf44" id="btn-zoom-in-nf44" title="Aumentar zoom"><i class="fas fa-search-plus"></i></button>
+          <button class="scan-btn-nf44" id="btn-torch-nf44" title="Lanterna"><i class="fas fa-bolt"></i></button>
+          <button class="scan-btn-nf44 primary" id="btn-fechar-scan-nf44"><i class="fas fa-times"></i> Fechar</button>
+        </div>
+      </div>
+
+      <div class="scan-body-nf44">
+        <div class="scan-frame-nf44">
+          <div id="html5-reader-nf44"></div>
+          <div class="scan-guide-nf44"></div>
+          <div class="scan-line-nf44"></div>
+        </div>
+      </div>
+
+      <div class="scan-status-nf44" id="scanStatusNF44">Status: <b>pronto</b></div>
+    </div>
+  </div>
+
+
+  <div id="scanner">
+    <button class="scanner-close" onclick="fecharLeitor(); event.stopPropagation();">
+      <i class="fas fa-times"></i> Fechar
+    </button>
+
+    <div id="scanner-view"></div>
+    <div id="scanner-info" class="scanner-info"></div>
+  </div>
+
+  <div id="modal-divergencia" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">⚠️ DIVERGÊNCIAS IDENTIFICADAS</div>
+      <div class="modal-body" id="modal-lista"></div>
+      <div class="modal-footer">
+        <p style="font-size: 13px; color: #bbb; margin-bottom: 15px;">Favor fazer uma conferência dos mesmos.</p>
+        <button onclick="fecharModal()">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <div id="modal-ean-extra" class="modal-overlay modal-confirmacao-extra">
+    <div class="modal-content">
+      <div class="modal-header">⚠️ CÓDIGO FORA DA NOTA FISCAL</div>
+      <div class="modal-body" id="modal-ean-extra-body"></div>
+      <div class="modal-footer">
+        <p style="font-size: 13px; color: #bbb; margin-bottom: 15px;">Confira se a peça realmente deve entrar nessa conferência.</p>
+        <div class="linha-modal">
+          <button class="btn-danger" id="btn-ean-extra-cancelar" type="button">Bipar novamente</button>
+          <button class="btn-warning" id="btn-ean-extra-confirmar" type="button">Considerar mesmo assim</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <footer>
+    &copy; 2025 HS - Sistema de Conferência de Notas Fiscais. Versão 3.7
+  </footer>
+
+  <script>
+    const APP_VERSION = "3.7";
+
+    const URL_API = "https://script.google.com/macros/s/AKfycbx1HDzA2b478DAhi5ONS6TstKieKf4lvFM9wzib9McUrdP7Z4Xwhb6SrUt5KW1YcR3x/exec";
+
+    const filiaisValidas = ["293", "488", "287", "288", "761"];
+    const nomesFiliais = { "293":"ARTUR","488":"FLORIANO","287":"JOTA","288":"PONTO","761":"MODA" };
+
+    let filialAtual = "";
+    let conferenteAtual = "";
+
+    let cabecalhoAtual = null;
+    let itensNF = [];
+    let mapaScan = {};
+    let termoFiltro = "";
+    let exibindoSomenteDivergencias = false;
+
+    // Scanner
+    let html5ScannerEAN = null;
+    let html5ScannerNF = null;
+    let modoScanner = "";
+    let audioCtx = null;
+
+    let cacheInfoEAN = {};
+    const PREFIXOS_EAN_VALIDOS = ["7909", "7900", "7890", "7891", "7892", "7894", "7895"];
+    let aguardandoConfirmacaoExtra = false;
+
+    // ✅ CONTROLE REFORÇADO SCANNER EAN
+    let scannerBloqueado = false; // bloqueia totalmente novos scans (UI)
+    let inFlightEAN = false;      // bloqueia reentrância enquanto existe request pendente
+    let ultimoEanLido = "";
+    let ultimoEanTimestamp = 0;
+
+    // Sync
+    let syncTimer = null;
+    let syncAtivo = false;
+    let ultimoSyncHash = "";
+
+    async function postJSON_(payload){
+      const resp = await fetch(URL_API, {
+        method: "POST",
+        headers: { "Content-Type":"text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+      return await resp.json();
+    }
+
+    function entrar(){
+      const f = document.getElementById("codigo-filial").value.trim();
+      const nome = document.getElementById("nome-conferente").value.trim();
+
+      if(!filiaisValidas.includes(f)){ alert("Código de filial inválido."); return; }
+      if(!nome){ alert("Informe o nome do conferente."); return; }
+
+      filialAtual = f;
+      conferenteAtual = nome;
+
+      localStorage.setItem("filial_conf_nf", f);
+      localStorage.setItem("conferente_conf_nf", nome);
+
+      document.getElementById("login").classList.add("hidden");
+      document.getElementById("principal").classList.remove("hidden");
+
+      atualizarInfoTopo_();
+    }
+
+    function atualizarInfoTopo_(){
+      document.getElementById("info-filial").textContent = `Filial logada: ${filialAtual} - ${nomesFiliais[filialAtual] || ""}`;
+      document.getElementById("info-conferente").textContent = `Conferente: ${conferenteAtual || "—"}`;
+    }
+
+    function sair(){
+      if(!confirm("Deseja sair?")) return;
+      pararSync_();
+      localStorage.removeItem("filial_conf_nf");
+      localStorage.removeItem("conferente_conf_nf");
+      location.reload();
+    }
+
+    async function carregarNF(){
+      const chave = document.getElementById("chave").value.trim();
+      const erro = document.getElementById("erro");
+      const loading = document.getElementById("loading");
+      const painel = document.getElementById("painel");
+
+      if(chave.length !== 44){ alert("A chave deve ter 44 dígitos."); return; }
+
+      erro.textContent = "";
+      loading.classList.remove("hidden");
+      painel.classList.add("hidden");
+
+      pararSync_();
+      document.getElementById("kpi-sync").textContent = "—";
+
+      try {
+        const resp = await fetch(`${URL_API}?api=consultarConferenciaNF&filial=${encodeURIComponent(filialAtual)}&chave=${encodeURIComponent(chave)}&v=${APP_VERSION}&t=${Date.now()}`);
+        const data = await resp.json();
+        if(!data.success) throw new Error(data.message || "Erro ao buscar NF.");
+
+        cabecalhoAtual = data.cabecalho;
+
+        if (data.jaConferida) {
+          const statusConf = data.statusConferencia || "CONFERIDA";
+          const continuar = confirm(
+            "⚠️ Esta nota fiscal já consta como conferida no banco.\n\n" +
+            "Status: " + statusConf + "\n\n" +
+            "Deseja abrir mesmo assim para consulta ou nova conferência?"
+          );
+
+          if (!continuar) {
+            erro.textContent = "NF já conferida. Carregamento cancelado.";
+            loading.classList.add("hidden");
+            return;
+          }
+        }
+
+        itensNF = data.itens || [];
+        mapaScan = {};
+        exibindoSomenteDivergencias = false;
+
+        document.getElementById("resumo-nf").innerHTML = `
+          <strong>NF:</strong> ${cabecalhoAtual.numeroNF} |
+          <strong>Emitente:</strong> ${cabecalhoAtual.nomeEmitente} |
+          <strong>Data:</strong> ${cabecalhoAtual.dataEmissao}
+        `;
+
+        atualizarKPIs();
+        document.getElementById("painel").classList.remove("hidden");
+        document.getElementById("btn-enviar").classList.add("hidden");
+        renderizarListaAtual_(false);
+
+        iniciarSync_();
+      } catch(err) {
+        erro.textContent = err.message;
+      } finally {
+        loading.classList.add("hidden");
+      }
+    }
+
+    function atualizarKPIs(){
+      let totalNF = Number(cabecalhoAtual?.totalItensNF || 0);
+      if(!totalNF){
+        totalNF = 0;
+        itensNF.forEach(i => totalNF += Number(i.quantidade || 0));
+      }
+
+      let totalScan = 0;
+      Object.values(mapaScan).forEach(v => totalScan += Number(v || 0));
+
+      document.getElementById("kpi-nf").textContent = totalNF;
+      document.getElementById("kpi-scan").textContent = totalScan;
+    }
+
+    function montarListaConferencia(jaConferido){
+      const lista = [];
+      const eansNaNota = new Set();
+
+      itensNF.forEach(i => {
+        const ean = String(i.ean || "").trim();
+        if(!ean) return;
+        eansNaNota.add(ean);
+
+        const qtdScan = Number(mapaScan[ean] || 0);
+        const qtdNF = Number(i.quantidade || 0);
+        const diff = qtdScan - qtdNF;
+
+        let status = "";
+        if(jaConferido){
+          if(diff === 0) status = "OK";
+          else if(diff < 0) status = "FALTANDO";
+          else status = "PASSANDO";
+        }
+
+        lista.push({
+          ean,
+          codigo:i.codigo, cor:i.cor, tamanho:i.tamanho,
+          qtdNF, qtdScan, diff, status, tipo:"nota"
+        });
+      });
+
+      Object.keys(mapaScan).forEach(ean => {
+        if(!eansNaNota.has(ean)){
+          if(!cacheInfoEAN[ean]){
+            buscarEANNoBanco(ean).catch(()=>{});
+          }
+          const info = cacheInfoEAN[ean] || { codigo:"---", cor:"---", tamanho:"---" };
+          lista.push({
+            ean,
+            codigo: info.codigo,
+            cor: info.cor,
+            tamanho: info.tamanho,
+            qtdNF: 0,
+            qtdScan: Number(mapaScan[ean] || 0),
+            diff: Number(mapaScan[ean] || 0),
+            status: jaConferido ? "EXTRA" : "",
+            tipo:"extra"
+          });
+        }
+      });
+
+      if(termoFiltro){
+        const t = termoFiltro.toLowerCase();
+        return lista.filter(i =>
+          String(i.ean).includes(t) ||
+          String(i.codigo).toLowerCase().includes(t) ||
+          String(i.cor).toLowerCase().includes(t) ||
+          String(i.tamanho).toLowerCase().includes(t)
+        );
+      }
+
+      return lista;
+    }
+
+
+    function aplicarFiltroDivergencias_(lista){
+      const base = (lista || []).filter(i => {
+        const diff = Number(i.diff || 0);
+        const qtdScan = Number(i.qtdScan || 0);
+
+        // Oculta automaticamente quando a quantidade bipada fica exatamente igual à NF.
+        // Se depois bipar a mais, diff fica positivo e o item volta para a lista.
+        if(diff === 0 && qtdScan > 0) return false;
+
+        return true;
+      });
+
+      if(!exibindoSomenteDivergencias) return base;
+
+      // Depois de clicar em Fazer Conferência, mostra somente itens com diferença.
+      return base.filter(i => Number(i.diff || 0) !== 0);
+    }
+
+    function renderizarListaAtual_(jaConferido){
+      const lista = aplicarFiltroDivergencias_(montarListaConferencia(jaConferido));
+      render(lista);
+    }
+
+    function render(lista){
+      const container = document.getElementById("lista");
+      container.innerHTML = "";
+
+      let faltam = 0;
+      let passam = 0;
+
+      if(!lista || !lista.length){
+        container.innerHTML = `
+          <div class="item">
+            <div class="muted" style="font-weight:800;text-align:center;padding:12px">
+              Nenhum item pendente ou divergente no momento.
+            </div>
+          </div>
+        `;
+        document.getElementById("resumo-div").textContent = "";
+        return;
+      }
+
+      lista.forEach(i => {
+        if(i.status === "FALTANDO") faltam++;
+        if(i.status === "PASSANDO" || i.status === "EXTRA") passam++;
+
+        const div = document.createElement("div");
+        div.className = "item";
+
+        let statusTexto = "";
+        let statusClass = "diff-ok";
+
+        if(Number(i.diff || 0) === 0){
+          statusTexto = "OK";
+          statusClass = "diff-ok";
+        }else if(Number(i.diff || 0) < 0){
+          statusTexto = `FALTANDO ${Math.abs(Number(i.diff || 0))}`;
+          statusClass = "diff-bad";
+        }else{
+          statusTexto = `PASSANDO ${Math.abs(Number(i.diff || 0))}`;
+          statusClass = "diff-passando";
+        }
+
+        if(i.status === "EXTRA"){
+          statusTexto = `FORA DA NF +${Math.abs(Number(i.diff || 0))}`;
+          statusClass = "diff-passando";
+        }
+
+        div.innerHTML = `
+          <div class="row" style="align-items:center">
+            <div class="item-main-code">
+              <span>${i.codigo || "---"}</span>
+              <span>${i.cor || "---"}</span>
+              <span>${i.tamanho || "---"}</span>
+            </div>
+
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="${statusClass}">${statusTexto}</span>
+              <span class="grupo-ajuste" title="Ajuste manual">
+                <button class="btn-ajuste btn-ajuste-menos" onclick="ajustarQtdServidor('${i.ean}', -1)" ${Number(i.qtdScan || 0) <= 0 ? "disabled" : ""}>
+                  <i class="fas fa-minus"></i>
+                </button>
+                <button class="btn-ajuste btn-ajuste-mais" onclick="ajustarQtdServidor('${i.ean}', 1)">
+                  <i class="fas fa-plus"></i>
+                </button>
+              </span>
+            </div>
+          </div>
+
+          <div class="item-info-line">
+            <div class="item-info-left">
+              <span>NF: ${i.qtdNF}</span>
+            </div>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+
+      const resumoDiv = document.getElementById("resumo-div");
+      if(faltam > 0 || passam > 0){
+        resumoDiv.innerHTML = `
+          <span style="color:#b91c1c">${faltam} FALTANDO</span>,
+          <span style="color:#b45309">${passam} PASSANDO/FORA DA NF</span>
+        `;
+      } else {
+        resumoDiv.textContent = "";
+      }
+    }
+
+    function fazerConferencia(){
+      exibindoSomenteDivergencias = true;
+
+      const listaCompleta = montarListaConferencia(true);
+      const divergencias = listaCompleta.filter(i => Number(i.diff || 0) !== 0);
+
+      render(divergencias);
+      document.getElementById("btn-enviar").classList.remove("hidden");
+
+      if(divergencias.length > 0) {
+        abrirModal(divergencias);
+      } else {
+        alert("Conferência sem divergências. Todos os itens estão OK.");
+      }
+    }
+
+    function abrirModal(divergencias){
+      const modal = document.getElementById("modal-divergencia");
+      const listaModal = document.getElementById("modal-lista");
+      listaModal.innerHTML = "";
+
+      divergencias.forEach(i => {
+        const div = document.createElement("div");
+        div.className = "modal-item";
+        const cor = i.diff < 0 ? "#f97373" : "#43b0ff";
+        const labelExtra = i.status === "EXTRA" ? " (EXTRA)" : "";
+        div.innerHTML = `
+          <span><strong>${i.codigo} / ${i.cor} / ${i.tamanho}</strong>${labelExtra}</span>
+          <span style="color:${cor}; font-weight:900">Dif: ${i.diff}</span>
+        `;
+        listaModal.appendChild(div);
+      });
+
+      modal.style.display = "flex";
+    }
+
+    function fecharModal(){
+      document.getElementById("modal-divergencia").style.display = "none";
+    }
+
+    async function limparScans(){
+      if(!cabecalhoAtual) return;
+      if(!confirm("Zerar TODA a contagem dessa NF (para todos os usuários)?")) return;
+
+      try{
+        await postJSON_({
+          api:"zerarSyncNF",
+          chaveAcesso: String(cabecalhoAtual.chaveAcesso || "").trim()
+        });
+      }catch(e){}
+
+      puxarSyncAgora_();
+      alert("Zerado no servidor (e o Sync vai atualizar a tela).");
+    }
+
+    async function ajustarQtdServidor(ean, delta){
+      if(!cabecalhoAtual || !cabecalhoAtual.chaveAcesso){
+        alert("Carregue a NF primeiro.");
+        return;
+      }
+
+      ean = String(ean || "").trim();
+      delta = Number(delta || 0);
+      if(!ean || !delta) return;
+
+      const atual = Number(mapaScan[ean] || 0);
+      const novaQtd = Math.max(0, atual + delta);
+      if(novaQtd === atual) return;
+
+      // ✅ Atualização otimista: muda na tela na hora e confirma no servidor depois.
+      if(novaQtd <= 0) delete mapaScan[ean];
+      else mapaScan[ean] = novaQtd;
+
+      atualizarKPIs();
+      const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
+      renderizarListaAtual_(jaConferido);
+
+      try{
+        const data = await postJSON_({
+          api:"ajustarBipeManual",
+          chaveAcesso: String(cabecalhoAtual.chaveAcesso || "").trim(),
+          ean,
+          novaQtd,
+          conferente: conferenteAtual || "Usuário"
+        });
+
+        if(!data || !data.success){
+          throw new Error(data?.message || "Não consegui ajustar no servidor.");
+        }
+
+        if(!itensNF.some(i => String(i.ean||"") === ean) && !cacheInfoEAN[ean]){
+          await buscarEANNoBanco(ean);
+        }
+
+        await puxarSyncAgora_();
+      }catch(e){
+        // ✅ Desfaz na tela se o servidor não aceitar o ajuste.
+        if(atual <= 0) delete mapaScan[ean];
+        else mapaScan[ean] = atual;
+        atualizarKPIs();
+        renderizarListaAtual_(jaConferido);
+        alert(e.message || "Erro ao ajustar no servidor.");
+      }
+    }
+
+    function beepOk(){
+      try{
+        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = "square";
+        o.frequency.value = 880;
+        g.gain.value = 0.08;
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        o.start();
+        setTimeout(()=>{ o.stop(); }, 110);
+      }catch(e){}
+      try{ if(navigator.vibrate) navigator.vibrate(50); }catch(e){}
+    }
+
+    function isValidEAN13(ean){
+      if(!ean || typeof ean !== 'string') return false;
+      if(!/^\d{13}$/.test(ean)) return false;
+
+      if(ean === '0000000000000') return false;
+      if(/^(\d)\1{12}$/.test(ean)) return false;
+
+      const digits = ean.split('').map(n => parseInt(n,10));
+      const check = digits[12];
+      let sum = 0;
+      for(let i=0; i<12; i++){
+        sum += digits[i] * (i%2===0 ? 1 : 3);
+      }
+      const calc = (10 - (sum % 10)) % 10;
+
+      return calc === check;
+    }
+
+    function prefixoEANValido(ean){
+      ean = String(ean || "").trim();
+      return PREFIXOS_EAN_VALIDOS.some(prefixo => ean.startsWith(prefixo));
+    }
+
+    function mostrarErroLeituraEAN_(mensagem){
+      const scannerDiv = document.getElementById("scanner");
+      const scannerView = document.getElementById("scanner-view");
+      const info = document.getElementById("scanner-info");
+      scannerBloqueado = true;
+      scannerView.classList.add("scanner-paused");
+      info.classList.add("scanner-info-paused");
+      info.innerHTML = `
+        ❌ <strong>${mensagem}</strong><br/>
+        Bipe novamente apontando apenas para o código de barras da peça.
+      `;
+      setTimeout(() => {
+        if(modoScanner === "EAN" && scannerDiv.style.display === "flex" && !aguardandoConfirmacaoExtra){
+          scannerBloqueado = false;
+          scannerView.classList.remove("scanner-paused");
+          info.classList.remove("scanner-info-paused");
+          info.innerHTML = `Aponte para o <span class="scanner-info-highlight">EAN-13</span> das peças.<br/>Após ler, o scanner <span class="scanner-info-highlight">pausa</span>. Toque na tela para ler o próximo.`;
+        }
+      }, 1400);
+    }
+
+    function extrairEAN13DoTexto(texto){
+      if(!texto || typeof texto !== 'string') return "";
+      const only = texto.replace(/\D/g,"");
+      if(only.length < 13) return "";
+
+      for(let i=0; i<=only.length-13; i++){
+        const cand = only.substring(i, i+13);
+        if(cand === '0000000000000') continue;
+        if(/^(\d)\1{12}$/.test(cand)) continue;
+        if(isValidEAN13(cand)) return cand;
+      }
+      return "";
+    }
+
+    function extrairChave44(texto){
+      const only = String(texto || "").replace(/\D/g, "");
+      if (only.length < 44) return "";
+      for (let i=0; i<=only.length-44; i++){
+        const cand = only.slice(i, i+44);
+        if (/^\d{44}$/.test(cand)) return cand;
+      }
+      return "";
+    }
+
+    function iniciarSync_(){
+      if(!cabecalhoAtual || !cabecalhoAtual.chaveAcesso) return;
+      syncAtivo = true;
+      ultimoSyncHash = "";
+      puxarSyncAgora_();
+      syncTimer = setInterval(() => puxarSyncAgora_(), 1100);
+    }
+
+    function pararSync_(){
+      syncAtivo = false;
+      if(syncTimer){ clearInterval(syncTimer); syncTimer = null; }
+      document.getElementById("kpi-sync").textContent = "—";
+    }
+
+    function _hashMapa_(obj){
+      const keys = Object.keys(obj || {}).sort();
+      let s = "";
+      for(const k of keys){ s += k + ":" + String(obj[k]) + ";"; }
+      return s;
+    }
+
+    async function garantirInfoExtras_(){
+      const eansNaNota = new Set(itensNF.map(i => String(i.ean || "").trim()).filter(Boolean));
+      const pendentes = Object.keys(mapaScan || {}).filter(ean => !eansNaNota.has(ean) && !cacheInfoEAN[ean]);
+      if(!pendentes.length) return;
+      await buscarEANsNoBanco(pendentes);
+    }
+
+    async function puxarSyncAgora_(){
+      if(!syncAtivo || !cabecalhoAtual) return;
+      const chave = String(cabecalhoAtual.chaveAcesso || "").trim();
+      if(!chave || chave.length !== 44) return;
+
+      try{
+        const resp = await fetch(`${URL_API}?api=sincronizarBipes&chave=${encodeURIComponent(chave)}&v=${APP_VERSION}&t=${Date.now()}`);
+        const data = await resp.json();
+        if(!data || !data.success) throw new Error("sync fail");
+
+        const bipes = data.bipes || {};
+        const hash = _hashMapa_(bipes);
+
+        if(hash !== ultimoSyncHash){
+          ultimoSyncHash = hash;
+          mapaScan = bipes;
+          await garantirInfoExtras_();
+          atualizarKPIs();
+          const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
+          renderizarListaAtual_(jaConferido);
+        }
+
+        document.getElementById("kpi-sync").textContent = "OK";
+      }catch(e){
+        document.getElementById("kpi-sync").textContent = "OFF";
+      }
+    }
+
+    async function abrirLeitor(modo){
+      if(modo === "NF"){
+        await abrirScannerNF44();
+        return;
+      }
+
+const scannerDiv = document.getElementById("scanner");
+      const scannerView = document.getElementById("scanner-view");
+      const info = document.getElementById("scanner-info");
+
+      modoScanner = modo;
+      scannerDiv.style.display = "flex";
+
+      // ✅ RESETA CONTROLES
+      scannerBloqueado = false;
+      inFlightEAN = false;
+      ultimoEanLido = "";
+      ultimoEanTimestamp = 0;
+
+      const notif = scannerDiv.querySelector(".scanner-notification");
+      if(notif) notif.remove();
+
+      scannerView.classList.remove("scanner-paused");
+      info.classList.remove("scanner-info-paused");
+
+      if(modoScanner === "EAN" && !cabecalhoAtual){
+        alert("Carregue a NF primeiro.");
+        scannerDiv.style.display = "none";
+        return;
+      }
+
+      scannerView.innerHTML = "";
+
+      info.innerHTML = (modoScanner === "NF")
+        ? `Aponte para o código de barras da NF (chave <span class="scanner-info-highlight">44 dígitos</span>).<br/>Ao ler, <span class="scanner-info-highlight">fecha automaticamente</span>.`
+        : `Aponte para o <span class="scanner-info-highlight">EAN-13</span> das peças.<br/>Após ler, o scanner <span class="scanner-info-highlight">pausa</span>. Toque na tela para ler o próximo.`;
+
+      try{
+        await pararScannerAtual_();
+
+        if(modoScanner === "EAN"){
+          await iniciarHtml5EAN_Bonito_(scannerView, info);
+        } else {
+          await iniciarHtml5NF44_(scannerView);
+        }
+      }catch(ex){
+        alert("Erro ao iniciar o leitor: " + (ex.message || ex));
+        scannerDiv.style.display = "none";
+      }
+    }
+
+    async function pararScannerAtual_(){
+      try{
+        if(html5ScannerNF){
+          await html5ScannerNF.stop().catch(()=>{});
+          await html5ScannerNF.clear().catch(()=>{});
+          html5ScannerNF = null;
+        }
+      }catch(e){}
+
+      try{
+        if(html5ScannerEAN){
+          await html5ScannerEAN.stop().catch(()=>{});
+          await html5ScannerEAN.clear().catch(()=>{});
+          html5ScannerEAN = null;
+        }
+      }catch(e){}
+    }
+
+    async function iniciarHtml5NF44_(scannerView){
+      scannerView.innerHTML = `
+        <div style="
+          width:min(820px, 96vw);
+          background:#0b0b0c;
+          border:2px solid #673ab7;
+          border-radius:16px;
+          padding:14px;
+          box-shadow:0 18px 70px rgba(103,58,183,.25);
+        ">
+          <div id="html5-nf44" style="width:100%; border-radius:12px; overflow:hidden;"></div>
+          <div style="
+            margin-top:10px; font-size:13px; color:#cbd5e1;
+            background:rgba(31,41,55,.55);
+            border:1px solid #374151;
+            padding:10px 12px;border-radius:12px;
+          ">
+            Aponte para o <b>código de barras</b> da NF. Ao ler, preenche a chave e fecha automaticamente.
+          </div>
+        </div>
+      `;
+
+      html5ScannerNF = new Html5Qrcode("html5-nf44");
+
+      const config = {
+        fps: 14,
+        qrbox: { width: 320, height: 220 },
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        rememberLastUsedCamera: true
+      };
+
+      let travadoNF = false;
+
+      await html5ScannerNF.start(
+        { facingMode: "environment" },
+        config,
+        async (decodedText) => {
+          if(modoScanner !== "NF") return;
+          if(travadoNF) return;
+
+          const chave = extrairChave44(decodedText);
+          if(!chave) return;
+
+          travadoNF = true;
+          document.getElementById("chave").value = chave;
+          beepOk();
+
+          await new Promise(r => setTimeout(r, 120));
+          await fecharLeitor();
+        },
+        ()=>{}
+      );
+    }
+
+    function _mostrarNotificacaoEAN_(ean13){
+      const scannerDiv = document.getElementById("scanner");
+
+      const old = scannerDiv.querySelector(".scanner-notification");
+      if(old) old.remove();
+
+      const el = document.createElement("div");
+      el.className = "scanner-notification";
+      el.innerHTML = `
+        <i class="fas fa-check-circle"></i>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:center">
+          <div class="title">CÓDIGO CAPTURADO!</div>
+          <div class="sub">Toque na tela para escanear o próximo</div>
+          <div class="ean">${ean13}</div>
+        </div>
+      `;
+      scannerDiv.appendChild(el);
+
+      setTimeout(()=>{ if(el.parentNode) el.remove(); }, 2600);
+    }
+
+    async function iniciarHtml5EAN_Bonito_(scannerView, info){
+      scannerView.innerHTML = `<div id="html5-ean" style="width:min(720px, 92vw); border-radius:12px; overflow:hidden;"></div>`;
+      html5ScannerEAN = new Html5Qrcode("html5-ean");
+
+      const config = {
+        fps: 8,
+        qrbox: { width: 280, height: 280 },
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        rememberLastUsedCamera: true
+      };
+
+      await html5ScannerEAN.start(
+        { facingMode: "environment" },
+        config,
+        async (decodedText) => {
+          if(modoScanner !== "EAN") return;
+
+          // ✅ BLOQUEIO TOTAL (tela travada) ou request pendente
+          if(scannerBloqueado || inFlightEAN) return;
+
+          const textoLimpo = String(decodedText || "").trim();
+          if(textoLimpo.length < 10) return;
+
+          const ean13 = extrairEAN13DoTexto(textoLimpo);
+          if(!ean13) return;
+
+          if(ean13.length !== 13 || !isValidEAN13(ean13)) return;
+
+          if(!prefixoEANValido(ean13)){
+            const agoraBloqueio = Date.now();
+            if(ean13 !== ultimoEanLido || (agoraBloqueio - ultimoEanTimestamp) > 1600){
+              ultimoEanLido = ean13;
+              ultimoEanTimestamp = agoraBloqueio;
+              mostrarErroLeituraEAN_("Código fora do padrão das peças.");
+            }
+            return;
+          }
+
+          const agora = Date.now();
+          if(ean13 === ultimoEanLido && (agora - ultimoEanTimestamp) < 3000) return;
+
+          // ✅ BLOQUEIA ANTES DE TUDO
+          scannerBloqueado = true;
+          inFlightEAN = true;
+
+          ultimoEanLido = ean13;
+          ultimoEanTimestamp = agora;
+
+          // ✅ TRAVA VISUAL NA HORA
+          scannerView.classList.add("scanner-paused");
+          info.classList.add("scanner-info-paused");
+          info.innerHTML = `
+            ✅ <strong>EAN ${ean13}</strong> capturado!<br/>
+            Toque em <span class="scanner-info-highlight">QUALQUER LUGAR</span> da tela para continuar.
+          `;
+
+          // ✅ BEEP IMEDIATO (não espera servidor)
+          beepOk();
+
+          // ✅ Notificação visual
+          _mostrarNotificacaoEAN_(ean13);
+
+          try{
+            // mantém await aqui (pode demorar, mas já travou e já bipou)
+            const registrado = await registrarBipeServidor_(ean13, { confirmarExtra: true });
+            if(!registrado){
+              scannerBloqueado = false;
+              scannerView.classList.remove("scanner-paused");
+              info.classList.remove("scanner-info-paused");
+              info.innerHTML = `Aponte para o <span class="scanner-info-highlight">EAN-13</span> das peças.<br/>Após ler, o scanner <span class="scanner-info-highlight">pausa</span>. Toque na tela para ler o próximo.`;
+            }
+          }catch(e){
+            console.error("Erro ao registrar bipe:", e);
+            // Se falhar, libera tudo (pra você não ficar preso)
+            scannerBloqueado = false;
+            scannerView.classList.remove("scanner-paused");
+            info.classList.remove("scanner-info-paused");
+            info.innerHTML = `
+              ❌ Falha ao registrar no servidor.<br/>
+              Tente novamente apontando para o EAN-13.
+            `;
+          }finally{
+            inFlightEAN = false;
+          }
+        },
+        ()=>{}
+      );
+    }
+
+    async function confirmarEANExtra_(ean, info){
+      aguardandoConfirmacaoExtra = true;
+      scannerBloqueado = true;
+
+      const modal = document.getElementById("modal-ean-extra");
+      const body = document.getElementById("modal-ean-extra-body");
+      const btnCancelar = document.getElementById("btn-ean-extra-cancelar");
+      const btnConfirmar = document.getElementById("btn-ean-extra-confirmar");
+
+      const codigo = info?.codigo || "---";
+      const cor = info?.cor || "---";
+      const tamanho = info?.tamanho || "---";
+
+      body.innerHTML = `
+        <div>O EAN abaixo <strong>não consta na nota fiscal carregada</strong>.</div>
+        <div class="codigo-extra">${ean}</div>
+        <div style="display:flex;flex-direction:column;gap:6px;color:#e5e7eb">
+          <span><strong>Ref/Cor:</strong> ${codigo} / ${cor}</span>
+          <span><strong>Tamanho:</strong> ${tamanho}</span>
+        </div>
+      `;
+
+      modal.style.display = "flex";
+
+      return await new Promise(resolve => {
+        const limpar = (valor) => {
+          modal.style.display = "none";
+          btnCancelar.onclick = null;
+          btnConfirmar.onclick = null;
+          aguardandoConfirmacaoExtra = false;
+          resolve(valor);
+        };
+        btnCancelar.onclick = () => limpar(false);
+        btnConfirmar.onclick = () => limpar(true);
+      });
+    }
+
+    async function prepararEANParaRegistro_(ean, pedirConfirmacaoExtra){
+      ean = String(ean || "").trim();
+      if(!ean || ean.length !== 13 || !isValidEAN13(ean)){
+        throw new Error("EAN inválido.");
+      }
+      if(!prefixoEANValido(ean)){
+        throw new Error("Código fora do padrão das peças. Bipe novamente.");
+      }
+
+      const naNota = itensNF.some(i => String(i.ean || "").trim() === ean);
+      if(naNota) return true;
+
+      if(!cacheInfoEAN[ean]){
+        await buscarEANNoBanco(ean);
+      }
+
+      if(pedirConfirmacaoExtra){
+        const confirmado = await confirmarEANExtra_(ean, cacheInfoEAN[ean]);
+        if(!confirmado) return false;
+      }
+
+      return true;
+    }
+
+    async function registrarBipeServidor_(ean, opcoes = {}){
+      if(!cabecalhoAtual || !cabecalhoAtual.chaveAcesso) return false;
+
+      const pedirConfirmacaoExtra = opcoes.confirmarExtra !== false;
+      const podeRegistrar = await prepararEANParaRegistro_(ean, pedirConfirmacaoExtra);
+      if(!podeRegistrar) return false;
+
+      const payload = {
+        api: "registrarBipeIndividual",
+        chaveAcesso: String(cabecalhoAtual.chaveAcesso || "").trim(),
+        ean: String(ean || "").trim(),
+        qtd: 1,
+        conferente: conferenteAtual || "Usuário"
+      };
+
+      try{
+        const data = await postJSON_(payload);
+        if(data && data.success){
+          await puxarSyncAgora_();
+          return true;
+        }else{
+          throw new Error(data?.message || "Falha ao registrar bipe.");
+        }
+      }catch(e){
+        console.error("Falha ao registrar bipe no servidor", e);
+        throw e;
+      }
+    }
+
+    async function buscarEANNoBanco(ean){
+      await buscarEANsNoBanco([ean]);
+      return cacheInfoEAN[String(ean || "").trim()] || null;
+    }
+
+    async function buscarEANsNoBanco(eans){
+      const listaEans = [...new Set((eans || []).map(e => String(e || "").trim()).filter(Boolean))];
+      if(!listaEans.length) return;
+
+      const buffer = document.getElementById("buffer-ean");
+      if(buffer) buffer.classList.remove("hidden");
+      try{
+        const data = await postJSON_({
+          api:"buscarInfoEAN",
+          filial: filialAtual,
+          eans: listaEans
+        });
+        if(data.success && data.itens){
+          listaEans.forEach(ean => {
+            if(data.itens[ean]) cacheInfoEAN[ean] = data.itens[ean];
+          });
+          const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
+          renderizarListaAtual_(jaConferido);
+        }
+      }catch(e){
+        console.error("Falha ao buscar EAN no banco", e);
+      }finally{
+        if(buffer) buffer.classList.add("hidden");
+      }
+    }
+
+    // ✅ Clique para liberar (somente quando estiver bloqueado)
+    document.addEventListener("click", (e)=>{
+      const scannerDiv = document.getElementById("scanner");
+      if(scannerDiv.style.display !== "flex") return;
+      if(modoScanner !== "EAN") return;
+
+      if(e.target.closest(".scanner-close")) return;
+      if(e.target.closest("#modal-ean-extra")) return;
+
+      // ✅ Só libera se estava bloqueado
+      if(!scannerBloqueado) return;
+
+      e.stopPropagation();
+      e.preventDefault();
+
+      scannerBloqueado = false;
+
+      const scannerView = document.getElementById("scanner-view");
+      const info = document.getElementById("scanner-info");
+
+      scannerView.classList.remove("scanner-paused");
+      info.classList.remove("scanner-info-paused");
+      info.innerHTML = `
+        ✅ <span class="scanner-info-highlight">Scanner liberado!</span><br/>
+        Aponte para o próximo EAN-13.
+      `;
+
+      setTimeout(() => {
+        if(modoScanner === "EAN" && scannerDiv.style.display === "flex") {
+          info.innerHTML = `Aponte para o <span class="scanner-info-highlight">EAN-13</span> das peças.<br/>Após ler, o scanner <span class="scanner-info-highlight">pausa</span>. Toque na tela para ler o próximo.`;
+        }
+      }, 1500);
+
+    }, true);
+
+    async function adicionarEANManual(){
+      if(!cabecalhoAtual){ alert("Carregue a NF primeiro."); return; }
+
+      const inp = document.getElementById("ean-manual");
+      const ean13 = extrairEAN13DoTexto(inp.value || "");
+      if(!ean13){
+        alert("EAN inválido. Verifique o código digitado.");
+        inp.value = ""; inp.focus(); return;
+      }
+      if(!prefixoEANValido(ean13)){
+        alert("Código fora do padrão das peças. Confira o EAN e tente novamente.");
+        inp.value = ""; inp.focus(); return;
+      }
+
+      try{
+        const registrado = await registrarBipeServidor_(ean13, { confirmarExtra: true });
+        if(registrado) beepOk();
+      }catch(e){
+        alert(e.message || "Erro ao registrar EAN.");
+      }
+      inp.value = ""; inp.focus();
+    }
+
+    async function fecharLeitor(){
+      scannerBloqueado = false;
+      inFlightEAN = false;
+      ultimoEanLido = "";
+      ultimoEanTimestamp = 0;
+
+      await pararScannerAtual_();
+      const scannerDiv = document.getElementById("scanner");
+      scannerDiv.style.display = "none";
+
+      const notif = scannerDiv.querySelector(".scanner-notification");
+      if(notif) notif.remove();
+
+      modoScanner = "";
+    }
+
+    async function enviarConferencia(){
+      const erro = document.getElementById("erro");
+      const msg = document.getElementById("msg");
+      erro.textContent = "";
+
+      if(!cabecalhoAtual){ erro.textContent = "Nenhuma NF carregada."; return; }
+      if(!confirm("Deseja enviar o resultado da conferência para o banco?")) return;
+
+      msg.textContent = "Enviando resultado da conferência...";
+      msg.classList.remove("hidden");
+
+      const listaFinal = montarListaConferencia(true);
+
+      const payload = {
+        api: "registrarConferenciaNF",
+        filialCodigo: filialAtual,
+        filialNome: nomesFiliais[filialAtual] || "",
+        numeroNF: cabecalhoAtual.numeroNF || "",
+        chaveAcesso: cabecalhoAtual.chaveAcesso || document.getElementById("chave").value.trim(),
+        dataEmissao: cabecalhoAtual.dataEmissao || "",
+        serieNF: cabecalhoAtual.serieNF || "",
+        transportadora: "BRASPRESS",
+        dataConferencia: new Date().toISOString(),
+        totalNF: Number(document.getElementById("kpi-nf").textContent || 0),
+        totalScan: Number(document.getElementById("kpi-scan").textContent || 0),
+        versaoApp: APP_VERSION,
+        conferente: conferenteAtual || "Usuário",
+        itens: listaFinal.map(i => ({
+          ean: i.ean,
+          codigo: i.codigo,
+          cor: i.cor,
+          tamanho: i.tamanho,
+          qtdNF: i.qtdNF,
+          qtdScan: i.qtdScan,
+          diff: i.diff,
+          status: i.status
+        }))
+      };
+
+      try{
+        const data = await postJSON_(payload);
+        if(!data.success) throw new Error(data.message || "Falha ao registrar conferência.");
+        alert("Conferência registrada com sucesso!");
+        limparTela();
+      }catch(err){
+        erro.textContent = "Erro ao enviar: " + (err.message || err);
+      }finally{
+        msg.classList.add("hidden");
+      }
+    }
+
+    function limparTela(){
+      pararSync_();
+
+      cabecalhoAtual = null;
+      mapaScan = {};
+      itensNF = [];
+      termoFiltro = "";
+      exibindoSomenteDivergencias = false;
+      cacheInfoEAN = {};
+
+      document.getElementById("chave").value = "";
+      document.getElementById("filtro").value = "";
+      document.getElementById("ean-manual").value = "";
+
+      document.getElementById("painel").classList.add("hidden");
+      document.getElementById("btn-enviar").classList.add("hidden");
+      document.getElementById("resumo-div").textContent = "";
+      document.getElementById("lista").innerHTML = "";
+
+      document.getElementById("chave").focus();
+    }
+
+
+    // ========= Scanner NF 44 FUNCIONAL - BLOCO SEPARADO =========
+    let html5ScannerNF44 = null;
+    let scannerOpenNF44 = false;
+    let travadoNF44 = false;
+
+    let currentTrackNF44 = null;
+    let zoomLevelNF44 = 1;
+    let zoomMinNF44 = 1;
+    let zoomMaxNF44 = 1;
+    let torchOnNF44 = false;
+    let torchSupportedNF44 = false;
+    let zoomSupportedNF44 = false;
+
+    const isIOS_NF44 = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    function statusNF44_(html){
+      const el = document.getElementById("scanStatusNF44");
+      if(el) el.innerHTML = "Status: " + html;
+    }
+
+    async function applyZoomNF44_(z){
+      if(!currentTrackNF44 || !zoomSupportedNF44) return;
+      try{
+        await currentTrackNF44.applyConstraints({ advanced: [{ zoom: z }] });
+        zoomLevelNF44 = z;
+        statusNF44_(`<b>lendo…</b><br/>Zoom: ${zoomLevelNF44.toFixed(1)}x`);
+      }catch(e){}
+    }
+
+    async function toggleTorchNF44_(){
+      if(!currentTrackNF44 || !torchSupportedNF44) return;
+      try{
+        torchOnNF44 = !torchOnNF44;
+        await currentTrackNF44.applyConstraints({ advanced: [{ torch: torchOnNF44 }] });
+        statusNF44_(`<b>lendo…</b><br/>Lanterna: ${torchOnNF44 ? "ON" : "OFF"}`);
+      }catch(e){}
+    }
+
+    async function fecharScannerNF44(){
+      scannerOpenNF44 = false;
+      travadoNF44 = false;
+      torchOnNF44 = false;
+      currentTrackNF44 = null;
+      zoomSupportedNF44 = false;
+      torchSupportedNF44 = false;
+
+      const ov = document.getElementById("scannerOverlayNF44");
+      if(ov) ov.style.display = "none";
+      document.body.style.overflow = "";
+
+      try{
+        if(html5ScannerNF44){
+          await html5ScannerNF44.stop().catch(()=>{});
+          await html5ScannerNF44.clear().catch(()=>{});
+          html5ScannerNF44 = null;
+        }
+
+        const video = document.querySelector("#html5-reader-nf44 video");
+        if(video && video.srcObject){
+          const stream = video.srcObject;
+          const tracks = stream.getTracks();
+          tracks.forEach(track => track.stop());
+          video.srcObject = null;
+        }
+      }catch(e){
+        console.warn("Erro ao fechar scanner NF44:", e);
+      }
+
+      statusNF44_("<b>fechado</b>");
+    }
+
+    async function abrirScannerNF44(){
+      const chaveInput = document.getElementById("chave");
+
+      if(chaveInput && chaveInput.value.trim() !== ""){
+        if(!confirm("O campo já contém uma chave. Deseja limpar e escanear uma nova?")){
+          return;
+        }
+        chaveInput.value = "";
+      }
+
+      const ov = document.getElementById("scannerOverlayNF44");
+      if(!ov){
+        alert("Leitor NF44 não encontrado.");
+        return;
+      }
+
+      ov.style.display = "flex";
+      document.body.style.overflow = "hidden";
+
+      scannerOpenNF44 = true;
+      travadoNF44 = false;
+      statusNF44_("<b>abrindo câmera…</b>");
+
+      try{
+        if(html5ScannerNF44){
+          await html5ScannerNF44.stop().catch(()=>{});
+          await html5ScannerNF44.clear().catch(()=>{});
+          html5ScannerNF44 = null;
+        }
+      }catch(e){}
+
+      html5ScannerNF44 = new Html5Qrcode("html5-reader-nf44");
+
+      let formats = undefined;
+      try{
+        if(window.Html5QrcodeSupportedFormats){
+          formats = [
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.EAN_13
+          ];
+        }
+      }catch(e){}
+
+      const config = {
+        fps: isIOS_NF44 ? 20 : 30,
+        qrbox: (view) => {
+          const w = Math.min(view.width, 520);
+          const h = Math.min(view.height, 820);
+          const boxW = Math.floor(w * 0.92);
+          const boxH = Math.floor(h * 0.22);
+          return { width: boxW, height: boxH };
+        },
+        aspectRatio: isIOS_NF44 ? 1.0 : 0.75,
+        disableFlip: true,
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        rememberLastUsedCamera: true,
+        ...(formats ? { formatsToSupport: formats } : {})
+      };
+
+      statusNF44_("<b>procurando o código…</b><br/>Aproxime e alinhe no retângulo.");
+
+      try{
+        await html5ScannerNF44.start(
+          { facingMode: "environment" },
+          config,
+          async (decodedText) => {
+            if(!scannerOpenNF44) return;
+            if(travadoNF44) return;
+
+            const chave = extrairChave44(decodedText);
+            if(!chave){
+              statusNF44_("<b>lendo…</b><br/>Detectei algo, procurando 44 dígitos…");
+              return;
+            }
+
+            travadoNF44 = true;
+            document.getElementById("chave").value = chave;
+            statusNF44_("<b>capturado!</b><br/>Chave 44 preenchida ✅");
+            beepOk();
+
+            await new Promise(r => setTimeout(r, 200));
+            await fecharScannerNF44();
+          },
+          (error) => {
+            if(error && error.name === "NotAllowedError"){
+              statusNF44_("<b style='color:#ff6b6b'>Permissão negada</b><br/>Permita o acesso à câmera");
+              setTimeout(() => fecharScannerNF44(), 3000);
+            } else if(error && error !== "NotFoundException"){
+              console.warn("Erro do scanner NF44:", error);
+            }
+          }
+        );
+
+        setTimeout(async ()=>{
+          try{
+            const video = document.querySelector("#html5-reader-nf44 video");
+            const stream = video && video.srcObject;
+            if(!stream) return;
+
+            const t = stream.getVideoTracks && stream.getVideoTracks()[0];
+            if(!t) return;
+
+            currentTrackNF44 = t;
+            const caps = currentTrackNF44.getCapabilities ? currentTrackNF44.getCapabilities() : {};
+
+            if(caps.zoom){
+              zoomSupportedNF44 = true;
+              zoomMinNF44 = caps.zoom.min;
+              zoomMaxNF44 = caps.zoom.max;
+              zoomLevelNF44 = Math.min(Math.max(1.5, zoomMinNF44), zoomMaxNF44);
+              await applyZoomNF44_(zoomLevelNF44);
+            }
+
+            if(caps.torch !== undefined){
+              torchSupportedNF44 = true;
+            }
+          }catch(e){}
+        }, 800);
+
+      }catch(error){
+        console.error("Erro ao iniciar scanner NF44:", error);
+
+        if(error.name === "NotAllowedError" || String(error.message || "").includes("Permission")){
+          statusNF44_("<b style='color:#ff6b6b'>❌ Permissão necessária</b><br/>Permita o acesso à câmera para usar o scanner");
+          setTimeout(() => fecharScannerNF44(), 3000);
+        }else{
+          statusNF44_("<b style='color:#ff6b6b'>Erro na câmera</b><br/>" + (error.message || "Tente novamente"));
+          setTimeout(() => fecharScannerNF44(), 2000);
+        }
+      }
+    }
+
+    function configurarBotoesNF44(){
+      const fechar = document.getElementById("btn-fechar-scan-nf44");
+      const zoomIn = document.getElementById("btn-zoom-in-nf44");
+      const zoomOut = document.getElementById("btn-zoom-out-nf44");
+      const torch = document.getElementById("btn-torch-nf44");
+
+      if(fechar) fechar.onclick = fecharScannerNF44;
+
+      if(zoomIn){
+        zoomIn.onclick = async function(){
+          if(!zoomSupportedNF44){
+            statusNF44_("<b>zoom não suportado</b>");
+            return;
+          }
+          await applyZoomNF44_(Math.min(zoomMaxNF44, zoomLevelNF44 + 0.5));
+        };
+      }
+
+      if(zoomOut){
+        zoomOut.onclick = async function(){
+          if(!zoomSupportedNF44){
+            statusNF44_("<b>zoom não suportado</b>");
+            return;
+          }
+          await applyZoomNF44_(Math.max(zoomMinNF44, zoomLevelNF44 - 0.5));
+        };
+      }
+
+      if(torch){
+        torch.onclick = async function(){
+          if(!torchSupportedNF44){
+            statusNF44_("<b>lanterna não suportada</b>");
+            return;
+          }
+          await toggleTorchNF44_();
+        };
+      }
+    }
+
+
+    window.addEventListener("load", ()=>{
+      configurarBotoesNF44();
+      configurarBotoesNF44();
+      const f = localStorage.getItem("filial_conf_nf");
+      const nome = localStorage.getItem("conferente_conf_nf");
+
+      if(f && filiaisValidas.includes(f) && nome){
+        filialAtual = f;
+        conferenteAtual = nome;
+
+        document.getElementById("login").classList.add("hidden");
+        document.getElementById("principal").classList.remove("hidden");
+        atualizarInfoTopo_();
+      }
+
+      document.getElementById("filtro").addEventListener("input", (e)=>{
+        termoFiltro = e.target.value.trim();
+        const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
+        renderizarListaAtual_(jaConferido);
+      });
+
+      document.addEventListener("keydown", function(e){
+        if(e.key === "Escape" && scannerOpenNF44){
+          fecharScannerNF44();
+        }
+      });
+
+      document.getElementById("ean-manual").addEventListener("keydown", (e)=>{
+        if(e.key === "Enter"){
+          e.preventDefault();
+          adicionarEANManual();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
