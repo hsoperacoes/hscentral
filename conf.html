@@ -12,7 +12,7 @@
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css?version=3.7" />
 
-  <!-- ✅ Html5Qrcode (usado para NF 44 e EAN) -->
+  
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
@@ -403,7 +403,7 @@
     .btn-ajuste-menos:hover{background:var(--red-dark)}
     .btn-ajuste:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3)}
 
-    /* Scanner overlay preservado */
+    
     #scanner{
       width:100vw;height:100vh;position:fixed;inset:0;z-index:1000;
       display:none;justify-content:center;align-items:center;flex-direction:column;
@@ -567,10 +567,7 @@
     }
 
   
-    /* =========================================================
-       SCANNER NF 44 FUNCIONAL - BLOCO SEPARADO
-       Mantém layout novo e usa a estrutura do modelo que lia rápido.
-    ========================================================= */
+    
     #scannerOverlayNF44 {
       position: fixed;
       inset: 0;
@@ -737,9 +734,7 @@
     }
 
   
-    /* =========================================================
-       AJUSTES V3.5 - LISTA COMPACTA E SEM ESPAÇO EM BRANCO
-    ========================================================= */
+    
     #painel{
       grid-template-columns:360px 1fr !important;
       align-items:start !important;
@@ -852,9 +847,7 @@
     }
 
   
-    /* =========================================================
-       AJUSTES V3.6 - OK OCULTO EM TEMPO REAL / LISTA SEM VÃO
-    ========================================================= */
+    
     #painel{
       grid-template-columns:240px 1fr !important;
       gap:12px !important;
@@ -935,10 +928,7 @@
     }
 
   
-    /* =========================================================
-       AJUSTE V3.7 - REMOVE VÃO ENTRE BUSCA E RESULTADO
-       A coluna da esquerda não pode definir a altura da linha do grid.
-    ========================================================= */
+    
     #painel{
       display:grid !important;
       grid-template-columns:240px minmax(0,1fr) !important;
@@ -1116,8 +1106,7 @@
     </div>
   </div>
 
-
-  <!-- SCANNER NF 44 FUNCIONAL - SEPARADO DO LEITOR DE EAN -->
+  
   <div id="scannerOverlayNF44">
     <div class="scan-card-nf44">
       <div class="scan-top-nf44">
@@ -1145,7 +1134,6 @@
     </div>
   </div>
 
-
   <div id="scanner">
     <button class="scanner-close" onclick="fecharLeitor(); event.stopPropagation();">
       <i class="fas fa-times"></i> Fechar
@@ -1166,8 +1154,6 @@
     </div>
   </div>
 
-
-
   <div id="modal-ean-extra" class="modal-overlay modal-confirmacao-extra">
     <div class="modal-content">
       <div class="modal-header">⚠️ CÓDIGO FORA DA NOTA FISCAL</div>
@@ -1181,7 +1167,6 @@
       </div>
     </div>
   </div>
-
 
   <footer>
     &copy; 2025 HS - Sistema de Conferência de Notas Fiscais. Versão 3.7
@@ -1204,7 +1189,6 @@
     let termoFiltro = "";
     let exibindoSomenteDivergencias = false;
 
-    // Scanner
     let html5ScannerEAN = null;
     let html5ScannerNF = null;
     let modoScanner = "";
@@ -1214,13 +1198,11 @@
     const PREFIXOS_EAN_VALIDOS = ["7909", "7900", "7890", "7891", "7892", "7894", "7895"];
     let aguardandoConfirmacaoExtra = false;
 
-    // ✅ CONTROLE REFORÇADO SCANNER EAN
     let scannerBloqueado = false; // bloqueia totalmente novos scans (UI)
     let inFlightEAN = false;      // bloqueia reentrância enquanto existe request pendente
     let ultimoEanLido = "";
     let ultimoEanTimestamp = 0;
 
-    // Sync
     let syncTimer = null;
     let syncAtivo = false;
     let ultimoSyncHash = "";
@@ -1400,14 +1382,11 @@
       return lista;
     }
 
-
     function aplicarFiltroDivergencias_(lista){
       const base = (lista || []).filter(i => {
         const diff = Number(i.diff || 0);
         const qtdScan = Number(i.qtdScan || 0);
 
-        // Oculta automaticamente quando a quantidade bipada fica exatamente igual à NF.
-        // Se depois bipar a mais, diff fica positivo e o item volta para a lista.
         if(diff === 0 && qtdScan > 0) return false;
 
         return true;
@@ -1415,7 +1394,6 @@
 
       if(!exibindoSomenteDivergencias) return base;
 
-      // Depois de clicar em Fazer Conferência, mostra somente itens com diferença.
       return base.filter(i => Number(i.diff || 0) !== 0);
     }
 
@@ -1579,7 +1557,6 @@
       const novaQtd = Math.max(0, atual + delta);
       if(novaQtd === atual) return;
 
-      // ✅ Atualização otimista: muda na tela na hora e confirma no servidor depois.
       if(novaQtd <= 0) delete mapaScan[ean];
       else mapaScan[ean] = novaQtd;
 
@@ -1606,7 +1583,6 @@
 
         await puxarSyncAgora_();
       }catch(e){
-        // ✅ Desfaz na tela se o servidor não aceitar o ajuste.
         if(atual <= 0) delete mapaScan[ean];
         else mapaScan[ean] = atual;
         atualizarKPIs();
@@ -1768,7 +1744,6 @@ const scannerDiv = document.getElementById("scanner");
       modoScanner = modo;
       scannerDiv.style.display = "flex";
 
-      // ✅ RESETA CONTROLES
       scannerBloqueado = false;
       inFlightEAN = false;
       ultimoEanLido = "";
@@ -1916,7 +1891,6 @@ const scannerDiv = document.getElementById("scanner");
         async (decodedText) => {
           if(modoScanner !== "EAN") return;
 
-          // ✅ BLOQUEIO TOTAL (tela travada) ou request pendente
           if(scannerBloqueado || inFlightEAN) return;
 
           const textoLimpo = String(decodedText || "").trim();
@@ -1940,14 +1914,12 @@ const scannerDiv = document.getElementById("scanner");
           const agora = Date.now();
           if(ean13 === ultimoEanLido && (agora - ultimoEanTimestamp) < 3000) return;
 
-          // ✅ BLOQUEIA ANTES DE TUDO
           scannerBloqueado = true;
           inFlightEAN = true;
 
           ultimoEanLido = ean13;
           ultimoEanTimestamp = agora;
 
-          // ✅ TRAVA VISUAL NA HORA
           scannerView.classList.add("scanner-paused");
           info.classList.add("scanner-info-paused");
           info.innerHTML = `
@@ -1955,14 +1927,11 @@ const scannerDiv = document.getElementById("scanner");
             Toque em <span class="scanner-info-highlight">QUALQUER LUGAR</span> da tela para continuar.
           `;
 
-          // ✅ BEEP IMEDIATO (não espera servidor)
           beepOk();
 
-          // ✅ Notificação visual
           _mostrarNotificacaoEAN_(ean13);
 
           try{
-            // mantém await aqui (pode demorar, mas já travou e já bipou)
             const registrado = await registrarBipeServidor_(ean13, { confirmarExtra: true });
             if(!registrado){
               scannerBloqueado = false;
@@ -1972,7 +1941,6 @@ const scannerDiv = document.getElementById("scanner");
             }
           }catch(e){
             console.error("Erro ao registrar bipe:", e);
-            // Se falhar, libera tudo (pra você não ficar preso)
             scannerBloqueado = false;
             scannerView.classList.remove("scanner-paused");
             info.classList.remove("scanner-info-paused");
@@ -2109,7 +2077,6 @@ const scannerDiv = document.getElementById("scanner");
       }
     }
 
-    // ✅ Clique para liberar (somente quando estiver bloqueado)
     document.addEventListener("click", (e)=>{
       const scannerDiv = document.getElementById("scanner");
       if(scannerDiv.style.display !== "flex") return;
@@ -2118,7 +2085,6 @@ const scannerDiv = document.getElementById("scanner");
       if(e.target.closest(".scanner-close")) return;
       if(e.target.closest("#modal-ean-extra")) return;
 
-      // ✅ Só libera se estava bloqueado
       if(!scannerBloqueado) return;
 
       e.stopPropagation();
@@ -2256,8 +2222,6 @@ const scannerDiv = document.getElementById("scanner");
       document.getElementById("chave").focus();
     }
 
-
-    // ========= Scanner NF 44 FUNCIONAL - BLOCO SEPARADO =========
     let html5ScannerNF44 = null;
     let scannerOpenNF44 = false;
     let travadoNF44 = false;
@@ -2499,7 +2463,6 @@ const scannerDiv = document.getElementById("scanner");
         };
       }
     }
-
 
     window.addEventListener("load", ()=>{
       configurarBotoesNF44();
