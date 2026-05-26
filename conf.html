@@ -998,6 +998,181 @@
       }
     }
 
+  
+    /* =========================================================
+       AJUSTE V3.9.1 - CONFIRMAÇÃO BONITA + BLOQUEIO DE ENVIO
+    ========================================================= */
+    .modal-confirmacao-envio .modal-content{
+      max-width:820px;
+      padding:0;
+      overflow:hidden;
+      border-radius:26px;
+    }
+    .confirmacao-envio-header{
+      background:linear-gradient(135deg,#020817,#0f172a);
+      color:#fff;
+      padding:20px 22px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:14px;
+    }
+    .confirmacao-envio-header h3{
+      margin:0;
+      font-size:20px;
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+    .confirmacao-envio-header p{
+      margin:6px 0 0;
+      font-size:13px;
+      color:#cbd5e1;
+      line-height:1.35;
+    }
+    .confirmacao-envio-badges{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .confirmacao-envio-badge{
+      padding:8px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:900;
+      background:rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.16);
+      color:#e5e7eb;
+      white-space:nowrap;
+    }
+    .confirmacao-envio-body{
+      padding:18px 20px;
+      background:#f8fafc;
+      max-height:min(58vh,520px);
+      overflow:auto;
+    }
+    .confirmacao-envio-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+      gap:12px;
+    }
+    .card-divergencia-envio{
+      background:#fff;
+      border:1px solid #e2e8f0;
+      border-radius:18px;
+      padding:14px;
+      box-shadow:0 6px 18px rgba(15,23,42,.06);
+      display:flex;
+      flex-direction:column;
+      gap:9px;
+    }
+    .card-divergencia-envio .topo-card{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+    }
+    .card-divergencia-envio .ref-card{
+      font-size:18px;
+      font-weight:900;
+      color:#0f172a;
+      letter-spacing:.3px;
+    }
+    .card-divergencia-envio .tipo-card{
+      font-size:11px;
+      font-weight:900;
+      border-radius:999px;
+      padding:6px 8px;
+      white-space:nowrap;
+    }
+    .tipo-faltando{background:#fee2e2;color:#991b1b}
+    .tipo-passando{background:#fef3c7;color:#92400e}
+    .tipo-extra{background:#dbeafe;color:#1e40af}
+    .card-divergencia-envio .detalhes-card{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:8px;
+      font-size:12px;
+      color:#475569;
+      font-weight:800;
+    }
+    .card-divergencia-envio .detalhes-card span{
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      border-radius:12px;
+      padding:8px;
+    }
+    .card-divergencia-envio .qtd-card{
+      margin-top:2px;
+      padding:10px;
+      border-radius:14px;
+      background:#f1f5f9;
+      color:#0f172a;
+      font-size:13px;
+      font-weight:900;
+      text-align:center;
+    }
+    .confirmacao-envio-footer{
+      padding:16px 20px;
+      background:#fff;
+      border-top:1px solid #e2e8f0;
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+    }
+    .confirmacao-envio-footer button{
+      min-width:180px;
+    }
+
+    #overlay-envio-bloqueante{
+      position:fixed;
+      inset:0;
+      z-index:300000;
+      background:rgba(2,6,23,.78);
+      backdrop-filter:blur(6px);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+    #overlay-envio-bloqueante.ativo{
+      display:flex;
+    }
+    .card-envio-bloqueante{
+      width:min(460px,92vw);
+      background:#fff;
+      color:#0f172a;
+      border-radius:26px;
+      border:1px solid rgba(255,255,255,.22);
+      box-shadow:0 24px 80px rgba(0,0,0,.35);
+      padding:26px;
+      text-align:center;
+    }
+    .spinner-envio{
+      width:54px;
+      height:54px;
+      margin:0 auto 16px;
+      border-radius:999px;
+      border:5px solid #e2e8f0;
+      border-top-color:#071a45;
+      animation:spinEnvio .9s linear infinite;
+    }
+    @keyframes spinEnvio{to{transform:rotate(360deg)}}
+    .card-envio-bloqueante h3{
+      margin:0 0 8px;
+      font-size:22px;
+      color:#071a45;
+      font-weight:900;
+    }
+    .card-envio-bloqueante p{
+      margin:0;
+      color:#475569;
+      font-size:14px;
+      line-height:1.45;
+      font-weight:700;
+    }
+
   </style>
 </head>
 <body>
@@ -1184,6 +1359,36 @@
   </div>
 
 
+  
+  <div id="modal-confirmacao-envio" class="modal-overlay modal-confirmacao-envio">
+    <div class="modal-content">
+      <div class="confirmacao-envio-header">
+        <div>
+          <h3>⚠️ Confirmar envio da conferência</h3>
+          <p>Confira os itens abaixo antes de registrar o resultado. Após enviar, a nota será marcada como conferida.</p>
+        </div>
+        <div class="confirmacao-envio-badges" id="confirmacao-envio-badges"></div>
+      </div>
+      <div class="confirmacao-envio-body">
+        <div id="confirmacao-envio-lista" class="confirmacao-envio-grid"></div>
+      </div>
+      <div class="confirmacao-envio-footer">
+        <button class="btn-secundario" type="button" onclick="fecharConfirmacaoEnvio_()">Voltar e conferir</button>
+        <button class="btn-danger" type="button" onclick="confirmarEnvioDivergencias_()">
+          <i class="fas fa-paper-plane"></i> Confirmar e enviar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="overlay-envio-bloqueante">
+    <div class="card-envio-bloqueante">
+      <div class="spinner-envio"></div>
+      <h3>Enviando conferência...</h3>
+      <p>Aguarde a conclusão. Não feche a tela e não faça nenhuma ação até o sistema finalizar o registro.</p>
+    </div>
+  </div>
+
   <footer>
     &copy; 2025 HS - Sistema de Conferência de Notas Fiscais. Versão 3.8
   </footer>
@@ -1225,6 +1430,99 @@
     let syncTimer = null;
     let syncAtivo = false;
     let ultimoSyncHash = "";
+    let envioEmAndamento = false;
+    let pendenciaEnvioConfirmado_ = null;
+
+    function setEnvioBloqueado_(ativo){
+      envioEmAndamento = !!ativo;
+      const overlay = document.getElementById("overlay-envio-bloqueante");
+      if(overlay){
+        overlay.classList.toggle("ativo", !!ativo);
+      }
+      document.querySelectorAll("button,input").forEach(el => {
+        if(el.closest("#overlay-envio-bloqueante")) return;
+        el.disabled = !!ativo;
+      });
+    }
+
+    function escapeHtml_(v){
+      return String(v ?? "").replace(/[&<>"']/g, s => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[s]));
+    }
+
+    function tipoDivergenciaItem_(it){
+      const diff = Number(it.diff || 0);
+      if(it.extra || it.foraNota || it.tipo === "extra") return "FORA DA NOTA";
+      if(diff < 0) return "FALTANDO";
+      if(diff > 0) return "PASSANDO";
+      return "OK";
+    }
+
+    function classeTipoDivergencia_(tipo){
+      if(tipo === "FALTANDO") return "tipo-faltando";
+      if(tipo === "PASSANDO") return "tipo-passando";
+      if(tipo === "FORA DA NOTA") return "tipo-extra";
+      return "";
+    }
+
+    function abrirConfirmacaoEnvio_(itensDivergentes){
+      const modal = document.getElementById("modal-confirmacao-envio");
+      const lista = document.getElementById("confirmacao-envio-lista");
+      const badges = document.getElementById("confirmacao-envio-badges");
+      if(!modal || !lista || !badges) return false;
+
+      const faltando = itensDivergentes.filter(it => tipoDivergenciaItem_(it) === "FALTANDO").length;
+      const passando = itensDivergentes.filter(it => tipoDivergenciaItem_(it) === "PASSANDO").length;
+      const extra = itensDivergentes.filter(it => tipoDivergenciaItem_(it) === "FORA DA NOTA").length;
+
+      badges.innerHTML = `
+        <span class="confirmacao-envio-badge">Faltando: ${faltando}</span>
+        <span class="confirmacao-envio-badge">Passando: ${passando}</span>
+        <span class="confirmacao-envio-badge">Fora da nota: ${extra}</span>
+      `;
+
+      lista.innerHTML = itensDivergentes.map(it => {
+        const tipo = tipoDivergenciaItem_(it);
+        const cls = classeTipoDivergencia_(tipo);
+        const esperado = Number(it.quantidade || 0);
+        const bipado = Number(it.jaEscaneado || it.bipado || it.scan || 0);
+        const diff = Number(it.diff || 0);
+        const qtdDiverg = Math.abs(diff || (bipado - esperado) || 0);
+
+        return `
+          <div class="card-divergencia-envio">
+            <div class="topo-card">
+              <div class="ref-card">${escapeHtml_(it.codigo || it.ref || it.ean || "---")}</div>
+              <div class="tipo-card ${cls}">${escapeHtml_(tipo)}</div>
+            </div>
+            <div class="detalhes-card">
+              <span>Cor<br><strong>${escapeHtml_(it.cor || "---")}</strong></span>
+              <span>Tamanho<br><strong>${escapeHtml_(it.tamanho || it.tam || "---")}</strong></span>
+              <span>Esperado<br><strong>${esperado}</strong></span>
+              <span>Bipado<br><strong>${bipado}</strong></span>
+            </div>
+            <div class="qtd-card">Diferença: ${qtdDiverg}</div>
+          </div>
+        `;
+      }).join("");
+
+      modal.style.display = "flex";
+      return true;
+    }
+
+    function fecharConfirmacaoEnvio_(){
+      const modal = document.getElementById("modal-confirmacao-envio");
+      if(modal) modal.style.display = "none";
+      pendenciaEnvioConfirmado_ = null;
+    }
+
+    async function confirmarEnvioDivergencias_(){
+      if(!pendenciaEnvioConfirmado_) return;
+      const payload = pendenciaEnvioConfirmado_;
+      fecharConfirmacaoEnvio_();
+      await enviarConferenciaFinal_(payload);
+    }
 
     // ✅ Evita que um sync atrasado sobrescreva ajuste manual recém-feito
     let bloqueioSyncAte = 0;
@@ -2316,12 +2614,12 @@ const scannerDiv = document.getElementById("scanner");
 
     async function enviarConferencia(){
       const erro = document.getElementById("erro");
-      const msg = document.getElementById("msg");
       erro.textContent = "";
 
+      if(envioEmAndamento) return;
       if(!cabecalhoAtual){ erro.textContent = "Nenhuma NF carregada."; return; }
 
-      // ✅ Usa o resultado congelado do botão "Fazer Conferência".
+      // Usa o resultado congelado do botão "Fazer Conferência".
       // Se a pessoa não clicou antes, calcula e congela agora.
       if(!resultadoConferenciaAtual){
         const listaCompleta = montarListaConferencia(true);
@@ -2331,14 +2629,6 @@ const scannerDiv = document.getElementById("scanner");
 
       const listaFinal = resultadoConferenciaAtual.listaCompleta || [];
       const divergencias = resultadoConferenciaAtual.divergencias || [];
-
-      const textoConfirmacao = montarTextoConfirmacaoEnvio_(divergencias);
-      if(!confirm(textoConfirmacao)) return;
-
-      msg.textContent = divergencias.length
-        ? "Enviando divergências da conferência..."
-        : "Enviando conferência sem divergências...";
-      msg.classList.remove("hidden");
 
       const payload = {
         api: "registrarConferenciaNF",
@@ -2366,11 +2656,39 @@ const scannerDiv = document.getElementById("scanner");
         }))
       };
 
+      // Se houver divergências, abre o modal bonito com cards.
+      // Se não houver, envia direto sem mostrar alerta falso de divergência.
+      if(divergencias.length){
+        pendenciaEnvioConfirmado_ = payload;
+        abrirConfirmacaoEnvio_(divergencias);
+        return;
+      }
+
+      await enviarConferenciaFinal_(payload);
+    }
+
+    async function enviarConferenciaFinal_(payload){
+      const erro = document.getElementById("erro");
+      const msg = document.getElementById("msg");
+      erro.textContent = "";
+
+      const itensPayload = payload.itens || [];
+      const divergenciasReais = itensPayload.filter(i => Number(i.diff || 0) !== 0);
+
+      setEnvioBloqueado_(true);
+
+      if(msg){
+        msg.textContent = divergenciasReais.length
+          ? "Enviando divergências da conferência..."
+          : "Enviando conferência sem divergências...";
+        msg.classList.remove("hidden");
+      }
+
       try{
         const data = await postJSON_(payload);
         if(!data.success) throw new Error(data.message || "Falha ao registrar conferência.");
 
-        if(divergencias.length){
+        if(divergenciasReais.length){
           alert("Conferência registrada com divergências.");
         }else{
           alert("Conferência registrada com sucesso, sem divergências.");
@@ -2380,7 +2698,8 @@ const scannerDiv = document.getElementById("scanner");
       }catch(err){
         erro.textContent = "Erro ao enviar: " + (err.message || err);
       }finally{
-        msg.classList.add("hidden");
+        if(msg) msg.classList.add("hidden");
+        setEnvioBloqueado_(false);
       }
     }
 
