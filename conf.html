@@ -1485,9 +1485,17 @@
       lista.innerHTML = itensDivergentes.map(it => {
         const tipo = tipoDivergenciaItem_(it);
         const cls = classeTipoDivergencia_(tipo);
-        const esperado = Number(it.quantidade || 0);
-        const bipado = Number(it.jaEscaneado || it.bipado || it.scan || 0);
-        const diff = Number(it.diff || 0);
+        // A lista congelada da conferência usa qtdNF/qtdScan.
+        // Mantém fallbacks para versões antigas, mas prioriza os campos corretos.
+        const esperado = Number(
+          it.qtdNF ?? it.quantidade ?? it.esperado ?? 0
+        );
+        const bipado = Number(
+          it.qtdScan ?? it.jaEscaneado ?? it.bipado ?? it.scan ?? 0
+        );
+        const diff = Number(
+          it.diff ?? (bipado - esperado) ?? 0
+        );
         const qtdDiverg = Math.abs(diff || (bipado - esperado) || 0);
 
         return `
