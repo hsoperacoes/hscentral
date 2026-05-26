@@ -1535,6 +1535,9 @@
     // ✅ Evita que um sync atrasado sobrescreva ajuste manual recém-feito
     let bloqueioSyncAte = 0;
     let ajustesManuaisPendentes = {};
+    let timersAjusteManual = {};
+    let valoresAjusteManualPendentes = {};
+    let valoresAjusteManualConfirmados = {};
     let resultadoConferenciaAtual = null;
 
     async function postJSON_(payload){
@@ -1965,26 +1968,51 @@
       delta = Number(delta || 0);
       if(!ean || !delta) return;
 
-      const atual = Number(mapaScan[ean] || 0);
-      const novaQtd = Math.max(0, atual + delta);
-      if(novaQtd === atual) return;
+      const atualTela = Number(mapaScan[ean] || 0);
+      const novaQtdTela = Math.max(0, atualTela + delta);
+      if(novaQtdTela === atualTela) return;
 
-      // ✅ trava o EAN para impedir clique duplo durante o ajuste
-      if(ajustesManuaisPendentes[ean]) return;
-      ajustesManuaisPendentes[ean] = true;
+      // Guarda a última quantidade confirmada antes da sequência rápida.
+      if(valoresAjusteManualConfirmados[ean] === undefined){
+        valoresAjusteManualConfirmados[ean] = atualTela;
+      }
 
-      // ✅ Atualização otimista fixa: muda na tela na hora
-      if(novaQtd <= 0) delete mapaScan[ean];
-      else mapaScan[ean] = novaQtd;
+      // Atualiza a tela imediatamente em TODOS os cliques, sem esperar o banco.
+      if(novaQtdTela <= 0) delete mapaScan[ean];
+      else mapaScan[ean] = novaQtdTela;
 
-      // ✅ Bloqueia sync por alguns segundos para impedir "voltar para valor antigo"
-      bloqueioSyncAte = Date.now() + 5000;
+      valoresAjusteManualPendentes[ean] = novaQtdTela;
+
+      // Bloqueia sync visual enquanto o usuário está clicando e enquanto a gravação não termina.
+      bloqueioSyncAte = Date.now() + 7000;
       ultimoSyncHash = _hashMapa_(mapaScan);
       resultadoConferenciaAtual = null;
 
       atualizarKPIs();
       const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
       renderizarListaAtual_(jaConferido);
+
+      // Debounce: vários cliques rápidos viram UMA gravação final no banco.
+      if(timersAjusteManual[ean]){
+        clearTimeout(timersAjusteManual[ean]);
+      }
+
+      timersAjusteManual[ean] = setTimeout(() => {
+        salvarAjusteManualFinal_(ean);
+      }, 450);
+    }
+
+    async function salvarAjusteManualFinal_(ean){
+      if(!cabecalhoAtual || !cabecalhoAtual.chaveAcesso) return;
+
+      ean = String(ean || "").trim();
+      if(!ean) return;
+
+      const novaQtd = Number(valoresAjusteManualPendentes[ean] || 0);
+      const valorAnteriorConfirmado = Number(valoresAjusteManualConfirmados[ean] || 0);
+
+      ajustesManuaisPendentes[ean] = true;
+      bloqueioSyncAte = Date.now() + 7000;
 
       try{
         const data = await postJSON_({
@@ -1999,34 +2027,43 @@
           throw new Error(data?.message || "Não consegui ajustar no servidor.");
         }
 
+        // Se o servidor retornar mapa completo, usa. Caso contrário, mantém a quantidade final escolhida.
         if(data.bipes){
           mapaScan = data.bipes || {};
-          ultimoSyncHash = _hashMapa_(mapaScan);
         }else{
-          // Sem mapa de retorno: mantém o valor otimista como verdade local até o próximo sync seguro.
           if(novaQtd <= 0) delete mapaScan[ean];
           else mapaScan[ean] = novaQtd;
-          ultimoSyncHash = _hashMapa_(mapaScan);
         }
+
+        valoresAjusteManualConfirmados[ean] = novaQtd;
+        delete valoresAjusteManualPendentes[ean];
 
         if(!itensNF.some(i => String(i.ean||"") === ean) && !cacheInfoEAN[ean]){
           await buscarEANNoBanco(ean);
         }
 
+        ultimoSyncHash = _hashMapa_(mapaScan);
         bloqueioSyncAte = Date.now() + 2500;
+
         atualizarKPIs();
+        const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
         renderizarListaAtual_(jaConferido);
       }catch(e){
-        // ✅ Desfaz na tela se o servidor não aceitar o ajuste.
-        if(atual <= 0) delete mapaScan[ean];
-        else mapaScan[ean] = atual;
+        // Se falhar, volta apenas para o último valor confirmado antes da sequência rápida.
+        if(valorAnteriorConfirmado <= 0) delete mapaScan[ean];
+        else mapaScan[ean] = valorAnteriorConfirmado;
+
+        valoresAjusteManualConfirmados[ean] = valorAnteriorConfirmado;
+        delete valoresAjusteManualPendentes[ean];
 
         ultimoSyncHash = _hashMapa_(mapaScan);
         atualizarKPIs();
+        const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
         renderizarListaAtual_(jaConferido);
         alert(e.message || "Erro ao ajustar no servidor.");
       }finally{
         delete ajustesManuaisPendentes[ean];
+        delete timersAjusteManual[ean];
       }
     }
 
@@ -2732,6 +2769,10 @@ const scannerDiv = document.getElementById("scanner");
       document.getElementById("lista").innerHTML = "";
 
       document.getElementById("chave").focus();
+      Object.values(timersAjusteManual || {}).forEach(t => clearTimeout(t));
+      timersAjusteManual = {};
+      valoresAjusteManualPendentes = {};
+      valoresAjusteManualConfirmados = {};
     }
 
 
