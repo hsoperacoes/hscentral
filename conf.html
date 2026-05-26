@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -10,9 +11,9 @@
   <title>Conferência de Nota Fiscal - HS</title>
 
   <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css?version=3.7" />
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css?version=3.8" />
 
-  
+  <!-- ✅ Html5Qrcode (usado para NF 44 e EAN) -->
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
@@ -403,7 +404,7 @@
     .btn-ajuste-menos:hover{background:var(--red-dark)}
     .btn-ajuste:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3)}
 
-    
+    /* Scanner overlay preservado */
     #scanner{
       width:100vw;height:100vh;position:fixed;inset:0;z-index:1000;
       display:none;justify-content:center;align-items:center;flex-direction:column;
@@ -567,7 +568,10 @@
     }
 
   
-    
+    /* =========================================================
+       SCANNER NF 44 FUNCIONAL - BLOCO SEPARADO
+       Mantém layout novo e usa a estrutura do modelo que lia rápido.
+    ========================================================= */
     #scannerOverlayNF44 {
       position: fixed;
       inset: 0;
@@ -734,7 +738,9 @@
     }
 
   
-    
+    /* =========================================================
+       AJUSTES V3.5 - LISTA COMPACTA E SEM ESPAÇO EM BRANCO
+    ========================================================= */
     #painel{
       grid-template-columns:360px 1fr !important;
       align-items:start !important;
@@ -847,7 +853,9 @@
     }
 
   
-    
+    /* =========================================================
+       AJUSTES V3.6 - OK OCULTO EM TEMPO REAL / LISTA SEM VÃO
+    ========================================================= */
     #painel{
       grid-template-columns:240px 1fr !important;
       gap:12px !important;
@@ -928,7 +936,10 @@
     }
 
   
-    
+    /* =========================================================
+       AJUSTE V3.7 - REMOVE VÃO ENTRE BUSCA E RESULTADO
+       A coluna da esquerda não pode definir a altura da linha do grid.
+    ========================================================= */
     #painel{
       display:grid !important;
       grid-template-columns:240px minmax(0,1fr) !important;
@@ -992,12 +1003,12 @@
 <body>
 
   <div class="top-nav">
-    <a href="index.html?version=3.7" class="back-button">
+    <a href="index.html?version=3.8" class="back-button">
       <i class="fas fa-arrow-left"></i> Voltar à Home
     </a>
   </div>
 
-  <img src="logo.png?version=3.7" alt="Logo HS" class="logo-topo" />
+  <img src="logo.png?version=3.8" alt="Logo HS" class="logo-topo" />
 
   <div class="container">
     <div class="form-container">
@@ -1006,10 +1017,10 @@
         <h2>Login da Filial</h2>
 
         <label for="codigo-filial">Código da Filial</label>
-        <input id="codigo-filial" type="text" placeholder="Digite aqui o cód de sua filial" />
+        <input id="codigo-filial" type="text" placeholder="Ex: 293, 488, 287, 288, 761" />
 
         <label for="nome-conferente">Conferente</label>
-        <input id="nome-conferente" type="text" placeholder="Digite nome do conferente" />
+        <input id="nome-conferente" type="text" placeholder="Ex: WILL" />
 
         <button class="btn-full" onclick="entrar()">
           <i class="fas fa-door-open"></i> Entrar
@@ -1106,7 +1117,8 @@
     </div>
   </div>
 
-  
+
+  <!-- SCANNER NF 44 FUNCIONAL - SEPARADO DO LEITOR DE EAN -->
   <div id="scannerOverlayNF44">
     <div class="scan-card-nf44">
       <div class="scan-top-nf44">
@@ -1134,6 +1146,7 @@
     </div>
   </div>
 
+
   <div id="scanner">
     <button class="scanner-close" onclick="fecharLeitor(); event.stopPropagation();">
       <i class="fas fa-times"></i> Fechar
@@ -1154,6 +1167,8 @@
     </div>
   </div>
 
+
+
   <div id="modal-ean-extra" class="modal-overlay modal-confirmacao-extra">
     <div class="modal-content">
       <div class="modal-header">⚠️ CÓDIGO FORA DA NOTA FISCAL</div>
@@ -1168,12 +1183,13 @@
     </div>
   </div>
 
+
   <footer>
-    &copy; 2025 HS - Sistema de Conferência de Notas Fiscais. Versão 3.7
+    &copy; 2025 HS - Sistema de Conferência de Notas Fiscais. Versão 3.8
   </footer>
 
   <script>
-    const APP_VERSION = "3.7";
+    const APP_VERSION = "3.8";
 
     const URL_API = "https://script.google.com/macros/s/AKfycbx1HDzA2b478DAhi5ONS6TstKieKf4lvFM9wzib9McUrdP7Z4Xwhb6SrUt5KW1YcR3x/exec";
 
@@ -1189,6 +1205,7 @@
     let termoFiltro = "";
     let exibindoSomenteDivergencias = false;
 
+    // Scanner
     let html5ScannerEAN = null;
     let html5ScannerNF = null;
     let modoScanner = "";
@@ -1198,14 +1215,21 @@
     const PREFIXOS_EAN_VALIDOS = ["7909", "7900", "7890", "7891", "7892", "7894", "7895"];
     let aguardandoConfirmacaoExtra = false;
 
+    // ✅ CONTROLE REFORÇADO SCANNER EAN
     let scannerBloqueado = false; // bloqueia totalmente novos scans (UI)
     let inFlightEAN = false;      // bloqueia reentrância enquanto existe request pendente
     let ultimoEanLido = "";
     let ultimoEanTimestamp = 0;
 
+    // Sync
     let syncTimer = null;
     let syncAtivo = false;
     let ultimoSyncHash = "";
+
+    // ✅ Evita que um sync atrasado sobrescreva ajuste manual recém-feito
+    let bloqueioSyncAte = 0;
+    let ajustesManuaisPendentes = {};
+    let resultadoConferenciaAtual = null;
 
     async function postJSON_(payload){
       const resp = await fetch(URL_API, {
@@ -1287,6 +1311,7 @@
 
         itensNF = data.itens || [];
         mapaScan = {};
+        resultadoConferenciaAtual = null;
         exibindoSomenteDivergencias = false;
 
         document.getElementById("resumo-nf").innerHTML = `
@@ -1382,11 +1407,14 @@
       return lista;
     }
 
+
     function aplicarFiltroDivergencias_(lista){
       const base = (lista || []).filter(i => {
         const diff = Number(i.diff || 0);
         const qtdScan = Number(i.qtdScan || 0);
 
+        // Oculta automaticamente quando a quantidade bipada fica exatamente igual à NF.
+        // Se depois bipar a mais, diff fica positivo e o item volta para a lista.
         if(diff === 0 && qtdScan > 0) return false;
 
         return true;
@@ -1394,6 +1422,7 @@
 
       if(!exibindoSomenteDivergencias) return base;
 
+      // Depois de clicar em Fazer Conferência, mostra somente itens com diferença.
       return base.filter(i => Number(i.diff || 0) !== 0);
     }
 
@@ -1494,14 +1523,70 @@
       const listaCompleta = montarListaConferencia(true);
       const divergencias = listaCompleta.filter(i => Number(i.diff || 0) !== 0);
 
+      // ✅ Congela o resultado calculado neste momento.
+      // Assim, ao clicar em "Enviar Resultado", o sistema não recalcula em cima de um sync atrasado.
+      resultadoConferenciaAtual = {
+        criadoEm: Date.now(),
+        listaCompleta,
+        divergencias
+      };
+
       render(divergencias);
       document.getElementById("btn-enviar").classList.remove("hidden");
 
       if(divergencias.length > 0) {
         abrirModal(divergencias);
       } else {
+        document.getElementById("resumo-div").textContent = "Sem divergências";
         alert("Conferência sem divergências. Todos os itens estão OK.");
       }
+    }
+
+    function textoTipoDivergencia_(item){
+      if(item.status === "EXTRA") return "FORA DA NOTA";
+      const diff = Number(item.diff || 0);
+      if(diff < 0) return "FALTANDO";
+      if(diff > 0) return "PASSANDO";
+      return "OK";
+    }
+
+    function montarTextoConfirmacaoEnvio_(divergencias){
+      if(!divergencias || !divergencias.length){
+        return (
+          "✅ Esta conferência não possui divergências.\\n\\n" +
+          "Nenhum item faltando, passando ou fora da nota foi identificado.\\n\\n" +
+          "Deseja realmente enviar e marcar esta NF como conferida?"
+        );
+      }
+
+      const faltando = divergencias.filter(i => Number(i.diff || 0) < 0 && i.status !== "EXTRA");
+      const passando = divergencias.filter(i => Number(i.diff || 0) > 0 && i.status !== "EXTRA");
+      const fora = divergencias.filter(i => i.status === "EXTRA");
+
+      const linhas = [];
+      linhas.push("⚠️ ATENÇÃO: esta conferência possui divergências.");
+      linhas.push("");
+      linhas.push(`Faltando: ${faltando.length}`);
+      linhas.push(`Passando: ${passando.length}`);
+      linhas.push(`Fora da nota: ${fora.length}`);
+      linhas.push("");
+      linhas.push("Resumo dos itens:");
+
+      divergencias.slice(0, 20).forEach(i => {
+        const tipo = textoTipoDivergencia_(i);
+        const qtd = Math.abs(Number(i.diff || 0));
+        linhas.push(`- ${tipo}: ${i.codigo || "---"} / ${i.cor || "---"} / ${i.tamanho || "---"} | Qtd: ${qtd}`);
+      });
+
+      if(divergencias.length > 20){
+        linhas.push(`... e mais ${divergencias.length - 20} item(ns).`);
+      }
+
+      linhas.push("");
+      linhas.push("Confira o resultado antes de enviar.");
+      linhas.push("Deseja realmente registrar essas divergências no banco?");
+
+      return linhas.join("\\n");
     }
 
     function abrirModal(divergencias){
@@ -1513,7 +1598,7 @@
         const div = document.createElement("div");
         div.className = "modal-item";
         const cor = i.diff < 0 ? "#f97373" : "#43b0ff";
-        const labelExtra = i.status === "EXTRA" ? " (EXTRA)" : "";
+        const labelExtra = i.status === "EXTRA" ? " (FORA DA NOTA)" : "";
         div.innerHTML = `
           <span><strong>${i.codigo} / ${i.cor} / ${i.tamanho}</strong>${labelExtra}</span>
           <span style="color:${cor}; font-weight:900">Dif: ${i.diff}</span>
@@ -1530,17 +1615,38 @@
 
     async function limparScans(){
       if(!cabecalhoAtual) return;
-      if(!confirm("Zerar TODA a contagem dessa NF (para todos os usuários)?")) return;
+
+      const chave = String(cabecalhoAtual.chaveAcesso || "").trim();
+      const nf = cabecalhoAtual.numeroNF || chave;
+
+      const ok1 = confirm(
+        "⚠️ ATENÇÃO\\n\\n" +
+        "Você está prestes a ZERAR TODA a contagem desta NF para todos os usuários.\\n\\n" +
+        "NF/Chave: " + nf + "\\n\\n" +
+        "Deseja continuar?"
+      );
+      if(!ok1) return;
+
+      const ok2 = confirm(
+        "Confirma novamente?\\n\\n" +
+        "Essa ação apaga os bipes temporários desta conferência e não deve ser usada sem certeza."
+      );
+      if(!ok2) return;
 
       try{
         await postJSON_({
           api:"zerarSyncNF",
-          chaveAcesso: String(cabecalhoAtual.chaveAcesso || "").trim()
+          chaveAcesso: chave
         });
-      }catch(e){}
-
-      puxarSyncAgora_();
-      alert("Zerado no servidor (e o Sync vai atualizar a tela).");
+        mapaScan = {};
+        ultimoSyncHash = _hashMapa_(mapaScan);
+        resultadoConferenciaAtual = null;
+        atualizarKPIs();
+        renderizarListaAtual_(false);
+        alert("Contagem zerada com sucesso.");
+      }catch(e){
+        alert("Erro ao zerar conferência: " + (e.message || e));
+      }
     }
 
     async function ajustarQtdServidor(ean, delta){
@@ -1557,8 +1663,18 @@
       const novaQtd = Math.max(0, atual + delta);
       if(novaQtd === atual) return;
 
+      // ✅ trava o EAN para impedir clique duplo durante o ajuste
+      if(ajustesManuaisPendentes[ean]) return;
+      ajustesManuaisPendentes[ean] = true;
+
+      // ✅ Atualização otimista fixa: muda na tela na hora
       if(novaQtd <= 0) delete mapaScan[ean];
       else mapaScan[ean] = novaQtd;
+
+      // ✅ Bloqueia sync por alguns segundos para impedir "voltar para valor antigo"
+      bloqueioSyncAte = Date.now() + 5000;
+      ultimoSyncHash = _hashMapa_(mapaScan);
+      resultadoConferenciaAtual = null;
 
       atualizarKPIs();
       const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
@@ -1577,17 +1693,34 @@
           throw new Error(data?.message || "Não consegui ajustar no servidor.");
         }
 
+        if(data.bipes){
+          mapaScan = data.bipes || {};
+          ultimoSyncHash = _hashMapa_(mapaScan);
+        }else{
+          // Sem mapa de retorno: mantém o valor otimista como verdade local até o próximo sync seguro.
+          if(novaQtd <= 0) delete mapaScan[ean];
+          else mapaScan[ean] = novaQtd;
+          ultimoSyncHash = _hashMapa_(mapaScan);
+        }
+
         if(!itensNF.some(i => String(i.ean||"") === ean) && !cacheInfoEAN[ean]){
           await buscarEANNoBanco(ean);
         }
 
-        await puxarSyncAgora_();
+        bloqueioSyncAte = Date.now() + 2500;
+        atualizarKPIs();
+        renderizarListaAtual_(jaConferido);
       }catch(e){
+        // ✅ Desfaz na tela se o servidor não aceitar o ajuste.
         if(atual <= 0) delete mapaScan[ean];
         else mapaScan[ean] = atual;
+
+        ultimoSyncHash = _hashMapa_(mapaScan);
         atualizarKPIs();
         renderizarListaAtual_(jaConferido);
         alert(e.message || "Erro ao ajustar no servidor.");
+      }finally{
+        delete ajustesManuaisPendentes[ean];
       }
     }
 
@@ -1705,6 +1838,8 @@
 
     async function puxarSyncAgora_(){
       if(!syncAtivo || !cabecalhoAtual) return;
+      if(Date.now() < bloqueioSyncAte) return;
+
       const chave = String(cabecalhoAtual.chaveAcesso || "").trim();
       if(!chave || chave.length !== 44) return;
 
@@ -1718,9 +1853,17 @@
 
         if(hash !== ultimoSyncHash){
           ultimoSyncHash = hash;
-          mapaScan = bipes;
+
+          // ✅ Se houver ajuste manual pendente, não deixa o sync antigo sobrescrever esse EAN.
+          const mesclado = Object.assign({}, bipes);
+          Object.keys(ajustesManuaisPendentes || {}).forEach(ean => {
+            if(mapaScan[ean] != null) mesclado[ean] = mapaScan[ean];
+          });
+
+          mapaScan = mesclado;
           await garantirInfoExtras_();
           atualizarKPIs();
+
           const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
           renderizarListaAtual_(jaConferido);
         }
@@ -1744,6 +1887,7 @@ const scannerDiv = document.getElementById("scanner");
       modoScanner = modo;
       scannerDiv.style.display = "flex";
 
+      // ✅ RESETA CONTROLES
       scannerBloqueado = false;
       inFlightEAN = false;
       ultimoEanLido = "";
@@ -1891,6 +2035,7 @@ const scannerDiv = document.getElementById("scanner");
         async (decodedText) => {
           if(modoScanner !== "EAN") return;
 
+          // ✅ BLOQUEIO TOTAL (tela travada) ou request pendente
           if(scannerBloqueado || inFlightEAN) return;
 
           const textoLimpo = String(decodedText || "").trim();
@@ -1914,12 +2059,14 @@ const scannerDiv = document.getElementById("scanner");
           const agora = Date.now();
           if(ean13 === ultimoEanLido && (agora - ultimoEanTimestamp) < 3000) return;
 
+          // ✅ BLOQUEIA ANTES DE TUDO
           scannerBloqueado = true;
           inFlightEAN = true;
 
           ultimoEanLido = ean13;
           ultimoEanTimestamp = agora;
 
+          // ✅ TRAVA VISUAL NA HORA
           scannerView.classList.add("scanner-paused");
           info.classList.add("scanner-info-paused");
           info.innerHTML = `
@@ -1927,11 +2074,14 @@ const scannerDiv = document.getElementById("scanner");
             Toque em <span class="scanner-info-highlight">QUALQUER LUGAR</span> da tela para continuar.
           `;
 
+          // ✅ BEEP IMEDIATO (não espera servidor)
           beepOk();
 
+          // ✅ Notificação visual
           _mostrarNotificacaoEAN_(ean13);
 
           try{
+            // mantém await aqui (pode demorar, mas já travou e já bipou)
             const registrado = await registrarBipeServidor_(ean13, { confirmarExtra: true });
             if(!registrado){
               scannerBloqueado = false;
@@ -1941,6 +2091,7 @@ const scannerDiv = document.getElementById("scanner");
             }
           }catch(e){
             console.error("Erro ao registrar bipe:", e);
+            // Se falhar, libera tudo (pra você não ficar preso)
             scannerBloqueado = false;
             scannerView.classList.remove("scanner-paused");
             info.classList.remove("scanner-info-paused");
@@ -2024,10 +2175,12 @@ const scannerDiv = document.getElementById("scanner");
       const podeRegistrar = await prepararEANParaRegistro_(ean, pedirConfirmacaoExtra);
       if(!podeRegistrar) return false;
 
+      ean = String(ean || "").trim();
+
       const payload = {
         api: "registrarBipeIndividual",
         chaveAcesso: String(cabecalhoAtual.chaveAcesso || "").trim(),
-        ean: String(ean || "").trim(),
+        ean,
         qtd: 1,
         conferente: conferenteAtual || "Usuário"
       };
@@ -2035,7 +2188,17 @@ const scannerDiv = document.getElementById("scanner");
       try{
         const data = await postJSON_(payload);
         if(data && data.success){
-          await puxarSyncAgora_();
+          // ✅ Atualiza localmente na hora e bloqueia sync antigo por instantes.
+          mapaScan[ean] = Number(mapaScan[ean] || 0) + 1;
+          bloqueioSyncAte = Date.now() + 1800;
+          ultimoSyncHash = _hashMapa_(mapaScan);
+          resultadoConferenciaAtual = null;
+
+          await garantirInfoExtras_();
+          atualizarKPIs();
+          const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
+          renderizarListaAtual_(jaConferido);
+
           return true;
         }else{
           throw new Error(data?.message || "Falha ao registrar bipe.");
@@ -2077,6 +2240,7 @@ const scannerDiv = document.getElementById("scanner");
       }
     }
 
+    // ✅ Clique para liberar (somente quando estiver bloqueado)
     document.addEventListener("click", (e)=>{
       const scannerDiv = document.getElementById("scanner");
       if(scannerDiv.style.display !== "flex") return;
@@ -2085,6 +2249,7 @@ const scannerDiv = document.getElementById("scanner");
       if(e.target.closest(".scanner-close")) return;
       if(e.target.closest("#modal-ean-extra")) return;
 
+      // ✅ Só libera se estava bloqueado
       if(!scannerBloqueado) return;
 
       e.stopPropagation();
@@ -2155,12 +2320,25 @@ const scannerDiv = document.getElementById("scanner");
       erro.textContent = "";
 
       if(!cabecalhoAtual){ erro.textContent = "Nenhuma NF carregada."; return; }
-      if(!confirm("Deseja enviar o resultado da conferência para o banco?")) return;
 
-      msg.textContent = "Enviando resultado da conferência...";
+      // ✅ Usa o resultado congelado do botão "Fazer Conferência".
+      // Se a pessoa não clicou antes, calcula e congela agora.
+      if(!resultadoConferenciaAtual){
+        const listaCompleta = montarListaConferencia(true);
+        const divergencias = listaCompleta.filter(i => Number(i.diff || 0) !== 0);
+        resultadoConferenciaAtual = { criadoEm: Date.now(), listaCompleta, divergencias };
+      }
+
+      const listaFinal = resultadoConferenciaAtual.listaCompleta || [];
+      const divergencias = resultadoConferenciaAtual.divergencias || [];
+
+      const textoConfirmacao = montarTextoConfirmacaoEnvio_(divergencias);
+      if(!confirm(textoConfirmacao)) return;
+
+      msg.textContent = divergencias.length
+        ? "Enviando divergências da conferência..."
+        : "Enviando conferência sem divergências...";
       msg.classList.remove("hidden");
-
-      const listaFinal = montarListaConferencia(true);
 
       const payload = {
         api: "registrarConferenciaNF",
@@ -2191,7 +2369,13 @@ const scannerDiv = document.getElementById("scanner");
       try{
         const data = await postJSON_(payload);
         if(!data.success) throw new Error(data.message || "Falha ao registrar conferência.");
-        alert("Conferência registrada com sucesso!");
+
+        if(divergencias.length){
+          alert("Conferência registrada com divergências.");
+        }else{
+          alert("Conferência registrada com sucesso, sem divergências.");
+        }
+
         limparTela();
       }catch(err){
         erro.textContent = "Erro ao enviar: " + (err.message || err);
@@ -2208,6 +2392,7 @@ const scannerDiv = document.getElementById("scanner");
       itensNF = [];
       termoFiltro = "";
       exibindoSomenteDivergencias = false;
+      resultadoConferenciaAtual = null;
       cacheInfoEAN = {};
 
       document.getElementById("chave").value = "";
@@ -2222,6 +2407,8 @@ const scannerDiv = document.getElementById("scanner");
       document.getElementById("chave").focus();
     }
 
+
+    // ========= Scanner NF 44 FUNCIONAL - BLOCO SEPARADO =========
     let html5ScannerNF44 = null;
     let scannerOpenNF44 = false;
     let travadoNF44 = false;
@@ -2463,6 +2650,7 @@ const scannerDiv = document.getElementById("scanner");
         };
       }
     }
+
 
     window.addEventListener("load", ()=>{
       configurarBotoesNF44();
