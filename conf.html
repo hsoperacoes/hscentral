@@ -1236,7 +1236,7 @@
 
               <div class="kpi"><strong>Total itens na NF</strong><span id="kpi-nf">0</span></div>
               <div class="kpi hidden"><strong>Total escaneado</strong><span id="kpi-scan">0</span></div>
-              <div class="kpi"><strong>Sync (tempo real)</strong><span id="kpi-sync">—</span></div>
+              <div class="kpi hidden"><strong>Sync (tempo real)</strong><span id="kpi-sync">—</span></div>
             </div>
 
             <div class="card">
@@ -1432,6 +1432,7 @@
     let ultimoSyncHash = "";
     let envioEmAndamento = false;
     let pendenciaEnvioConfirmado_ = null;
+    let conferenciaEnviadaAtual = false;
 
     function setEnvioBloqueado_(ativo){
       envioEmAndamento = !!ativo;
@@ -1449,6 +1450,38 @@
       return String(v ?? "").replace(/[&<>"']/g, s => ({
         "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
       }[s]));
+    }
+
+    function mensagemUsuarioErro_(contexto){
+      if(contexto === "carregar") return "Não foi possível carregar esta nota fiscal. Confira a filial/chave e tente novamente.";
+      if(contexto === "enviar") return "Não foi possível registrar a conferência. Tente novamente. Se continuar, avise o escritório.";
+      if(contexto === "scanner") return "Não foi possível iniciar a câmera. Verifique a permissão da câmera e tente novamente.";
+      return "Não foi possível concluir a operação. Tente novamente.";
+    }
+
+    function exibirErroUsuario_(contexto){
+      const erro = document.getElementById("erro");
+      if(erro) erro.textContent = mensagemUsuarioErro_(contexto);
+    }
+
+    function chaveAtualAberta_(){
+      return String(cabecalhoAtual?.chaveAcesso || document.getElementById("chave")?.value || "").trim();
+    }
+
+    function existeConferenciaAbertaSemEnvio_(){
+      return !!(cabecalhoAtual && !conferenciaEnviadaAtual);
+    }
+
+    function bloquearTrocaNFSePendente_(novaChave){
+      if(!existeConferenciaAbertaSemEnvio_()) return false;
+      const chaveAtual = String(cabecalhoAtual?.chaveAcesso || "").trim();
+      const chaveNova = String(novaChave || "").trim();
+      if(chaveAtual && chaveNova && chaveAtual === chaveNova) return false;
+
+      alert("Finalize e envie a conferência da nota fiscal atual antes de acessar outra NF.");
+      const input = document.getElementById("chave");
+      if(input && chaveAtual) input.value = chaveAtual;
+      return true;
     }
 
     function tipoDivergenciaItem_(it){
@@ -1574,6 +1607,10 @@
     }
 
     function sair(){
+      if(existeConferenciaAbertaSemEnvio_()){
+        alert("Finalize e envie a conferência da nota fiscal atual antes de sair.");
+        return;
+      }
       if(!confirm("Deseja sair?")) return;
       pararSync_();
       localStorage.removeItem("filial_conf_nf");
@@ -1588,10 +1625,11 @@
       const painel = document.getElementById("painel");
 
       if(chave.length !== 44){ alert("A chave deve ter 44 dígitos."); return; }
+      if(bloquearTrocaNFSePendente_(chave)) return;
 
       erro.textContent = "";
       loading.classList.remove("hidden");
-      painel.classList.add("hidden");
+      if(!existeConferenciaAbertaSemEnvio_()) painel.classList.add("hidden");
 
       pararSync_();
       document.getElementById("kpi-sync").textContent = "—";
@@ -1601,22 +1639,25 @@
         const data = await resp.json();
         if(!data.success) throw new Error(data.message || "Erro ao buscar NF.");
 
-        cabecalhoAtual = data.cabecalho;
+        const cabecalhoRecebido = data.cabecalho;
 
         if (data.jaConferida) {
-          const statusConf = data.statusConferencia || "CONFERIDA";
           const continuar = confirm(
-            "⚠️ Esta nota fiscal já consta como conferida no banco.\n\n" +
-            "Status: " + statusConf + "\n\n" +
+            "⚠️ Esta nota fiscal já consta como conferida.\n\n" +
             "Deseja abrir mesmo assim para consulta ou nova conferência?"
           );
 
           if (!continuar) {
-            erro.textContent = "NF já conferida. Carregamento cancelado.";
+            erro.textContent = "Carregamento cancelado.";
             loading.classList.add("hidden");
             return;
           }
         }
+
+        cabecalhoAtual = cabecalhoRecebido;
+        conferenciaEnviadaAtual = false;
+        const chaveInputAtiva = document.getElementById("chave");
+        if(chaveInputAtiva) chaveInputAtiva.readOnly = true;
 
         itensNF = data.itens || [];
         mapaScan = {};
@@ -1636,7 +1677,9 @@
 
         iniciarSync_();
       } catch(err) {
-        erro.textContent = err.message;
+        console.error("Erro ao carregar NF:", err);
+        if(!cabecalhoAtual) painel.classList.add("hidden");
+        exibirErroUsuario_("carregar");
       } finally {
         loading.classList.add("hidden");
       }
@@ -2219,6 +2262,7 @@
 
     async function abrirLeitor(modo){
       if(modo === "NF"){
+        if(bloquearTrocaNFSePendente_("")) return;
         await abrirScannerNF44();
         return;
       }
@@ -2263,7 +2307,8 @@ const scannerDiv = document.getElementById("scanner");
           await iniciarHtml5NF44_(scannerView);
         }
       }catch(ex){
-        alert("Erro ao iniciar o leitor: " + (ex.message || ex));
+        console.error("Erro ao iniciar leitor:", ex);
+        alert(mensagemUsuarioErro_("scanner"));
         scannerDiv.style.display = "none";
       }
     }
@@ -2329,6 +2374,7 @@ const scannerDiv = document.getElementById("scanner");
           const chave = extrairChave44(decodedText);
           if(!chave) return;
 
+          if(bloquearTrocaNFSePendente_(chave)) return;
           travadoNF = true;
           document.getElementById("chave").value = chave;
           beepOk();
@@ -2733,6 +2779,8 @@ const scannerDiv = document.getElementById("scanner");
         const data = await postJSON_(payload);
         if(!data.success) throw new Error(data.message || "Falha ao registrar conferência.");
 
+        conferenciaEnviadaAtual = true;
+
         if(divergenciasReais.length){
           alert("Conferência registrada com divergências.");
         }else{
@@ -2741,7 +2789,8 @@ const scannerDiv = document.getElementById("scanner");
 
         limparTela();
       }catch(err){
-        erro.textContent = "Erro ao enviar: " + (err.message || err);
+        console.error("Erro ao enviar conferência:", err);
+        exibirErroUsuario_("enviar");
       }finally{
         if(msg) msg.classList.add("hidden");
         setEnvioBloqueado_(false);
@@ -2758,8 +2807,11 @@ const scannerDiv = document.getElementById("scanner");
       exibindoSomenteDivergencias = false;
       resultadoConferenciaAtual = null;
       cacheInfoEAN = {};
+      conferenciaEnviadaAtual = false;
 
-      document.getElementById("chave").value = "";
+      const chaveInputLimpar = document.getElementById("chave");
+      chaveInputLimpar.readOnly = false;
+      chaveInputLimpar.value = "";
       document.getElementById("filtro").value = "";
       document.getElementById("ean-manual").value = "";
 
@@ -2848,6 +2900,7 @@ const scannerDiv = document.getElementById("scanner");
     }
 
     async function abrirScannerNF44(){
+      if(bloquearTrocaNFSePendente_("")) return;
       const chaveInput = document.getElementById("chave");
 
       if(chaveInput && chaveInput.value.trim() !== ""){
@@ -2923,6 +2976,7 @@ const scannerDiv = document.getElementById("scanner");
               return;
             }
 
+            if(bloquearTrocaNFSePendente_(chave)) return;
             travadoNF44 = true;
             document.getElementById("chave").value = chave;
             statusNF44_("<b>capturado!</b><br/>Chave 44 preenchida ✅");
