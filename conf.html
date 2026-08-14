@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -11,7 +10,7 @@
   <title>Conferência de Nota Fiscal - HS</title>
 
   <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css?version=3.8" />
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css?version=3.9" />
 
   <!-- ✅ Html5Qrcode (usado para NF 44 e EAN) -->
   <script src="https://unpkg.com/html5-qrcode"></script>
@@ -1178,12 +1177,12 @@
 <body>
 
   <div class="top-nav">
-    <a href="index.html?version=3.8" class="back-button">
+    <a href="index.html?version=3.9" class="back-button">
       <i class="fas fa-arrow-left"></i> Voltar à Home
     </a>
   </div>
 
-  <img src="logo.png?version=3.8" alt="Logo HS" class="logo-topo" />
+  <img src="logo.png?version=3.9" alt="Logo HS" class="logo-topo" />
 
   <div class="container">
     <div class="form-container">
@@ -1390,11 +1389,11 @@
   </div>
 
   <footer>
-    &copy; 2025 HS - Sistema de Conferência de Notas Fiscais. Versão 3.8
+    &copy; 2025 HS - Sistema de Conferência de Notas Fiscais. Versão 3.9
   </footer>
 
   <script>
-    const APP_VERSION = "3.8";
+    const APP_VERSION = "3.9";
 
     const URL_API = "https://script.google.com/macros/s/AKfycbx1HDzA2b478DAhi5ONS6TstKieKf4lvFM9wzib9McUrdP7Z4Xwhb6SrUt5KW1YcR3x/exec";
 
@@ -1660,7 +1659,23 @@
         if(chaveInputAtiva) chaveInputAtiva.readOnly = true;
 
         itensNF = data.itens || [];
+
+        // 🔧 CORREÇÃO: antes disso, "mapaScan" era zerado aqui e só era
+        // preenchido de verdade quando o sincronismo automático rodava pela
+        // primeira vez (cerca de 1s depois). Nesse intervalo a tela mostrava
+        // TODOS os itens como "FALTANDO 100%", mesmo já tendo sido bipados,
+        // causando confusão para quem confere. Agora usamos direto o que o
+        // próprio servidor já retornou em "jaEscaneado" (ele já busca isso do
+        // banco antes de responder), então a lista nasce certa, sem flash.
         mapaScan = {};
+        itensNF.forEach(i => {
+          const eanItem = String(i.ean || "").trim();
+          const qtdJaEscaneada = Number(i.jaEscaneado || 0);
+          if(eanItem && qtdJaEscaneada > 0){
+            mapaScan[eanItem] = qtdJaEscaneada;
+          }
+        });
+
         resultadoConferenciaAtual = null;
         exibindoSomenteDivergencias = false;
 
@@ -2197,8 +2212,7 @@
     function iniciarSync_(){
       if(!cabecalhoAtual || !cabecalhoAtual.chaveAcesso) return;
       syncAtivo = true;
-      ultimoSyncHash = "";
-      puxarSyncAgora_();
+      ultimoSyncHash = _hashMapa_(mapaScan);
       syncTimer = setInterval(() => puxarSyncAgora_(), 1100);
     }
 
