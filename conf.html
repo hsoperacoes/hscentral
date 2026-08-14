@@ -1884,7 +1884,16 @@
       }
     }
 
-    function fazerConferencia(){
+    async function fazerConferencia(){
+      // 🔧 CORREÇÃO: antes, o modal de divergências podia abrir com itens
+      // "FORA DA NOTA" mostrando "--- / --- / ---", porque a busca do código
+      // real do EAN no banco (buscarEANNoBanco) é assíncrona e o modal era
+      // montado antes dela terminar. Agora aguardamos essa busca terminar
+      // (garantirInfoExtras_) antes de montar a lista e abrir o modal, então
+      // ele já nasce com o código correto (ou "EAN <código>" quando o EAN
+      // realmente não existe em nenhuma aba do banco).
+      await garantirInfoExtras_();
+
       exibindoSomenteDivergencias = true;
 
       const listaCompleta = montarListaConferencia(true);
@@ -2212,7 +2221,13 @@
     function iniciarSync_(){
       if(!cabecalhoAtual || !cabecalhoAtual.chaveAcesso) return;
       syncAtivo = true;
+      // ✅ Já partimos com o hash do que veio no carregamento da NF (mapaScan
+      // pré-preenchido), então esse primeiro puxarSyncAgora_() não causa mais
+      // o "flash" de FALTANDO. Ele continua sendo chamado imediatamente para
+      // descobrir o quanto antes itens "FORA DA NOTA" (EANs bipados que não
+      // pertencem a esta NF), que só vêm por este endpoint de sync.
       ultimoSyncHash = _hashMapa_(mapaScan);
+      puxarSyncAgora_();
       syncTimer = setInterval(() => puxarSyncAgora_(), 1100);
     }
 
