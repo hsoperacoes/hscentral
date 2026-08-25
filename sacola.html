@@ -26,7 +26,7 @@
 
     .form-container {
       width: 100%;
-      max-width: 760px;   /* mesma largura dos outros cards */
+      max-width: 760px;
       margin: 0 auto;
     }
 
@@ -41,7 +41,6 @@
       margin-bottom: 24px;
     }
 
-    /* Barra superior com botão de voltar (padrão falta/folgas) */
     .top-nav {
       width: 100%;
       display: flex;
@@ -82,7 +81,7 @@
     }
 
     #grupo-tamanho-g {
-      display: none; /* começa escondido */
+      display: none;
     }
   </style>
 </head>
@@ -110,6 +109,8 @@
             <option value="JOTA">JOTA</option>
             <option value="MODA">MODA</option>
             <option value="PONTO">PONTO</option>
+            <option value="DIVINA">DIVINA</option>
+            <option value="ITAUNA">ITAUNA</option>
           </select>
         </div>
 
@@ -148,6 +149,7 @@
             <label for="sacola-g">Sacola G <span class="required-star">*</span></label>
             <input type="number" id="sacola-g" name="sacola_g" placeholder="Quantidade" min="0">
           </div>
+
           <div class="form-group">
             <label for="envelope-g">Envelope G <span class="required-star">*</span></label>
             <input type="number" id="envelope-g" name="envelope_g" placeholder="Quantidade" min="0">
@@ -161,7 +163,6 @@
 
   <footer>HS Operações © 2025 - Todos os direitos reservados</footer>
 
-  <!-- JS específico dessa tela (mesmo fluxo do index grandão) -->
   <script>
     function toggleCamposG() {
       const grupoG = document.getElementById("grupo-tamanho-g");
@@ -182,7 +183,6 @@
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-      // já preenche a data/hora ao abrir a tela
       preencherDataSacola();
 
       const form = document.getElementById("form-sacola");
@@ -195,7 +195,6 @@
         const sacolaG = document.getElementById("sacola-g");
         const envelopeG = document.getElementById("envelope-g");
 
-        // mesma validação do index
         if (checkboxG.checked) {
           if (sacolaG.value === "" || envelopeG.value === "") {
             alert("Preencha os campos de Sacola G e Envelope G.");
@@ -204,8 +203,6 @@
         }
 
         botao.disabled = true;
-
-        // atualiza de novo a data/hora no momento do envio
         preencherDataSacola();
 
         const formData = new FormData(form);
@@ -224,8 +221,8 @@
 
           alert("Contagem registrada com sucesso!");
           form.reset();
-          toggleCamposG(); // volta a esconder G
-          preencherDataSacola(); // coloca nova data/hora
+          toggleCamposG();
+          preencherDataSacola();
         } catch (err) {
           alert("Erro ao registrar os dados. Tente novamente.");
           console.error("Erro:", err);
