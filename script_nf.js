@@ -5,7 +5,9 @@ const FILIAIS = {
   "488": { nome: "FLORIANO", codigoApi: "488" },
   "287": { nome: "JOTA",     codigoApi: "287" },
   "761": { nome: "MODA",     codigoApi: "761" },
-  "288": { nome: "PONTO",    codigoApi: "288" }
+  "288": { nome: "PONTO",    codigoApi: "288" },
+  "1849": { nome: "DIVINA",  codigoApi: "1849" },
+  "1848": { nome: "ITAUNA",  codigoApi: "1848" }
 };
 
 const LS_FILIAL_ATUAL = "hs_nf_filial_atual";
