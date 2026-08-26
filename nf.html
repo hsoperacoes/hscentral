@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>GERENCIAL HS - Recebimento de Nota Fiscal</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
@@ -408,8 +411,85 @@
   <script>
     // ✅ SEU APPWEB (AGORA DO JEITO QUE O script_nf.js NORMALMENTE ESPERA)
     const URL_API = "https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec";
-    window.URL_API = URL_API; // compat
+    window.URL_API = URL_API;
     window.__HS_DISABLE_DYNAMSOFT__ = true;
+
+    // Consulta robusta ao Apps Script: evita resposta antiga, aplica timeout
+    // e repete automaticamente falhas temporárias de rede.
+    (function configurarFetchRobustoNF() {
+      const fetchOriginal = window.fetch.bind(window);
+      const LIMITE_MS = 25000;
+      const MAX_TENTATIVAS = 3;
+
+      function ehConsultaNF(input) {
+        const url = typeof input === "string"
+          ? input
+          : (input && input.url ? input.url : "");
+        return url.includes("script.google.com/macros/s/") ||
+               url.includes("script.googleusercontent.com/macros/");
+      }
+
+      function criarUrlSemCache(input, tentativa) {
+        const urlOriginal = typeof input === "string"
+          ? input
+          : (input && input.url ? input.url : String(input));
+
+        const separador = urlOriginal.includes("?") ? "&" : "?";
+        return urlOriginal +
+          separador +
+          "_hs=" + Date.now() +
+          "&_tentativa=" + tentativa;
+      }
+
+      window.fetch = async function(input, init = {}) {
+        if (!ehConsultaNF(input)) {
+          return fetchOriginal(input, init);
+        }
+
+        let ultimoErro = null;
+
+        for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), LIMITE_MS);
+
+          try {
+            const resposta = await fetchOriginal(
+              criarUrlSemCache(input, tentativa),
+              {
+                ...init,
+                cache: "no-store",
+                redirect: "follow",
+                signal: controller.signal
+              }
+            );
+
+            if (!resposta.ok) {
+              throw new Error("Servidor respondeu HTTP " + resposta.status);
+            }
+
+            return resposta;
+          } catch (erro) {
+            ultimoErro = erro;
+
+            if (tentativa < MAX_TENTATIVAS) {
+              await new Promise(resolve =>
+                setTimeout(resolve, 700 * tentativa)
+              );
+            }
+          } finally {
+            clearTimeout(timeout);
+          }
+        }
+
+        const erroFinal = new Error(
+          ultimoErro && ultimoErro.name === "AbortError"
+            ? "A consulta demorou mais que o esperado. Tente novamente."
+            : "Não foi possível conectar ao servidor. Verifique a internet e tente novamente."
+        );
+        erroFinal.cause = ultimoErro;
+        throw erroFinal;
+      };
+    })();
 
     function abrirOverlayRecusa(mensagem) {
       const ov = document.getElementById('recusaOverlay');
@@ -479,7 +559,7 @@
   </script>
 
   <!-- ✅ seu sistema (login/consulta/histórico) -->
-  <script src="script_nf.js?v=1.0.5"></script>
+  <script src="script_nf.js?v=1.0.6"></script>
 
   <script>
     // ========= Scanner COMPLETO - SEM PERMISSÃO ANTECIPADA =========
