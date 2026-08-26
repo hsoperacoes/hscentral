@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -2905,13 +2906,15 @@ const scannerDiv = document.getElementById("scanner");
         conferenciaEnviadaAtual = true;
         envioConcluido = true;
 
+        // Limpa a NF concluída antes de mostrar o aviso. Ao fechar o aviso,
+        // o conferente já encontra o campo vazio para ler a próxima nota.
+        limparTela();
+
         if(divergenciasReais.length){
           alert("Conferência registrada com divergências.");
         }else{
           alert("Conferência registrada com sucesso, sem divergências.");
         }
-
-        limparTela();
       }catch(err){
         console.error("Erro ao enviar conferência:", err);
         exibirErroUsuario_("enviar");
@@ -2922,6 +2925,16 @@ const scannerDiv = document.getElementById("scanner");
         }
         if(msg) msg.classList.add("hidden");
         setEnvioBloqueado_(false);
+
+        if(envioConcluido){
+          const chaveProximaNF = document.getElementById("chave");
+          if(chaveProximaNF){
+            chaveProximaNF.disabled = false;
+            chaveProximaNF.readOnly = false;
+            chaveProximaNF.value = "";
+            requestAnimationFrame(() => chaveProximaNF.focus());
+          }
+        }
       }
     }
 
@@ -2945,10 +2958,29 @@ const scannerDiv = document.getElementById("scanner");
 
       document.getElementById("painel").classList.add("hidden");
       document.getElementById("btn-enviar").classList.add("hidden");
+      document.getElementById("resumo-nf").innerHTML = "";
       document.getElementById("resumo-div").textContent = "";
       document.getElementById("lista").innerHTML = "";
+      document.getElementById("kpi-nf").textContent = "0";
+      document.getElementById("kpi-scan").textContent = "0";
+      document.getElementById("kpi-sync").textContent = "—";
+      document.getElementById("loading").classList.add("hidden");
+      document.getElementById("erro").textContent = "";
 
-      document.getElementById("chave").focus();
+      const scannerPecas = document.getElementById("scanner");
+      if(scannerPecas) scannerPecas.style.display = "none";
+      const scannerNF = document.getElementById("scannerOverlayNF44");
+      if(scannerNF) scannerNF.style.display = "none";
+      document.body.style.overflow = "";
+      modoScanner = "";
+      scannerBloqueado = false;
+      inFlightEAN = false;
+
+      ["modal-divergencia", "modal-ean-extra", "modal-confirmacao-envio"].forEach(id => {
+        const modal = document.getElementById(id);
+        if(modal) modal.style.display = "none";
+      });
+
       Object.values(timersAjusteManual || {}).forEach(t => clearTimeout(t));
       timersAjusteManual = {};
       promessasAjusteManual = {};
