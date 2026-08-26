@@ -11,7 +11,7 @@
   <title>Conferência de Nota Fiscal - HS</title>
 
   <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css?version=3.9" />
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css?version=4.0" />
 
   <!-- ✅ Html5Qrcode (usado para NF 44 e EAN) -->
   <script src="https://unpkg.com/html5-qrcode"></script>
@@ -1378,12 +1378,12 @@
 <body>
 
   <div class="top-nav">
-    <a href="index.html?version=3.9" class="back-button">
+    <a href="index.html?version=4.0" class="back-button">
       <i class="fas fa-arrow-left"></i> Voltar à Home
     </a>
   </div>
 
-  <img src="logo.png?version=3.9" alt="Logo HS" class="logo-topo" />
+  <img src="logo.png?version=4.0" alt="Logo HS" class="logo-topo" />
 
   <div class="container">
     <div class="form-container">
@@ -1616,16 +1616,24 @@
   </div>
 
   <footer>
-    &copy; 2025 HS - Sistema de Conferência de Notas Fiscais. Versão 3.9
+    &copy; 2025 HS - Sistema de Conferência de Notas Fiscais. Versão 4.0
   </footer>
 
   <script>
-    const APP_VERSION = "3.9";
+    const APP_VERSION = "4.0";
 
     const URL_API = "https://script.google.com/macros/s/AKfycbx1HDzA2b478DAhi5ONS6TstKieKf4lvFM9wzib9McUrdP7Z4Xwhb6SrUt5KW1YcR3x/exec";
 
-    const filiaisValidas = ["293", "488", "287", "288", "761"];
-    const nomesFiliais = { "293":"ARTUR","488":"FLORIANO","287":"JOTA","288":"PONTO","761":"MODA" };
+    const filiaisValidas = ["293", "488", "287", "288", "761", "1849", "1848"];
+    const nomesFiliais = {
+      "293":"ARTUR",
+      "488":"FLORIANO",
+      "287":"JOTA",
+      "288":"PONTO",
+      "761":"MODA",
+      "1849":"DIVINA",
+      "1848":"ITAUNA"
+    };
 
     let filialAtual = "";
     let conferenteAtual = "";
