@@ -53,8 +53,9 @@ function registrarErroCliente(etapa, erro, requestId, chave) {
       "nome=" + (erro?.name || ""),
       "online=" + navigator.onLine,
       "pagina=" + location.href,
+      erro?.detalhes ? "resposta=" + erro.detalhes : "",
       "stack=" + (erro?.stack || "")
-    ].join(" | "));
+    ].filter(Boolean).join(" | "));
     params.append("requestId", requestId || "");
     params.append("userAgent", navigator.userAgent || "");
 
@@ -185,7 +186,53 @@ async function consultarNF() {
       body: form.toString()
     });
 
-    const json = await resp.json();
+    const textoResposta = await resp.text();
+    const contentType = resp.headers.get("content-type") || "";
+    const inicioResposta = textoResposta.trim().slice(0, 300);
+
+    if (!resp.ok) {
+      const erroHttp = new Error("HTTP " + resp.status);
+      erroHttp.name = "HTTPError";
+      erroHttp.detalhes = [
+        "status=" + resp.status,
+        "statusText=" + resp.statusText,
+        "contentType=" + contentType,
+        "urlFinal=" + resp.url,
+        "inicioResposta=" + inicioResposta
+      ].join(" | ");
+      throw erroHttp;
+    }
+
+    if (
+      inicioResposta.startsWith("<!DOCTYPE") ||
+      inicioResposta.startsWith("<html") ||
+      contentType.toLowerCase().includes("text/html")
+    ) {
+      const erroHtml = new Error("O Google devolveu uma página HTML em vez dos dados da consulta.");
+      erroHtml.name = "RespostaHTML";
+      erroHtml.detalhes = [
+        "status=" + resp.status,
+        "contentType=" + contentType,
+        "urlFinal=" + resp.url,
+        "inicioResposta=" + inicioResposta
+      ].join(" | ");
+      throw erroHtml;
+    }
+
+    let json;
+
+    try {
+      json = JSON.parse(textoResposta);
+    } catch (erroJson) {
+      const erroResposta = new Error("A resposta recebida não é um JSON válido.");
+      erroResposta.name = "RespostaInvalida";
+      erroResposta.detalhes = [
+        "contentType=" + contentType,
+        "urlFinal=" + resp.url,
+        "inicioResposta=" + inicioResposta
+      ].join(" | ");
+      throw erroResposta;
+    }
 
     if (!json || json.success !== true) {
       elErroMain.textContent = json?.message || "Erro ao consultar. Tente novamente.";
@@ -213,7 +260,12 @@ async function consultarNF() {
     renderHistorico();
   } catch (err) {
     registrarErroCliente("FETCH_OU_RESPOSTA", err, requestId, chave);
-    elErroMain.textContent = "Falha na consulta: " + (err?.message || err);
+
+    if (err?.name === "RespostaHTML" || err?.name === "RespostaInvalida") {
+      elErroMain.textContent = "O servidor concluiu a consulta, mas a resposta recebida foi inválida. Tente novamente em alguns instantes.";
+    } else {
+      elErroMain.textContent = "Falha na consulta: " + (err?.message || err);
+    }
   } finally {
     setLoading(false);
   }
