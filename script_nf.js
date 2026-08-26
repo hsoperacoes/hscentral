@@ -1,461 +1,552 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbwUa5DLhtKpa2kUAMxicHQsPlIG3gsLW-D3Scq6WUjAw42JIcUerAgy4f1H3TxsJLTB/exec";
+function doGet(e) {
+  const acao = e?.parameter?.acao;
 
-const FILIAIS = {
-  "293": { nome: "ARTUR",    codigoApi: "293" },
-  "488": { nome: "FLORIANO", codigoApi: "488" },
-  "287": { nome: "JOTA",     codigoApi: "287" },
-  "761": { nome: "MODA",     codigoApi: "761" },
-  "288": { nome: "PONTO",    codigoApi: "288" },
-  "1849": { nome: "DIVINA",  codigoApi: "1849" },
-  "1848": { nome: "ITAUNA",  codigoApi: "1848" }
-};
-
-const LS_FILIAL_ATUAL = "hs_nf_filial_atual";
-const LS_HIST_PREFIX  = "hs_nf_historico_";
-
-const elLogin     = document.getElementById("login-nf");
-const elPrincipal = document.getElementById("principal-nf");
-
-const inputCodigo = document.getElementById("codigo-nf");
-const btnEntrar   = document.getElementById("btn-entrar-nf");
-const btnSair     = document.getElementById("btn-sair-nf");
-
-const inputChave  = document.getElementById("chave-nf");
-const btnConsultar= document.getElementById("btn-consultar-nf");
-const btnLeitor   = document.getElementById("btn-leitor-nf");
-const btnLimpar   = document.getElementById("btn-limpar-nf");
-
-const elLoading   = document.getElementById("loading-nf");
-const elResultado = document.getElementById("resultado-nf");
-const elErroLogin = document.getElementById("erro-nf");
-const elErroMain  = document.getElementById("erro-nf2");
-const elHistLista = document.getElementById("historicoLista-nf");
-
-const elScanner   = document.getElementById("scanner");
-
-
-let filialAtual = null;
-let dbrScanner = null;
-
-function criarRequestId() {
-  return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
-}
-
-function registrarErroCliente(etapa, erro, requestId, chave) {
-  try {
-    const params = new URLSearchParams();
-    params.append("acao", "logCliente");
-    params.append("etapa", etapa || "ERRO_CLIENTE");
-    params.append("filial", filialAtual?.codigoApi || "");
-    params.append("chave", chave || "");
-    params.append("erro", erro?.message || String(erro || "Erro desconhecido"));
-    params.append("detalhes", [
-      "nome=" + (erro?.name || ""),
-      "online=" + navigator.onLine,
-      "pagina=" + location.href,
-      erro?.detalhes ? "resposta=" + erro.detalhes : "",
-      "stack=" + (erro?.stack || "")
-    ].filter(Boolean).join(" | "));
-    params.append("requestId", requestId || "");
-    params.append("userAgent", navigator.userAgent || "");
-
-    fetch(API_URL + "?" + params.toString(), {
-      method: "GET",
-      mode: "no-cors",
-      cache: "no-store",
-      keepalive: true
-    }).catch(() => {});
-  } catch (e) {}
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  const salvo = localStorage.getItem(LS_FILIAL_ATUAL);
-  if (salvo) {
-    try {
-      const obj = JSON.parse(salvo);
-      if (obj && obj.codigoLogin && FILIAIS[obj.codigoLogin]) {
-        setFilialLogada(obj.codigoLogin);
-      }
-    } catch (e) {}
+  if (acao === 'logCliente') {
+    registrarLog({
+      origem: "CLIENTE",
+      etapa: e?.parameter?.etapa || "ERRO_CLIENTE",
+      filial: e?.parameter?.filial || "",
+      chave: e?.parameter?.chave || "",
+      erro: e?.parameter?.erro || "Erro não informado",
+      detalhes: e?.parameter?.detalhes || "",
+      requestId: e?.parameter?.requestId || "",
+      userAgent: e?.parameter?.userAgent || ""
+    });
+    return criarResposta(true, { registrado: true });
   }
 
-  btnEntrar?.addEventListener("click", handleLogin);
-  inputCodigo?.addEventListener("keydown", (e) => { if (e.key === "Enter") handleLogin(); });
+  if (acao === 'resultado') {
+    const requestId = e?.parameter?.requestId?.toString().trim() || "";
+    if (!requestId) return criarResposta(false, "Request ID não informado.");
 
-  btnSair?.addEventListener("click", logout);
-  btnConsultar?.addEventListener("click", consultarNF);
+    const resultado = obterResultadoConsulta(requestId);
+    if (!resultado) return criarResposta(false, "Resultado ainda não disponível.");
 
-  inputChave?.addEventListener("input", () => {
-    const v = (inputChave.value || "").replace(/\D/g, "").slice(0, 44);
-    inputChave.value = v;
+    return ContentService
+      .createTextOutput(JSON.stringify(resultado))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (acao === 'historico' && e.parameter.filial) {
+    return criarResposta(true, []);
+  }
+  return handleConsulta(e);
+}
+
+function doPost(e) {
+  return handleConsulta(e);
+}
+
+function handleConsulta(e) {
+  if (!e || !e.parameter || !e.parameter.chave || !e.parameter.filial) {
+    return criarResposta(false, "Parâmetros obrigatórios faltando (chave e filial).");
+  }
+
+  const chave = e.parameter.chave.toString().trim();
+  const filial = e.parameter.filial.toString().trim();
+  const requestId = e.parameter.requestId?.toString().trim() || "";
+  const userAgent = e.parameter.userAgent?.toString().trim() || "";
+  let etapaAtual = "VALIDACAO";
+  const inicioConsulta = new Date().getTime();
+
+  registrarLog({
+    origem: "SERVIDOR",
+    etapa: "INICIO_CONSULTA",
+    filial,
+    chave,
+    erro: "",
+    detalhes: "Consulta recebida pelo Apps Script.",
+    requestId,
+    userAgent
   });
-  inputChave?.addEventListener("keydown", (e) => { if (e.key === "Enter") consultarNF(); });
 
-  btnLimpar?.addEventListener("click", limparHistoricoLocal);
-  btnLeitor?.addEventListener("click", toggleScanner);
-
-  if (!filialAtual) {
-    mostrarLogin();
-  } else {
-    mostrarPrincipal();
-    renderHistorico();
-  }
-});
-
-function handleLogin() {
-  limparMensagens();
-  const codigo = (inputCodigo.value || "").trim();
-
-  if (!codigo) {
-    elErroLogin.textContent = "Digite o código da filial.";
-    return;
-  }
-  if (!FILIAIS[codigo]) {
-    elErroLogin.textContent = "Código de filial inválido.";
-    return;
-  }
-
-  setFilialLogada(codigo);
-  mostrarPrincipal();
-  renderHistorico();
-}
-
-function setFilialLogada(codigoLogin) {
-  filialAtual = {
-    codigoLogin,
-    nome: FILIAIS[codigoLogin].nome,
-    codigoApi: FILIAIS[codigoLogin].codigoApi
+  const abasPorFilial = {
+    "293": "ARTUR",
+    "488": "FLORIANO",
+    "287": "JOTA",
+    "761": "MODA",
+    "288": "PONTO",
+    "1849": "DIVINA",
+    "1848": "ITAUNA"
   };
-  localStorage.setItem(LS_FILIAL_ATUAL, JSON.stringify(filialAtual));
-}
 
-function logout() {
-  pararScanner();
-  filialAtual = null;
-  localStorage.removeItem(LS_FILIAL_ATUAL);
-
-  inputCodigo.value = "";
-  inputChave.value = "";
-
-  elResultado.classList.add("hidden");
-  elResultado.innerHTML = "";
-  elHistLista.innerHTML = "";
-
-  mostrarLogin();
-}
-
-function mostrarLogin() {
-  elLogin.classList.remove("hidden");
-  elPrincipal.classList.add("hidden");
-}
-
-function mostrarPrincipal() {
-  elLogin.classList.add("hidden");
-  elPrincipal.classList.remove("hidden");
-}
-
-async function consultarNF() {
-  limparMensagens();
-
-  if (!filialAtual) {
-    elErroMain.textContent = "Faça login novamente.";
-    mostrarLogin();
-    return;
-  }
-
-  const chave = (inputChave.value || "").trim();
   if (chave.length !== 44) {
-    elErroMain.textContent = "A chave deve conter exatamente 44 dígitos.";
-    return;
-  }
-
-  setLoading(true);
-
-  const requestId = criarRequestId();
-
-  try {
-    const form = new URLSearchParams();
-    form.append("chave", chave);
-    form.append("filial", filialAtual.codigoApi);
-    form.append("requestId", requestId);
-    form.append("userAgent", navigator.userAgent || "");
-
-    const resp = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-      body: form.toString()
-    });
-
-    const textoResposta = await resp.text();
-    const contentType = resp.headers.get("content-type") || "";
-    const inicioResposta = textoResposta.trim().slice(0, 300);
-
-    if (!resp.ok) {
-      const erroHttp = new Error("HTTP " + resp.status);
-      erroHttp.name = "HTTPError";
-      erroHttp.detalhes = [
-        "status=" + resp.status,
-        "statusText=" + resp.statusText,
-        "contentType=" + contentType,
-        "urlFinal=" + resp.url,
-        "inicioResposta=" + inicioResposta
-      ].join(" | ");
-      throw erroHttp;
-    }
-
-    if (
-      inicioResposta.startsWith("<!DOCTYPE") ||
-      inicioResposta.startsWith("<html") ||
-      contentType.toLowerCase().includes("text/html")
-    ) {
-      const erroHtml = new Error("O Google devolveu uma página HTML em vez dos dados da consulta.");
-      erroHtml.name = "RespostaHTML";
-      erroHtml.detalhes = [
-        "status=" + resp.status,
-        "contentType=" + contentType,
-        "urlFinal=" + resp.url,
-        "inicioResposta=" + inicioResposta
-      ].join(" | ");
-      throw erroHtml;
-    }
-
-    let json;
-
-    try {
-      json = JSON.parse(textoResposta);
-    } catch (erroJson) {
-      const erroResposta = new Error("A resposta recebida não é um JSON válido.");
-      erroResposta.name = "RespostaInvalida";
-      erroResposta.detalhes = [
-        "contentType=" + contentType,
-        "urlFinal=" + resp.url,
-        "inicioResposta=" + inicioResposta
-      ].join(" | ");
-      throw erroResposta;
-    }
-
-    if (!json || json.success !== true) {
-      elErroMain.textContent = json?.message || "Erro ao consultar. Tente novamente.";
-      return;
-    }
-
-    const data = json.data || {};
-
-    // OVERLAY (RECUSA)
-    if (data.recusa === true && typeof abrirOverlayRecusa === "function") {
-      abrirOverlayRecusa(data.mensagemRecusa || "Esta nota está marcada para recusa.");
-    }
-
-    renderResultado(data);
-
-    salvarNoHistorico({
-      when: data.dataRegistro || agoraBR(),
+    registrarLog({
+      origem: "SERVIDOR",
+      etapa: "VALIDACAO_CHAVE",
+      filial,
       chave,
-      numeroNF: data.numeroNF || "-",
-      valorTotal: data.valorTotal || "0",
-      quantidadeTotal: data.quantidadeTotal || "0",
-      status: data.status || "-"
+      erro: "Chave inválida.",
+      detalhes: "A chave não possui 44 caracteres.",
+      requestId,
+      userAgent
     });
+    return criarResposta(false, "Chave deve conter exatamente 44 caracteres.");
+  }
 
-    renderHistorico();
-  } catch (err) {
-    registrarErroCliente("FETCH_OU_RESPOSTA", err, requestId, chave);
+  if (!abasPorFilial[filial]) {
+    registrarLog({
+      origem: "SERVIDOR",
+      etapa: "VALIDACAO_FILIAL",
+      filial,
+      chave,
+      erro: "Filial inválida.",
+      detalhes: "Código de filial não localizado no mapa.",
+      requestId,
+      userAgent
+    });
+    return criarResposta(false, "Código de filial inválido.");
+  }
 
-    if (err?.name === "RespostaHTML" || err?.name === "RespostaInvalida") {
-      elErroMain.textContent = "O servidor concluiu a consulta, mas a resposta recebida foi inválida. Tente novamente em alguns instantes.";
+  const cache = CacheService.getScriptCache();
+  const chaveProcessamento = "PROC_" + filial + "_" + chave;
+  if (cache.get(chaveProcessamento)) {
+    registrarLog({
+      origem: "SERVIDOR",
+      etapa: "CHAVE_EM_PROCESSAMENTO",
+      filial,
+      chave,
+      erro: "A chave já estava marcada no cache.",
+      detalhes: "A consulta foi recusada antes da leitura da planilha.",
+      requestId,
+      userAgent
+    });
+    return criarResposta(false, "Chave em processamento. Aguarde...");
+  }
+  cache.put(chaveProcessamento, "ok", 30);
+
+  try {
+    etapaAtual = "ABRIR_PLANILHA_ORIGEM";
+    const planilhaOrigem = SpreadsheetApp.openById("1R1Hq4kp7eaf9XfEVNCNFpUFjz3eLFcWqNl6QQx-QAew");
+
+    etapaAtual = "LOCALIZAR_ABA_FILIAL";
+    const abaOrigem = planilhaOrigem.getSheetByName(abasPorFilial[filial]);
+
+    etapaAtual = "OBTER_ULTIMA_LINHA";
+    const ultimaLinha = abaOrigem.getLastRow();
+    const agora = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm");
+
+    if (ultimaLinha < 2) {
+
+      const resultadoInvalido = {
+        success: true,
+        data: {
+          dataRegistro: agora,
+          numeroNF: "-",
+          valorTotal: "R$ 0,00",
+          quantidadeTotal: "0",
+          status: "INVÁLIDA"
+        }
+      };
+
+      salvarResultadoConsulta(requestId, resultadoInvalido);
+      return ContentService
+        .createTextOutput(JSON.stringify(resultadoInvalido))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    etapaAtual = "LER_DADOS_DA_ABA";
+    const todasAsLinhas = abaOrigem.getRange(2, 1, ultimaLinha - 1, 13).getValues();
+
+    etapaAtual = "MAPEAR_CHAVES";
+    const colChaves = todasAsLinhas.map(l => l[7]);
+
+    etapaAtual = "LOCALIZAR_CHAVE";
+    const index = colChaves.findIndex(c => c?.toString().trim() === chave);
+
+    if (index === -1) {
+
+      const resultadoInvalido = {
+        success: true,
+        data: {
+          dataRegistro: agora,
+          numeroNF: "-",
+          valorTotal: "R$ 0,00",
+          quantidadeTotal: "0",
+          status: "INVÁLIDA"
+        }
+      };
+
+      salvarResultadoConsulta(requestId, resultadoInvalido);
+      return ContentService
+        .createTextOutput(JSON.stringify(resultadoInvalido))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    etapaAtual = "FILTRAR_LINHAS_DA_NOTA";
+    const linhasIguais = todasAsLinhas.filter(l => l[7]?.toString().trim() === chave);
+
+    let linhaBase = linhasIguais.find(l => {
+      const bruto = l[5];
+      return bruto !== "" && bruto !== null && bruto !== undefined && bruto !== 0 && bruto !== "0" && bruto !== "0,00";
+    }) || linhasIguais[0];
+
+    const numeroNF = linhaBase[1]?.toString().trim() || "-";
+
+    const valorBruto = linhaBase[5];
+    let valorNumerico = 0;
+
+    if (typeof valorBruto === "number") {
+      valorNumerico = valorBruto;
     } else {
-      elErroMain.textContent = "Falha na consulta: " + (err?.message || err);
+      let s = (valorBruto ?? "").toString().trim();
+
+      s = s.replace(/[^\d.,-]/g, '');
+      s = s.replace(/,$/, '');
+
+      if (s.includes('.') && s.includes(',')) {
+        s = s.replace(/\./g, '').replace(',', '.');
+      } else if (s.includes(',')) {
+        s = s.replace(',', '.');
+      }
+
+      valorNumerico = parseFloat(s) || 0;
     }
-  } finally {
-    setLoading(false);
-  }
-}
 
-function renderResultado(data) {
-  elResultado.classList.remove("hidden");
-
-  const status = (data.status || "").toString().toUpperCase();
-  const isRecusar = status === "RECUSAR";
-  const isInvalida = status === "INVÁLIDA";
-
-  const badge = isRecusar
-    ? `<span style="color:#ff3b3b;font-weight:800;">RECUSAR</span>`
-    : isInvalida
-      ? `<span style="color:#ff6b6b;font-weight:800;">INVÁLIDA</span>`
-      : `<span style="color:#19c37d;font-weight:800;">VÁLIDA</span>`;
-
-  elResultado.innerHTML = `
-    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
-      <div style="font-size:14px;font-weight:700;">Resultado</div>
-      <div>${badge}</div>
-    </div>
-    <div style="margin-top:10px;line-height:1.6;">
-      <div><b>Data:</b> ${escapeHtml(data.dataRegistro || "-")}</div>
-      <div><b>Nº NF:</b> ${escapeHtml(data.numeroNF || "-")}</div>
-      <div><b>Valor Total:</b> ${escapeHtml(data.valorTotal || "0")}</div>
-      <div><b>Quantidade Total:</b> ${escapeHtml(data.quantidadeTotal || "0")}</div>
-    </div>
-  `;
-}
-
-function getHistKey() {
-  if (!filialAtual) return null;
-  return LS_HIST_PREFIX + filialAtual.codigoApi;
-}
-
-function carregarHistorico() {
-  const k = getHistKey();
-  if (!k) return [];
-  try {
-    const raw = localStorage.getItem(k);
-    const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr : [];
-  } catch (e) {
-    return [];
-  }
-}
-
-function salvarNoHistorico(item) {
-  const k = getHistKey();
-  if (!k) return;
-
-  const hist = carregarHistorico();
-  const ultimo = hist[0];
-  if (ultimo && ultimo.chave === item.chave) return;
-
-  hist.unshift(item);
-
-  const MAX = 50;
-  if (hist.length > MAX) hist.length = MAX;
-
-  localStorage.setItem(k, JSON.stringify(hist));
-}
-
-function renderHistorico() {
-  const hist = carregarHistorico();
-  elHistLista.innerHTML = "";
-
-  if (!hist.length) {
-    elHistLista.innerHTML = `<li style="color:#b9b9b9;cursor:default;">Sem histórico local.</li>`;
-    return;
-  }
-
-  hist.forEach((h) => {
-    const li = document.createElement("li");
-
-    const status = (h.status || "").toString().toUpperCase();
-    const cor = status === "RECUSAR"
-      ? "#ff3b3b"
-      : status === "INVÁLIDA"
-        ? "#ff6b6b"
-        : "#19c37d";
-
-    li.innerHTML = `
-      <div style="display:flex;justify-content:space-between;gap:10px;">
-        <div style="font-weight:700;color:${cor};">${escapeHtml(h.numeroNF || "-")} — ${escapeHtml(h.status || "-")}</div>
-        <div style="color:#b9b9b9;font-size:12px;">${escapeHtml(h.when || "")}</div>
-      </div>
-      <div style="color:#b9b9b9;font-size:12px;margin-top:2px;">
-        Valor: ${escapeHtml(h.valorTotal || "0")} | Qtde: ${escapeHtml(h.quantidadeTotal || "0")}
-      </div>
-    `;
-
-    li.addEventListener("click", () => {
-      inputChave.value = (h.chave || "").toString();
-      consultarNF();
+    const valorFormatado = valorNumerico.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL"
     });
 
-    elHistLista.appendChild(li);
-  });
-}
+    const quantidadeTotal = linhaBase[12]?.toString().trim() || "0";
+    const quantidadeNumerica = parseFloat(quantidadeTotal.replace(',', '.')) || 0;
 
-function limparHistoricoLocal() {
-  limparMensagens();
-  const k = getHistKey();
-  if (!k) return;
+    const codigosUnicos = linhasIguais
+      .map(l => [l[2]?.toString().trim(), l[3]?.toString().trim()])
+      .filter((v, i, arr) =>
+        arr.findIndex(x => x[0] === v[0] && x[1] === v[1]) === i
+      );
 
-  localStorage.removeItem(k);
-  renderHistorico();
+    etapaAtual = "VERIFICAR_DUPLICIDADE";
 
-  elResultado.classList.add("hidden");
-  elResultado.innerHTML = "";
-}
+    if (notaJaConsultada(filial, numeroNF)) {
+      const resultadoJaConsultado = {
+        success: true,
+        data: {
+          dataRegistro: agora,
+          numeroNF,
+          valorTotal: valorFormatado,
+          quantidadeTotal,
+          quantidadeTotalNumero: quantidadeNumerica,
+          status: "VÁLIDA",
+          jaConsultada: true
+        }
+      };
 
-async function toggleScanner() {
-  limparMensagens();
+      salvarResultadoConsulta(requestId, resultadoJaConsultado);
 
-  if (elScanner.style.display === "flex" || elScanner.style.display === "block") {
-    pararScanner();
-    return;
-  }
+      registrarLog({
+        origem: "SERVIDOR",
+        etapa: "NOTA_JA_CONSULTADA",
+        filial,
+        chave,
+        erro: "",
+        detalhes: "NF " + numeroNF + " já constava no histórico. Nenhum item foi gravado novamente.",
+        requestId,
+        userAgent
+      });
 
-  try {
-    elScanner.style.display = "flex";
-    elScanner.innerHTML = "";
-
-    if (!window.Dynamsoft || !Dynamsoft.DBR) {
-      throw new Error("Biblioteca Dynamsoft DBR não carregou.");
+      return ContentService
+        .createTextOutput(JSON.stringify(resultadoJaConsultado))
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
-    dbrScanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
-    await dbrScanner.setUIElement(elScanner);
+    etapaAtual = "REGISTRAR_ITENS";
+    registrarItensBasico({
+      numeroNF,
+      itens: codigosUnicos,
+      filial,
+      chave,
+      requestId,
+      userAgent
+    });
 
-    dbrScanner.onUniqueRead = (txt) => {
-      const digits = (txt || "").toString().replace(/\D/g, "");
-      if (digits.length >= 44) {
-        inputChave.value = digits.slice(0, 44);
-        pararScanner();
+    etapaAtual = "REGISTRAR_HISTORICO";
+    registrarHistoricoConsulta(
+      filial,
+      numeroNF,
+      valorFormatado,
+      quantidadeTotal,
+      chave,
+      requestId,
+      userAgent
+    );
+
+    etapaAtual = "CRIAR_RESPOSTA";
+
+    registrarLog({
+      origem: "SERVIDOR",
+      etapa: "FIM_SUCESSO",
+      filial,
+      chave,
+      erro: "",
+      detalhes: [
+        "Consulta concluída em " + (new Date().getTime() - inicioConsulta) + " ms.",
+        "NF: " + numeroNF,
+        "Valor: " + valorFormatado,
+        "Quantidade: " + quantidadeTotal,
+        "Itens únicos: " + codigosUnicos.length
+      ].join(" | "),
+      requestId,
+      userAgent
+    });
+
+    const resultadoFinal = {
+      success: true,
+      data: {
+        dataRegistro: agora,
+        numeroNF,
+        valorTotal: valorFormatado,
+        quantidadeTotal,
+        quantidadeTotalNumero: quantidadeNumerica,
+        status: "VÁLIDA",
+        jaConsultada: false
       }
     };
 
-    await dbrScanner.open();
-  } catch (err) {
-    pararScanner();
-    elErroMain.textContent = "Erro ao abrir câmera: " + (err?.message || err);
+    salvarResultadoConsulta(requestId, resultadoFinal);
+
+    return ContentService
+      .createTextOutput(JSON.stringify(resultadoFinal))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    console.error("Erro:", error);
+
+    registrarLog({
+      origem: "SERVIDOR",
+      etapa: etapaAtual,
+      filial,
+      chave,
+      erro: error?.message || String(error),
+      detalhes: error?.stack || "",
+      requestId,
+      userAgent
+    });
+
+    const resultadoErro = {
+      success: false,
+      message: "Erro no servidor: " + error.message
+    };
+
+    salvarResultadoConsulta(requestId, resultadoErro);
+
+    return ContentService
+      .createTextOutput(JSON.stringify(resultadoErro))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
-function pararScanner() {
+function criarResposta(sucesso, conteudo) {
+  const resposta = {
+    success: sucesso,
+    [sucesso ? "data" : "message"]: conteudo
+  };
+  return ContentService
+    .createTextOutput(JSON.stringify(resposta))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function registrarItensBasico(dados) {
   try {
-    if (dbrScanner) {
-      dbrScanner.close();
-      dbrScanner.destroyContext();
-      dbrScanner = null;
-    }
-  } catch (e) {}
+    const planilhaDestino = SpreadsheetApp.openById("1hZBxcL8GWNlAvsAJaFt0-lWuGM9PIZ3fIuHufyMHmBA");
 
-  elScanner.style.display = "none";
-  elScanner.innerHTML = "";
-}
+    const nomeAba = {
+      "293": "Artur",
+      "488": "Floriano",
+      "287": "Jota",
+      "761": "Moda",
+      "288": "Ponto",
+      "1849": "Divina",
+      "1848": "Itauna"
+    }[dados.filial];
 
-function setLoading(v) {
-  if (v) {
-    elLoading.classList.remove("hidden");
-    btnConsultar.disabled = true;
-    btnLeitor.disabled = true;
-  } else {
-    elLoading.classList.add("hidden");
-    btnConsultar.disabled = false;
-    btnLeitor.disabled = false;
+    const abaDestino = planilhaDestino.getSheetByName(nomeAba);
+    const abaCSV = planilhaDestino.getSheetByName("CSV");
+    if (!abaDestino || !abaCSV) return;
+
+    const agora = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy HH:mm");
+
+    const valoresDestino = [];
+    const formulasDestino = [];
+    const valoresCSV = [];
+    const formulasCSV = [];
+
+    let linhaDest = abaDestino.getLastRow() + 1;
+    let linhaCSV = abaCSV.getLastRow() + 1;
+
+    dados.itens.forEach(([codigo, cor], index) => {
+      valoresDestino.push([agora, dados.numeroNF, codigo]);
+      formulasDestino.push([`=VLOOKUP(C${linhaDest + index};Leonardo!E:F;2;0)`]);
+
+      valoresCSV.push([dados.filial, codigo, cor, ""]);
+      formulasCSV.push([`=VLOOKUP(B${linhaCSV + index};Leonardo!E:F;2;0)`]);
+    });
+
+    abaDestino
+      .getRange(linhaDest, 1, valoresDestino.length, 3)
+      .setNumberFormat("@")
+      .setValues(valoresDestino);
+
+    abaDestino
+      .getRange(linhaDest, 4, formulasDestino.length, 1)
+      .setFormulas(formulasDestino);
+
+    abaCSV
+      .getRange(linhaCSV, 1, valoresCSV.length, 4)
+      .setNumberFormat("@")
+      .setValues(valoresCSV);
+
+    abaCSV
+      .getRange(linhaCSV, 4, formulasCSV.length, 1)
+      .setFormulas(formulasCSV);
+
+  } catch (error) {
+    console.error("Falha ao registrar itens:", error);
+
+    registrarLog({
+      origem: "SERVIDOR",
+      etapa: "REGISTRAR_ITENS",
+      filial: dados.filial || "",
+      chave: dados.chave || "",
+      erro: error?.message || String(error),
+      detalhes: error?.stack || "",
+      requestId: dados.requestId || "",
+      userAgent: dados.userAgent || ""
+    });
   }
 }
 
-function limparMensagens() {
-  elErroLogin.textContent = "";
-  elErroMain.textContent = "";
+function registrarHistoricoConsulta(filial, numeroNF, valorTotal, quantidade, chave, requestId, userAgent) {
+  try {
+    const planilhaHistorico = SpreadsheetApp.openById("12lB_BdKEBVEgddg-CZ_OvqLh3FlNqXHQ9XSokycIk-Q");
+
+    const nomeAba = {
+      "293": "Artur",
+      "488": "Floriano",
+      "287": "Jota",
+      "761": "Moda",
+      "288": "Ponto",
+      "1849": "Divina",
+      "1848": "Itauna"
+    }[filial];
+
+    const abaDestino = planilhaHistorico.getSheetByName(nomeAba);
+    if (!abaDestino) return;
+
+    const dataConsulta = Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy");
+    const linha = abaDestino.getLastRow() + 1;
+
+    abaDestino
+      .getRange(linha, 1, 1, 4)
+      .setValues([[dataConsulta, numeroNF, valorTotal, quantidade]]);
+
+  } catch (erro) {
+    Logger.log("Erro ao registrar histórico: " + erro.message);
+
+    registrarLog({
+      origem: "SERVIDOR",
+      etapa: "REGISTRAR_HISTORICO",
+      filial,
+      chave: chave || "",
+      erro: erro?.message || String(erro),
+      detalhes: erro?.stack || "",
+      requestId: requestId || "",
+      userAgent: userAgent || ""
+    });
+  }
 }
 
-function agoraBR() {
-  const d = new Date();
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+function salvarResultadoConsulta(requestId, resultado) {
+  if (!requestId) return;
+  try {
+    CacheService.getScriptCache().put(
+      "RESULTADO_" + requestId,
+      JSON.stringify(resultado),
+      600
+    );
+  } catch (erro) {
+    console.error("Falha ao salvar resultado temporário:", erro);
+  }
 }
 
-function escapeHtml(str) {
-  return (str ?? "").toString()
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+function obterResultadoConsulta(requestId) {
+  try {
+    const bruto = CacheService.getScriptCache().get("RESULTADO_" + requestId);
+    return bruto ? JSON.parse(bruto) : null;
+  } catch (erro) {
+    console.error("Falha ao recuperar resultado temporário:", erro);
+    return null;
+  }
+}
+
+function notaJaConsultada(filial, numeroNF) {
+  try {
+    const planilhaHistorico = SpreadsheetApp.openById(
+      "12lB_BdKEBVEgddg-CZ_OvqLh3FlNqXHQ9XSokycIk-Q"
+    );
+
+    const nomeAba = {
+      "293": "Artur",
+      "488": "Floriano",
+      "287": "Jota",
+      "761": "Moda",
+      "288": "Ponto",
+      "1849": "Divina",
+      "1848": "Itauna"
+    }[filial];
+
+    const aba = planilhaHistorico.getSheetByName(nomeAba);
+    if (!aba || aba.getLastRow() < 1) return false;
+
+    const valores = aba.getRange(1, 2, aba.getLastRow(), 1).getDisplayValues().flat();
+    const nfProcurada = numeroNF.toString().trim();
+    return valores.some(valor => valor.toString().trim() === nfProcurada);
+  } catch (erro) {
+    console.error("Falha ao verificar nota já consultada:", erro);
+    return false;
+  }
+}
+
+function registrarLog(dados) {
+  try {
+    const planilha = SpreadsheetApp.openById("1R1Hq4kp7eaf9XfEVNCNFpUFjz3eLFcWqNl6QQx-QAew");
+    const abaLog = planilha.getSheetByName("log");
+    if (!abaLog) return;
+
+    if (abaLog.getLastRow() === 0) {
+      abaLog.appendRow([
+        "Data/Hora",
+        "Origem",
+        "Etapa",
+        "Filial",
+        "Chave",
+        "Erro",
+        "Detalhes",
+        "Request ID",
+        "User Agent"
+      ]);
+    }
+
+    const agora = Utilities.formatDate(
+      new Date(),
+      "GMT-3",
+      "dd/MM/yyyy HH:mm:ss"
+    );
+
+    abaLog.appendRow([
+      agora,
+      dados.origem || "",
+      dados.etapa || "",
+      dados.filial || "",
+      dados.chave || "",
+      dados.erro || "",
+      dados.detalhes || "",
+      dados.requestId || "",
+      dados.userAgent || ""
+    ]);
+
+  } catch (erroLog) {
+    console.error("Falha ao gravar log:", erroLog);
+  }
 }
