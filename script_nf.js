@@ -20,10 +20,10 @@ const inputCodigo = document.getElementById("codigo-nf");
 const btnEntrar   = document.getElementById("btn-entrar-nf");
 const btnSair     = document.getElementById("btn-sair-nf");
 
-const inputChave   = document.getElementById("chave-nf");
-const btnConsultar = document.getElementById("btn-consultar-nf");
-const btnLeitor    = document.getElementById("btn-leitor-nf");
-const btnLimpar    = document.getElementById("btn-limpar-nf");
+const inputChave  = document.getElementById("chave-nf");
+const btnConsultar= document.getElementById("btn-consultar-nf");
+const btnLeitor   = document.getElementById("btn-leitor-nf");
+const btnLimpar   = document.getElementById("btn-limpar-nf");
 
 const elLoading   = document.getElementById("loading-nf");
 const elResultado = document.getElementById("resultado-nf");
@@ -31,67 +31,16 @@ const elErroLogin = document.getElementById("erro-nf");
 const elErroMain  = document.getElementById("erro-nf2");
 const elHistLista = document.getElementById("historicoLista-nf");
 
-const elScanner = document.getElementById("scanner");
+const elScanner   = document.getElementById("scanner");
 
 let filialAtual = null;
 let dbrScanner = null;
 
-async function consultarComRetry(form) {
-  const MAX_TENTATIVAS = 3;
-
-  for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {
-    const controller = new AbortController();
-
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, 2000);
-
-    try {
-      const resp = await fetch(API_URL + "?_ts=" + Date.now(), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
-        },
-        body: form.toString(),
-        cache: "no-store",
-        signal: controller.signal
-      });
-
-      clearTimeout(timeout);
-
-      if (!resp.ok) {
-        throw new Error("HTTP " + resp.status);
-      }
-
-      return await resp.json();
-
-    } catch (err) {
-      clearTimeout(timeout);
-
-      const mensagemErro = String(err?.message || err || "");
-
-      const erroRede =
-        err?.name === "AbortError" ||
-        mensagemErro.includes("Failed to fetch") ||
-        mensagemErro.includes("NetworkError") ||
-        mensagemErro.includes("Load failed");
-
-      if (!erroRede || tentativa === MAX_TENTATIVAS) {
-        throw err;
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 300));
-    }
-  }
-}
-
 document.addEventListener("DOMContentLoaded", () => {
   const salvo = localStorage.getItem(LS_FILIAL_ATUAL);
-
   if (salvo) {
     try {
       const obj = JSON.parse(salvo);
-
       if (obj && obj.codigoLogin && FILIAIS[obj.codigoLogin]) {
         setFilialLogada(obj.codigoLogin);
       }
@@ -99,29 +48,16 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   btnEntrar?.addEventListener("click", handleLogin);
-
-  inputCodigo?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      handleLogin();
-    }
-  });
+  inputCodigo?.addEventListener("keydown", (e) => { if (e.key === "Enter") handleLogin(); });
 
   btnSair?.addEventListener("click", logout);
   btnConsultar?.addEventListener("click", consultarNF);
 
   inputChave?.addEventListener("input", () => {
-    const v = (inputChave.value || "")
-      .replace(/\D/g, "")
-      .slice(0, 44);
-
+    const v = (inputChave.value || "").replace(/\D/g, "").slice(0, 44);
     inputChave.value = v;
   });
-
-  inputChave?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      consultarNF();
-    }
-  });
+  inputChave?.addEventListener("keydown", (e) => { if (e.key === "Enter") consultarNF(); });
 
   btnLimpar?.addEventListener("click", limparHistoricoLocal);
   btnLeitor?.addEventListener("click", toggleScanner);
@@ -136,14 +72,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function handleLogin() {
   limparMensagens();
-
   const codigo = (inputCodigo.value || "").trim();
 
   if (!codigo) {
     elErroLogin.textContent = "Digite o código da filial.";
     return;
   }
-
   if (!FILIAIS[codigo]) {
     elErroLogin.textContent = "Código de filial inválido.";
     return;
@@ -160,18 +94,12 @@ function setFilialLogada(codigoLogin) {
     nome: FILIAIS[codigoLogin].nome,
     codigoApi: FILIAIS[codigoLogin].codigoApi
   };
-
-  localStorage.setItem(
-    LS_FILIAL_ATUAL,
-    JSON.stringify(filialAtual)
-  );
+  localStorage.setItem(LS_FILIAL_ATUAL, JSON.stringify(filialAtual));
 }
 
 function logout() {
   pararScanner();
-
   filialAtual = null;
-
   localStorage.removeItem(LS_FILIAL_ATUAL);
 
   inputCodigo.value = "";
@@ -179,7 +107,6 @@ function logout() {
 
   elResultado.classList.add("hidden");
   elResultado.innerHTML = "";
-
   elHistLista.innerHTML = "";
 
   mostrarLogin();
@@ -205,10 +132,8 @@ async function consultarNF() {
   }
 
   const chave = (inputChave.value || "").trim();
-
   if (chave.length !== 44) {
-    elErroMain.textContent =
-      "A chave deve conter exatamente 44 dígitos.";
+    elErroMain.textContent = "A chave deve conter exatamente 44 dígitos.";
     return;
   }
 
@@ -216,28 +141,27 @@ async function consultarNF() {
 
   try {
     const form = new URLSearchParams();
-
     form.append("chave", chave);
     form.append("filial", filialAtual.codigoApi);
 
-    const json = await consultarComRetry(form);
+    const resp = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+      body: form.toString()
+    });
+
+    const json = await resp.json();
 
     if (!json || json.success !== true) {
-      elErroMain.textContent =
-        json?.message || "Erro ao consultar. Tente novamente.";
+      elErroMain.textContent = json?.message || "Erro ao consultar. Tente novamente.";
       return;
     }
 
     const data = json.data || {};
 
-    if (
-      data.recusa === true &&
-      typeof abrirOverlayRecusa === "function"
-    ) {
-      abrirOverlayRecusa(
-        data.mensagemRecusa ||
-        "Esta nota está marcada para recusa."
-      );
+    // OVERLAY (RECUSA)
+    if (data.recusa === true && typeof abrirOverlayRecusa === "function") {
+      abrirOverlayRecusa(data.mensagemRecusa || "Esta nota está marcada para recusa.");
     }
 
     renderResultado(data);
@@ -252,23 +176,8 @@ async function consultarNF() {
     });
 
     renderHistorico();
-
   } catch (err) {
-    const mensagemErro = String(err?.message || err || "");
-
-    if (
-      err?.name === "AbortError" ||
-      mensagemErro.includes("Failed to fetch") ||
-      mensagemErro.includes("NetworkError") ||
-      mensagemErro.includes("Load failed")
-    ) {
-      elErroMain.textContent =
-        "Não foi possível conectar ao servidor. Tente novamente.";
-    } else {
-      elErroMain.textContent =
-        "Falha na consulta: " + mensagemErro;
-    }
-
+    elErroMain.textContent = "Falha na consulta: " + (err?.message || err);
   } finally {
     setLoading(false);
   }
@@ -277,10 +186,7 @@ async function consultarNF() {
 function renderResultado(data) {
   elResultado.classList.remove("hidden");
 
-  const status = (data.status || "")
-    .toString()
-    .toUpperCase();
-
+  const status = (data.status || "").toString().toUpperCase();
   const isRecusar = status === "RECUSAR";
   const isInvalida = status === "INVÁLIDA";
 
@@ -295,7 +201,6 @@ function renderResultado(data) {
       <div style="font-size:14px;font-weight:700;">Resultado</div>
       <div>${badge}</div>
     </div>
-
     <div style="margin-top:10px;line-height:1.6;">
       <div><b>Data:</b> ${escapeHtml(data.dataRegistro || "-")}</div>
       <div><b>Nº NF:</b> ${escapeHtml(data.numeroNF || "-")}</div>
@@ -306,26 +211,17 @@ function renderResultado(data) {
 }
 
 function getHistKey() {
-  if (!filialAtual) {
-    return null;
-  }
-
+  if (!filialAtual) return null;
   return LS_HIST_PREFIX + filialAtual.codigoApi;
 }
 
 function carregarHistorico() {
   const k = getHistKey();
-
-  if (!k) {
-    return [];
-  }
-
+  if (!k) return [];
   try {
     const raw = localStorage.getItem(k);
     const arr = raw ? JSON.parse(raw) : [];
-
     return Array.isArray(arr) ? arr : [];
-
   } catch (e) {
     return [];
   }
@@ -333,54 +229,33 @@ function carregarHistorico() {
 
 function salvarNoHistorico(item) {
   const k = getHistKey();
-
-  if (!k) {
-    return;
-  }
+  if (!k) return;
 
   const hist = carregarHistorico();
   const ultimo = hist[0];
-
-  if (ultimo && ultimo.chave === item.chave) {
-    return;
-  }
+  if (ultimo && ultimo.chave === item.chave) return;
 
   hist.unshift(item);
 
   const MAX = 50;
+  if (hist.length > MAX) hist.length = MAX;
 
-  if (hist.length > MAX) {
-    hist.length = MAX;
-  }
-
-  localStorage.setItem(
-    k,
-    JSON.stringify(hist)
-  );
+  localStorage.setItem(k, JSON.stringify(hist));
 }
 
 function renderHistorico() {
   const hist = carregarHistorico();
-
   elHistLista.innerHTML = "";
 
   if (!hist.length) {
-    elHistLista.innerHTML = `
-      <li style="color:#b9b9b9;cursor:default;">
-        Sem histórico local.
-      </li>
-    `;
-
+    elHistLista.innerHTML = `<li style="color:#b9b9b9;cursor:default;">Sem histórico local.</li>`;
     return;
   }
 
   hist.forEach((h) => {
     const li = document.createElement("li");
 
-    const status = (h.status || "")
-      .toString()
-      .toUpperCase();
-
+    const status = (h.status || "").toString().toUpperCase();
     const cor = status === "RECUSAR"
       ? "#ff3b3b"
       : status === "INVÁLIDA"
@@ -389,25 +264,16 @@ function renderHistorico() {
 
     li.innerHTML = `
       <div style="display:flex;justify-content:space-between;gap:10px;">
-        <div style="font-weight:700;color:${cor};">
-          ${escapeHtml(h.numeroNF || "-")} — ${escapeHtml(h.status || "-")}
-        </div>
-
-        <div style="color:#b9b9b9;font-size:12px;">
-          ${escapeHtml(h.when || "")}
-        </div>
+        <div style="font-weight:700;color:${cor};">${escapeHtml(h.numeroNF || "-")} — ${escapeHtml(h.status || "-")}</div>
+        <div style="color:#b9b9b9;font-size:12px;">${escapeHtml(h.when || "")}</div>
       </div>
-
       <div style="color:#b9b9b9;font-size:12px;margin-top:2px;">
-        Valor: ${escapeHtml(h.valorTotal || "0")} |
-        Qtde: ${escapeHtml(h.quantidadeTotal || "0")}
+        Valor: ${escapeHtml(h.valorTotal || "0")} | Qtde: ${escapeHtml(h.quantidadeTotal || "0")}
       </div>
     `;
 
     li.addEventListener("click", () => {
-      inputChave.value =
-        (h.chave || "").toString();
-
+      inputChave.value = (h.chave || "").toString();
       consultarNF();
     });
 
@@ -417,15 +283,10 @@ function renderHistorico() {
 
 function limparHistoricoLocal() {
   limparMensagens();
-
   const k = getHistKey();
-
-  if (!k) {
-    return;
-  }
+  if (!k) return;
 
   localStorage.removeItem(k);
-
   renderHistorico();
 
   elResultado.classList.add("hidden");
@@ -435,10 +296,7 @@ function limparHistoricoLocal() {
 async function toggleScanner() {
   limparMensagens();
 
-  if (
-    elScanner.style.display === "flex" ||
-    elScanner.style.display === "block"
-  ) {
+  if (elScanner.style.display === "flex" || elScanner.style.display === "block") {
     pararScanner();
     return;
   }
@@ -448,21 +306,14 @@ async function toggleScanner() {
     elScanner.innerHTML = "";
 
     if (!window.Dynamsoft || !Dynamsoft.DBR) {
-      throw new Error(
-        "Biblioteca Dynamsoft DBR não carregou."
-      );
+      throw new Error("Biblioteca Dynamsoft DBR não carregou.");
     }
 
-    dbrScanner =
-      await Dynamsoft.DBR.BarcodeScanner.createInstance();
-
+    dbrScanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
     await dbrScanner.setUIElement(elScanner);
 
     dbrScanner.onUniqueRead = (txt) => {
-      const digits = (txt || "")
-        .toString()
-        .replace(/\D/g, "");
-
+      const digits = (txt || "").toString().replace(/\D/g, "");
       if (digits.length >= 44) {
         inputChave.value = digits.slice(0, 44);
         pararScanner();
@@ -470,13 +321,9 @@ async function toggleScanner() {
     };
 
     await dbrScanner.open();
-
   } catch (err) {
     pararScanner();
-
-    elErroMain.textContent =
-      "Erro ao abrir câmera: " +
-      (err?.message || err);
+    elErroMain.textContent = "Erro ao abrir câmera: " + (err?.message || err);
   }
 }
 
@@ -498,7 +345,6 @@ function setLoading(v) {
     elLoading.classList.remove("hidden");
     btnConsultar.disabled = true;
     btnLeitor.disabled = true;
-
   } else {
     elLoading.classList.add("hidden");
     btnConsultar.disabled = false;
@@ -513,22 +359,12 @@ function limparMensagens() {
 
 function agoraBR() {
   const d = new Date();
-
-  const pad = (n) =>
-    String(n).padStart(2, "0");
-
-  return (
-    `${pad(d.getDate())}/` +
-    `${pad(d.getMonth() + 1)}/` +
-    `${d.getFullYear()} ` +
-    `${pad(d.getHours())}:` +
-    `${pad(d.getMinutes())}`
-  );
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function escapeHtml(str) {
-  return (str ?? "")
-    .toString()
+  return (str ?? "").toString()
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
