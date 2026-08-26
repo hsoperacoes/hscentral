@@ -33,8 +33,39 @@ const elHistLista = document.getElementById("historicoLista-nf");
 
 const elScanner   = document.getElementById("scanner");
 
+
 let filialAtual = null;
 let dbrScanner = null;
+
+function criarRequestId() {
+  return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+}
+
+function registrarErroCliente(etapa, erro, requestId, chave) {
+  try {
+    const params = new URLSearchParams();
+    params.append("acao", "logCliente");
+    params.append("etapa", etapa || "ERRO_CLIENTE");
+    params.append("filial", filialAtual?.codigoApi || "");
+    params.append("chave", chave || "");
+    params.append("erro", erro?.message || String(erro || "Erro desconhecido"));
+    params.append("detalhes", [
+      "nome=" + (erro?.name || ""),
+      "online=" + navigator.onLine,
+      "pagina=" + location.href,
+      "stack=" + (erro?.stack || "")
+    ].join(" | "));
+    params.append("requestId", requestId || "");
+    params.append("userAgent", navigator.userAgent || "");
+
+    fetch(API_URL + "?" + params.toString(), {
+      method: "GET",
+      mode: "no-cors",
+      cache: "no-store",
+      keepalive: true
+    }).catch(() => {});
+  } catch (e) {}
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   const salvo = localStorage.getItem(LS_FILIAL_ATUAL);
@@ -139,10 +170,14 @@ async function consultarNF() {
 
   setLoading(true);
 
+  const requestId = criarRequestId();
+
   try {
     const form = new URLSearchParams();
     form.append("chave", chave);
     form.append("filial", filialAtual.codigoApi);
+    form.append("requestId", requestId);
+    form.append("userAgent", navigator.userAgent || "");
 
     const resp = await fetch(API_URL, {
       method: "POST",
@@ -177,6 +212,7 @@ async function consultarNF() {
 
     renderHistorico();
   } catch (err) {
+    registrarErroCliente("FETCH_OU_RESPOSTA", err, requestId, chave);
     elErroMain.textContent = "Falha na consulta: " + (err?.message || err);
   } finally {
     setLoading(false);
