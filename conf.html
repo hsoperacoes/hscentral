@@ -1432,6 +1432,8 @@
     let envioEmAndamento = false;
     let pendenciaEnvioConfirmado_ = null;
     let conferenciaEnviadaAtual = false;
+    let gravacoesPendentes = new Set();
+    let promessasAjusteManual = {};
 
     function setEnvioBloqueado_(ativo){
       envioEmAndamento = !!ativo;
@@ -1579,6 +1581,16 @@
         body: JSON.stringify(payload)
       });
       return await resp.json();
+    }
+
+    function rastrearGravacao_(promessa){
+      const acompanhada = Promise.resolve(promessa);
+      gravacoesPendentes.add(acompanhada);
+      acompanhada.then(
+        () => gravacoesPendentes.delete(acompanhada),
+        () => gravacoesPendentes.delete(acompanhada)
+      );
+      return acompanhada;
     }
 
     function entrar(){
@@ -2065,8 +2077,28 @@
       }
 
       timersAjusteManual[ean] = setTimeout(() => {
-        salvarAjusteManualFinal_(ean);
+        dispararAjusteManual_(ean);
       }, 450);
+    }
+
+    function dispararAjusteManual_(ean){
+      ean = String(ean || "").trim();
+      if(!ean) return Promise.resolve(true);
+      if(promessasAjusteManual[ean]) return promessasAjusteManual[ean];
+
+      const promessa = rastrearGravacao_(salvarAjusteManualFinal_(ean));
+      promessasAjusteManual[ean] = promessa;
+
+      promessa.then(
+        () => {
+          if(promessasAjusteManual[ean] === promessa) delete promessasAjusteManual[ean];
+        },
+        () => {
+          if(promessasAjusteManual[ean] === promessa) delete promessasAjusteManual[ean];
+        }
+      );
+
+      return promessa;
     }
 
     async function salvarAjusteManualFinal_(ean){
@@ -2115,6 +2147,7 @@
         atualizarKPIs();
         const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
         renderizarListaAtual_(jaConferido);
+        return true;
       }catch(e){
         // Se falhar, volta apenas para o último valor confirmado antes da sequência rápida.
         if(valorAnteriorConfirmado <= 0) delete mapaScan[ean];
@@ -2127,10 +2160,34 @@
         atualizarKPIs();
         const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
         renderizarListaAtual_(jaConferido);
-        alert(e.message || "Erro ao ajustar no servidor.");
+        if(!envioEmAndamento) alert(e.message || "Erro ao ajustar no servidor.");
+        return false;
       }finally{
         delete ajustesManuaisPendentes[ean];
         delete timersAjusteManual[ean];
+      }
+    }
+
+    async function concluirGravacoesPendentesAntesEnvio_(){
+      // Força imediatamente os ajustes que ainda estavam aguardando o debounce.
+      const eansAgendados = Object.keys(timersAjusteManual || {});
+      eansAgendados.forEach(ean => {
+        clearTimeout(timersAjusteManual[ean]);
+        delete timersAjusteManual[ean];
+      });
+
+      for(const ean of eansAgendados){
+        const ok = await dispararAjusteManual_(ean);
+        if(ok === false) throw new Error("Não foi possível concluir uma gravação pendente.");
+      }
+
+      // Aguarda apenas requisições que já estavam em andamento. Na utilização
+      // normal este conjunto fica vazio e não acrescenta espera ao envio.
+      while(gravacoesPendentes.size){
+        const resultados = await Promise.allSettled(Array.from(gravacoesPendentes));
+        if(resultados.some(r => r.status === "rejected")) {
+          throw new Error("Não foi possível concluir uma gravação pendente.");
+        }
       }
     }
 
@@ -2500,7 +2557,9 @@ const scannerDiv = document.getElementById("scanner");
 
           try{
             // mantém await aqui (pode demorar, mas já travou e já bipou)
-            const registrado = await registrarBipeServidor_(ean13, { confirmarExtra: true });
+            const registrado = await rastrearGravacao_(
+              registrarBipeServidor_(ean13, { confirmarExtra: true })
+            );
             if(!registrado){
               scannerBloqueado = false;
               scannerView.classList.remove("scanner-paused");
@@ -2708,7 +2767,9 @@ const scannerDiv = document.getElementById("scanner");
       }
 
       try{
-        const registrado = await registrarBipeServidor_(ean13, { confirmarExtra: true });
+        const registrado = await rastrearGravacao_(
+          registrarBipeServidor_(ean13, { confirmarExtra: true })
+        );
         if(registrado) beepOk();
       }catch(e){
         alert(e.message || "Erro ao registrar EAN.");
@@ -2791,24 +2852,58 @@ const scannerDiv = document.getElementById("scanner");
       const erro = document.getElementById("erro");
       const msg = document.getElementById("msg");
       erro.textContent = "";
-
-      const itensPayload = payload.itens || [];
-      const divergenciasReais = itensPayload.filter(i => Number(i.diff || 0) !== 0);
+      let envioConcluido = false;
 
       setEnvioBloqueado_(true);
 
       if(msg){
-        msg.textContent = divergenciasReais.length
-          ? "Enviando divergências da conferência..."
-          : "Enviando conferência sem divergências...";
+        msg.textContent = "Enviando conferência...";
         msg.classList.remove("hidden");
       }
 
       try{
+        // A partir daqui nenhuma ação, leitura ou ajuste novo é aceito.
+        pararSync_();
+        scannerBloqueado = true;
+        await pararScannerAtual_();
+        await concluirGravacoesPendentesAntesEnvio_();
+
+        // Se uma gravação terminou enquanto a tela estava sendo bloqueada,
+        // recalcula o resultado antes de montar o envio definitivo.
+        if(!resultadoConferenciaAtual){
+          const listaCompleta = montarListaConferencia(true);
+          const divergencias = listaCompleta.filter(i => Number(i.diff || 0) !== 0);
+          resultadoConferenciaAtual = { criadoEm: Date.now(), listaCompleta, divergencias };
+        }
+
+        const listaFinal = resultadoConferenciaAtual.listaCompleta || [];
+        payload.totalNF = Number(document.getElementById("kpi-nf").textContent || 0);
+        payload.totalScan = Number(document.getElementById("kpi-scan").textContent || 0);
+        payload.itens = listaFinal.map(i => ({
+          ean: i.ean,
+          codigo: i.codigo,
+          cor: i.cor,
+          tamanho: i.tamanho,
+          qtdNF: i.qtdNF,
+          qtdScan: i.qtdScan,
+          diff: i.diff,
+          status: i.status
+        }));
+
+        const divergenciasReais = payload.itens.filter(i => Number(i.diff || 0) !== 0);
         const data = await postJSON_(payload);
-        if(!data.success) throw new Error(data.message || "Falha ao registrar conferência.");
+        if(
+          !data ||
+          !data.success ||
+          data.registroConfirmado !== true ||
+          data.syncLimpa !== true ||
+          Number(data.linhasMarcadasConferencia || 0) <= 0
+        ){
+          throw new Error(data?.message || "Falha ao registrar conferência.");
+        }
 
         conferenciaEnviadaAtual = true;
+        envioConcluido = true;
 
         if(divergenciasReais.length){
           alert("Conferência registrada com divergências.");
@@ -2821,6 +2916,10 @@ const scannerDiv = document.getElementById("scanner");
         console.error("Erro ao enviar conferência:", err);
         exibirErroUsuario_("enviar");
       }finally{
+        if(!envioConcluido && cabecalhoAtual){
+          scannerBloqueado = false;
+          iniciarSync_();
+        }
         if(msg) msg.classList.add("hidden");
         setEnvioBloqueado_(false);
       }
@@ -2852,6 +2951,8 @@ const scannerDiv = document.getElementById("scanner");
       document.getElementById("chave").focus();
       Object.values(timersAjusteManual || {}).forEach(t => clearTimeout(t));
       timersAjusteManual = {};
+      promessasAjusteManual = {};
+      gravacoesPendentes.clear();
       valoresAjusteManualPendentes = {};
       valoresAjusteManualConfirmados = {};
     }
