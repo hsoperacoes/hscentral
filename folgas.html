@@ -96,12 +96,14 @@
             <option value="JOTA">JOTA</option>
             <option value="MODA">MODA</option>
             <option value="PONTO">PONTO</option>
+            <option value="DIVINA">DIVINA</option>
+            <option value="ITAUNA">ITAUNA</option>
           </select>
         </div>
 
         <div class="form-group">
           <label for="funcionario-folgas">Funcionário</label>
-          <select id="funcionario-folgas" name="funcionario" required>
+          <select id="funcionario-folgas" name="funcionario" required disabled>
             <option value="">Carregando lista de funcionários...</option>
           </select>
         </div>
@@ -150,10 +152,10 @@
 
   <script>
     (function () {
-      // ========= FUNCIONÁRIOS (ABA FUNCIONÁRIOS) =========
-      // ✅ usa o GID da sua aba FUNCIONÁRIOS (o mesmo que você já usa e funciona)
-      const FUNCIONARIOS_GVIZ_URL =
-        'https://docs.google.com/spreadsheets/d/1PqDe40nKZbslvzJhJSRAP4naHeIp1uiu1xPk1nvssb4/gviz/tq?tqx=out:json&gid=1390331275';
+      // ========= FUNCIONÁRIOS (API DO GS UNIFICADO) =========
+      // A API do GS lê a aba FUNCIONÁRIOS somente até a linha 18.
+      const FUNCIONARIOS_API_URL =
+        'https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec';
 
       const filialSel       = document.getElementById('filial-folgas');
       const funcSel         = document.getElementById('funcionario-folgas');
@@ -170,46 +172,39 @@
       async function carregarFuncionarios() {
         try {
           funcSel.innerHTML = '<option value="">Carregando funcionários...</option>';
+          funcSel.disabled = true;
 
-          const resp = await fetch(FUNCIONARIOS_GVIZ_URL);
+          const url = `${FUNCIONARIOS_API_URL}?api=funcionarios&_ts=${Date.now()}`;
+          const resp = await fetch(url, {
+            method: 'GET',
+            cache: 'no-store'
+          });
           const texto = await resp.text();
 
-          // pega o JSON do wrapper da GVIZ de forma bem tolerante
-          const matchJson = texto.match(/\{.*\}/s);
-          if (!matchJson) throw new Error('Resposta da planilha em formato inesperado.');
+          if (texto.trim().startsWith('<')) {
+            throw new Error(
+              'O App Web não retornou JSON. Verifique a implantação e o acesso do GS.'
+            );
+          }
 
-          const json = JSON.parse(matchJson[0]);
-          const rows = (json.table && json.table.rows) ? json.table.rows : [];
-          if (!rows.length) throw new Error('Nenhuma linha na aba FUNCIONÁRIOS.');
+          const json = JSON.parse(texto);
+          if (!json || !json.success) {
+            throw new Error(json && json.message
+              ? json.message
+              : 'Resposta inválida do servidor.');
+          }
 
-          // ✅ aqui a primeira linha vira “cabeçalho” (igual no seu HTML de falta)
-          const headerRow = rows[0];
-          const mapa = {};
+          funcionariosPorFilial = json.funcionarios || {};
+          if (!Object.keys(funcionariosPorFilial).length) {
+            throw new Error('Nenhum funcionário foi retornado pelo servidor.');
+          }
 
-          (headerRow.c || []).forEach((cell, colIdx) => {
-            const headerVal = cell && cell.v ? String(cell.v).trim() : '';
-            if (!headerVal) return;
-
-            // pega só a primeira palavra (ARTUR / FLORIANO / etc) quando vier "ARTUR MALHAS"
-            const chave = headerVal.split(' ')[0].toUpperCase();
-
-            const nomes = [];
-            for (let r = 1; r < rows.length; r++) {
-              const linha = rows[r];
-              if (!linha || !linha.c) continue;
-              const c = linha.c[colIdx];
-              const val = c && c.v ? String(c.v).trim() : '';
-              if (val) nomes.push(val);
-            }
-
-            mapa[chave] = nomes;
-          });
-
-          funcionariosPorFilial = mapa;
+          funcSel.disabled = false;
           atualizarSelectFuncionarios();
         } catch (e) {
           console.error('Erro ao carregar funcionários:', e);
-          funcSel.innerHTML = '<option value="">Erro ao carregar funcionários</option>';
+          funcSel.innerHTML = '<option value="">Não foi possível carregar</option>';
+          funcSel.disabled = true;
         }
       }
 
