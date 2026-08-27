@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -10,7 +11,7 @@
   <title>Conferência de Nota Fiscal - HS</title>
 
   <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css?version=3.9" />
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css?version=4.0" />
 
   <!-- ✅ Html5Qrcode (usado para NF 44 e EAN) -->
   <script src="https://unpkg.com/html5-qrcode"></script>
@@ -301,6 +302,76 @@
     }
     .kpi strong{color:#334155}
     .kpi span{color:var(--navy);font-weight:900;font-size:22px}
+
+    .resumo-progresso{
+      margin-top:14px;
+      padding:14px;
+      border:1px solid var(--border);
+      border-radius:18px;
+      background:#f8fafc;
+    }
+    .progresso-metricas{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:8px;
+      margin-bottom:12px;
+    }
+    .progresso-metrica{
+      min-width:0;
+      padding:10px 6px;
+      border:1px solid #e2e8f0;
+      border-radius:13px;
+      background:#fff;
+      text-align:center;
+    }
+    .progresso-metrica span{
+      display:block;
+      color:#64748b;
+      font-size:11px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+    .progresso-metrica strong{
+      display:block;
+      margin-top:3px;
+      color:var(--navy);
+      font-size:22px;
+      font-weight:900;
+      line-height:1;
+    }
+    .barra-progresso-conferencia{
+      position:relative;
+      height:28px;
+      overflow:hidden;
+      border:1px solid #cbd5e1;
+      border-radius:10px;
+      background:#e2e8f0;
+      box-shadow:inset 0 1px 3px rgba(15,23,42,.08);
+    }
+    .barra-progresso-fill{
+      width:0;
+      height:100%;
+      border-radius:9px;
+      background:linear-gradient(90deg,#123b78,#1d63c7);
+      transition:width .2s ease-out;
+    }
+    .barra-progresso-percentual{
+      position:absolute;
+      top:50%;
+      left:12%;
+      transform:translate(-100%,-50%);
+      z-index:1;
+      color:#fff;
+      font-size:12px;
+      font-weight:900;
+      line-height:1;
+      text-shadow:0 1px 3px rgba(0,0,0,.35);
+      transition:left .2s ease-out,color .2s ease-out;
+    }
+    .barra-progresso-conferencia.progresso-baixo .barra-progresso-percentual{
+      color:var(--navy);
+      text-shadow:none;
+    }
 
     .campo-pesquisa{
       grid-column:2;
@@ -1172,17 +1243,147 @@
       font-weight:700;
     }
 
+    .modal-confirmacao-zerar{
+      z-index:250000;
+      padding:18px;
+      background:rgba(2,6,23,.78);
+      backdrop-filter:blur(7px);
+    }
+    .modal-confirmacao-zerar .modal-content{
+      width:min(460px,94vw);
+      max-width:460px;
+      padding:26px;
+      border:1px solid rgba(255,255,255,.25);
+      border-radius:26px;
+      box-shadow:0 24px 80px rgba(0,0,0,.38);
+      text-align:center;
+    }
+    .zerar-icone{
+      width:66px;
+      height:66px;
+      margin:0 auto 14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:22px;
+      background:#fff7ed;
+      color:#c2410c;
+      font-size:28px;
+      box-shadow:inset 0 0 0 1px #fed7aa;
+    }
+    .zerar-icone.etapa-final{
+      background:#fef2f2;
+      color:#b91c1c;
+      box-shadow:inset 0 0 0 1px #fecaca;
+    }
+    .zerar-icone.processando{
+      background:#eff6ff;
+      color:#1d4ed8;
+      box-shadow:inset 0 0 0 1px #bfdbfe;
+    }
+    .zerar-icone.sucesso{
+      background:#ecfdf5;
+      color:#047857;
+      box-shadow:inset 0 0 0 1px #a7f3d0;
+    }
+    .zerar-icone.erro{
+      background:#fef2f2;
+      color:#b91c1c;
+      box-shadow:inset 0 0 0 1px #fecaca;
+    }
+    .zerar-etapa{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:28px;
+      padding:6px 11px;
+      border-radius:999px;
+      background:#fff7ed;
+      color:#9a3412;
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.4px;
+      text-transform:uppercase;
+    }
+    .zerar-titulo{
+      margin:12px 0 8px;
+      color:var(--navy);
+      font-size:23px;
+      font-weight:900;
+    }
+    .zerar-texto{
+      margin:0;
+      color:#475569;
+      font-size:14px;
+      font-weight:700;
+      line-height:1.5;
+    }
+    .zerar-nf{
+      margin:18px 0 0;
+      padding:12px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      border:1px solid #e2e8f0;
+      border-radius:15px;
+      background:#f8fafc;
+      color:#64748b;
+      font-size:12px;
+      font-weight:800;
+      text-align:left;
+    }
+    .zerar-nf strong{
+      color:var(--navy);
+      font-size:15px;
+      font-weight:900;
+      overflow-wrap:anywhere;
+      text-align:right;
+    }
+    .zerar-acoes{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:20px;
+    }
+    .zerar-acoes button{
+      width:100%;
+      min-height:48px;
+    }
+    .btn-zerar-principal{
+      background:#c2410c;
+    }
+    .btn-zerar-principal:hover{
+      background:#9a3412;
+    }
+    .btn-zerar-principal.etapa-final{
+      background:var(--red);
+    }
+    .btn-zerar-principal.etapa-final:hover{
+      background:var(--red-dark);
+    }
+    .btn-zerar-principal.fechar-erro{
+      grid-column:1 / -1;
+      background:var(--navy);
+    }
+
+    @media(max-width:480px){
+      .modal-confirmacao-zerar .modal-content{padding:22px 18px}
+      .zerar-acoes{grid-template-columns:1fr}
+      .btn-zerar-principal.fechar-erro{grid-column:auto}
+    }
+
   </style>
 </head>
 <body>
 
   <div class="top-nav">
-    <a href="index.html?version=3.9" class="back-button">
+    <a href="index.html?version=4.0" class="back-button">
       <i class="fas fa-arrow-left"></i> Voltar à Home
     </a>
   </div>
 
-  <img src="logo.png?version=3.9" alt="Logo HS" class="logo-topo" />
+  <img src="logo.png?version=4.0" alt="Logo HS" class="logo-topo" />
 
   <div class="container">
     <div class="form-container">
@@ -1233,8 +1434,17 @@
               <div class="titulo">Resumo da NF</div>
               <div class="muted" id="resumo-nf"></div>
 
-              <div class="kpi"><strong>Total itens na NF</strong><span id="kpi-nf">0</span></div>
-              <div class="kpi hidden"><strong>Total escaneado</strong><span id="kpi-scan">0</span></div>
+              <div class="resumo-progresso">
+                <div class="progresso-metricas">
+                  <div class="progresso-metrica"><span>Total na NF</span><strong id="kpi-nf">0</strong></div>
+                  <div class="progresso-metrica"><span>Bipadas</span><strong id="kpi-scan">0</strong></div>
+                  <div class="progresso-metrica"><span>Faltam</span><strong id="kpi-faltam">0</strong></div>
+                </div>
+                <div id="barra-progresso" class="barra-progresso-conferencia progresso-baixo" role="progressbar" aria-label="Progresso da conferência" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <div id="barra-progresso-fill" class="barra-progresso-fill"></div>
+                  <span id="kpi-percentual" class="barra-progresso-percentual">0%</span>
+                </div>
+              </div>
               <div class="kpi hidden"><strong>Sync (tempo real)</strong><span id="kpi-sync">—</span></div>
             </div>
 
@@ -1380,6 +1590,23 @@
     </div>
   </div>
 
+  <div id="modal-confirmacao-zerar" class="modal-overlay modal-confirmacao-zerar" role="dialog" aria-modal="true" aria-labelledby="zerar-titulo">
+    <div class="modal-content">
+      <div id="zerar-icone" class="zerar-icone"><i id="zerar-icone-simbolo" class="fas fa-eraser"></i></div>
+      <div id="zerar-etapa" class="zerar-etapa">Atenção</div>
+      <h3 id="zerar-titulo" class="zerar-titulo">Zerar contagem da NF?</h3>
+      <p id="zerar-texto" class="zerar-texto"></p>
+      <div id="zerar-nf" class="zerar-nf">
+        <span>Nota fiscal</span>
+        <strong id="zerar-nf-valor"></strong>
+      </div>
+      <div id="zerar-acoes" class="zerar-acoes">
+        <button id="btn-zerar-cancelar" class="btn-secundario" type="button">Cancelar</button>
+        <button id="btn-zerar-confirmar" class="btn-zerar-principal" type="button">Continuar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="overlay-envio-bloqueante">
     <div class="card-envio-bloqueante">
       <div class="spinner-envio"></div>
@@ -1389,16 +1616,24 @@
   </div>
 
   <footer>
-    &copy; 2025 HS - Sistema de Conferência de Notas Fiscais. Versão 3.9
+    &copy; 2025 HS - Sistema de Conferência de Notas Fiscais. Versão 4.0
   </footer>
 
   <script>
-    const APP_VERSION = "3.9";
+    const APP_VERSION = "4.0";
 
     const URL_API = "https://script.google.com/macros/s/AKfycbx1HDzA2b478DAhi5ONS6TstKieKf4lvFM9wzib9McUrdP7Z4Xwhb6SrUt5KW1YcR3x/exec";
 
-    const filiaisValidas = ["293", "488", "287", "288", "761"];
-    const nomesFiliais = { "293":"ARTUR","488":"FLORIANO","287":"JOTA","288":"PONTO","761":"MODA" };
+    const filiaisValidas = ["293", "488", "287", "288", "761", "1849", "1848"];
+    const nomesFiliais = {
+      "293":"ARTUR",
+      "488":"FLORIANO",
+      "287":"JOTA",
+      "288":"PONTO",
+      "761":"MODA",
+      "1849":"DIVINA",
+      "1848":"ITAUNA"
+    };
 
     let filialAtual = "";
     let conferenteAtual = "";
@@ -1432,6 +1667,9 @@
     let envioEmAndamento = false;
     let pendenciaEnvioConfirmado_ = null;
     let conferenciaEnviadaAtual = false;
+    let gravacoesPendentes = new Set();
+    let promessasAjusteManual = {};
+    let timerFecharZeragem_ = null;
 
     function setEnvioBloqueado_(ativo){
       envioEmAndamento = !!ativo;
@@ -1581,6 +1819,16 @@
       return await resp.json();
     }
 
+    function rastrearGravacao_(promessa){
+      const acompanhada = Promise.resolve(promessa);
+      gravacoesPendentes.add(acompanhada);
+      acompanhada.then(
+        () => gravacoesPendentes.delete(acompanhada),
+        () => gravacoesPendentes.delete(acompanhada)
+      );
+      return acompanhada;
+    }
+
     function entrar(){
       const f = document.getElementById("codigo-filial").value.trim();
       const nome = document.getElementById("nome-conferente").value.trim();
@@ -1710,8 +1958,39 @@
       let totalScan = 0;
       Object.values(mapaScan).forEach(v => totalScan += Number(v || 0));
 
+      const esperadoPorEAN = {};
+      itensNF.forEach(i => {
+        const ean = String(i.ean || "").trim();
+        if(!ean) return;
+        esperadoPorEAN[ean] = Number(esperadoPorEAN[ean] || 0) + Number(i.quantidade || 0);
+      });
+
+      let totalCorretoBipado = 0;
+      Object.keys(esperadoPorEAN).forEach(ean => {
+        const esperado = Math.max(0, Number(esperadoPorEAN[ean] || 0));
+        const bipado = Math.max(0, Number(mapaScan[ean] || 0));
+        totalCorretoBipado += Math.min(esperado, bipado);
+      });
+
+      const faltam = Math.max(0, totalNF - totalCorretoBipado);
+      const percentual = totalNF > 0
+        ? Math.max(0, Math.min(100, Math.round((totalCorretoBipado / totalNF) * 100)))
+        : 0;
+
       document.getElementById("kpi-nf").textContent = totalNF;
       document.getElementById("kpi-scan").textContent = totalScan;
+      document.getElementById("kpi-faltam").textContent = faltam;
+
+      const barra = document.getElementById("barra-progresso");
+      const fill = document.getElementById("barra-progresso-fill");
+      const percentualEl = document.getElementById("kpi-percentual");
+      if(barra && fill && percentualEl){
+        fill.style.width = percentual + "%";
+        percentualEl.textContent = percentual + "%";
+        percentualEl.style.left = Math.max(12, Math.min(98, percentual)) + "%";
+        barra.classList.toggle("progresso-baixo", percentual < 8);
+        barra.setAttribute("aria-valuenow", String(percentual));
+      }
     }
 
     function montarListaConferencia(jaConferido){
@@ -1989,25 +2268,159 @@
       document.getElementById("modal-divergencia").style.display = "none";
     }
 
+    function solicitarConfirmacaoZerar_(nf){
+      const modal = document.getElementById("modal-confirmacao-zerar");
+      const icone = document.getElementById("zerar-icone");
+      const simbolo = document.getElementById("zerar-icone-simbolo");
+      const etapa = document.getElementById("zerar-etapa");
+      const titulo = document.getElementById("zerar-titulo");
+      const texto = document.getElementById("zerar-texto");
+      const boxNF = document.getElementById("zerar-nf");
+      const valorNF = document.getElementById("zerar-nf-valor");
+      const acoes = document.getElementById("zerar-acoes");
+      const cancelar = document.getElementById("btn-zerar-cancelar");
+      const confirmar = document.getElementById("btn-zerar-confirmar");
+
+      if(!modal || !icone || !simbolo || !etapa || !titulo || !texto || !boxNF || !valorNF || !acoes || !cancelar || !confirmar){
+        return Promise.resolve(false);
+      }
+
+      if(timerFecharZeragem_){
+        clearTimeout(timerFecharZeragem_);
+        timerFecharZeragem_ = null;
+      }
+
+      valorNF.textContent = String(nf || "—");
+      boxNF.style.display = "flex";
+      acoes.style.display = "grid";
+      cancelar.style.display = "block";
+      confirmar.style.display = "block";
+      confirmar.className = "btn-zerar-principal";
+      modal.style.display = "flex";
+
+      return new Promise(resolve => {
+        let encerrado = false;
+
+        const concluir = (valor) => {
+          if(encerrado) return;
+          encerrado = true;
+          cancelar.onclick = null;
+          confirmar.onclick = null;
+          if(!valor) modal.style.display = "none";
+          resolve(valor);
+        };
+
+        const mostrarEtapa = (numero) => {
+          modal.dataset.etapa = String(numero);
+          if(numero === 1){
+            icone.className = "zerar-icone";
+            simbolo.className = "fas fa-eraser";
+            etapa.textContent = "Atenção";
+            titulo.textContent = "Zerar contagem da NF?";
+            texto.textContent = "Todos os bipes temporários desta nota serão apagados para todos os conferentes.";
+            confirmar.textContent = "Continuar";
+            confirmar.className = "btn-zerar-principal";
+          }else{
+            icone.className = "zerar-icone etapa-final";
+            simbolo.className = "fas fa-triangle-exclamation";
+            etapa.textContent = "Confirmação final";
+            titulo.textContent = "Tem certeza?";
+            texto.textContent = "A contagem atual será apagada. Use esta ação somente se realmente quiser começar a conferência novamente.";
+            confirmar.textContent = "Sim, zerar contagem";
+            confirmar.className = "btn-zerar-principal etapa-final";
+          }
+          requestAnimationFrame(() => confirmar.focus());
+        };
+
+        cancelar.onclick = () => concluir(false);
+        confirmar.onclick = () => {
+          if(modal.dataset.etapa === "1"){
+            mostrarEtapa(2);
+            return;
+          }
+          concluir(true);
+        };
+
+        mostrarEtapa(1);
+      });
+    }
+
+    function mostrarProcessandoZeragem_(){
+      const modal = document.getElementById("modal-confirmacao-zerar");
+      const icone = document.getElementById("zerar-icone");
+      const simbolo = document.getElementById("zerar-icone-simbolo");
+      const etapa = document.getElementById("zerar-etapa");
+      const titulo = document.getElementById("zerar-titulo");
+      const texto = document.getElementById("zerar-texto");
+      const boxNF = document.getElementById("zerar-nf");
+      const acoes = document.getElementById("zerar-acoes");
+
+      modal.style.display = "flex";
+      icone.className = "zerar-icone processando";
+      simbolo.className = "fas fa-spinner fa-spin";
+      etapa.textContent = "Processando";
+      titulo.textContent = "Zerando a contagem...";
+      texto.textContent = "Aguarde só um instante.";
+      boxNF.style.display = "none";
+      acoes.style.display = "none";
+    }
+
+    function mostrarResultadoZeragem_(sucesso){
+      const modal = document.getElementById("modal-confirmacao-zerar");
+      const icone = document.getElementById("zerar-icone");
+      const simbolo = document.getElementById("zerar-icone-simbolo");
+      const etapa = document.getElementById("zerar-etapa");
+      const titulo = document.getElementById("zerar-titulo");
+      const texto = document.getElementById("zerar-texto");
+      const boxNF = document.getElementById("zerar-nf");
+      const acoes = document.getElementById("zerar-acoes");
+      const cancelar = document.getElementById("btn-zerar-cancelar");
+      const confirmar = document.getElementById("btn-zerar-confirmar");
+
+      modal.style.display = "flex";
+      boxNF.style.display = "none";
+
+      if(sucesso){
+        icone.className = "zerar-icone sucesso";
+        simbolo.className = "fas fa-check";
+        etapa.textContent = "Concluído";
+        titulo.textContent = "Contagem zerada";
+        texto.textContent = "A conferência já pode ser iniciada novamente.";
+        acoes.style.display = "none";
+        timerFecharZeragem_ = setTimeout(() => {
+          modal.style.display = "none";
+          timerFecharZeragem_ = null;
+        }, 850);
+        return;
+      }
+
+      icone.className = "zerar-icone erro";
+      simbolo.className = "fas fa-circle-exclamation";
+      etapa.textContent = "Não foi possível concluir";
+      titulo.textContent = "Falha ao zerar a contagem";
+      texto.textContent = "Tente novamente. Se o problema continuar, atualize a página.";
+      acoes.style.display = "grid";
+      cancelar.style.display = "none";
+      confirmar.style.display = "block";
+      confirmar.textContent = "Fechar";
+      confirmar.className = "btn-zerar-principal fechar-erro";
+      confirmar.onclick = () => {
+        confirmar.onclick = null;
+        modal.style.display = "none";
+      };
+      requestAnimationFrame(() => confirmar.focus());
+    }
+
     async function limparScans(){
       if(!cabecalhoAtual) return;
 
       const chave = String(cabecalhoAtual.chaveAcesso || "").trim();
       const nf = cabecalhoAtual.numeroNF || chave;
 
-      const ok1 = confirm(
-        "⚠️ ATENÇÃO\\n\\n" +
-        "Você está prestes a ZERAR TODA a contagem desta NF para todos os usuários.\\n\\n" +
-        "NF/Chave: " + nf + "\\n\\n" +
-        "Deseja continuar?"
-      );
-      if(!ok1) return;
+      const confirmado = await solicitarConfirmacaoZerar_(nf);
+      if(!confirmado) return;
 
-      const ok2 = confirm(
-        "Confirma novamente?\\n\\n" +
-        "Essa ação apaga os bipes temporários desta conferência e não deve ser usada sem certeza."
-      );
-      if(!ok2) return;
+      mostrarProcessandoZeragem_();
 
       try{
         await postJSON_({
@@ -2019,9 +2432,10 @@
         resultadoConferenciaAtual = null;
         atualizarKPIs();
         renderizarListaAtual_(false);
-        alert("Contagem zerada com sucesso.");
+        mostrarResultadoZeragem_(true);
       }catch(e){
-        alert("Erro ao zerar conferência: " + (e.message || e));
+        console.error("Erro ao zerar conferência:", e);
+        mostrarResultadoZeragem_(false);
       }
     }
 
@@ -2065,8 +2479,28 @@
       }
 
       timersAjusteManual[ean] = setTimeout(() => {
-        salvarAjusteManualFinal_(ean);
+        dispararAjusteManual_(ean);
       }, 450);
+    }
+
+    function dispararAjusteManual_(ean){
+      ean = String(ean || "").trim();
+      if(!ean) return Promise.resolve(true);
+      if(promessasAjusteManual[ean]) return promessasAjusteManual[ean];
+
+      const promessa = rastrearGravacao_(salvarAjusteManualFinal_(ean));
+      promessasAjusteManual[ean] = promessa;
+
+      promessa.then(
+        () => {
+          if(promessasAjusteManual[ean] === promessa) delete promessasAjusteManual[ean];
+        },
+        () => {
+          if(promessasAjusteManual[ean] === promessa) delete promessasAjusteManual[ean];
+        }
+      );
+
+      return promessa;
     }
 
     async function salvarAjusteManualFinal_(ean){
@@ -2115,6 +2549,7 @@
         atualizarKPIs();
         const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
         renderizarListaAtual_(jaConferido);
+        return true;
       }catch(e){
         // Se falhar, volta apenas para o último valor confirmado antes da sequência rápida.
         if(valorAnteriorConfirmado <= 0) delete mapaScan[ean];
@@ -2127,10 +2562,34 @@
         atualizarKPIs();
         const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
         renderizarListaAtual_(jaConferido);
-        alert(e.message || "Erro ao ajustar no servidor.");
+        if(!envioEmAndamento) alert(e.message || "Erro ao ajustar no servidor.");
+        return false;
       }finally{
         delete ajustesManuaisPendentes[ean];
         delete timersAjusteManual[ean];
+      }
+    }
+
+    async function concluirGravacoesPendentesAntesEnvio_(){
+      // Força imediatamente os ajustes que ainda estavam aguardando o debounce.
+      const eansAgendados = Object.keys(timersAjusteManual || {});
+      eansAgendados.forEach(ean => {
+        clearTimeout(timersAjusteManual[ean]);
+        delete timersAjusteManual[ean];
+      });
+
+      for(const ean of eansAgendados){
+        const ok = await dispararAjusteManual_(ean);
+        if(ok === false) throw new Error("Não foi possível concluir uma gravação pendente.");
+      }
+
+      // Aguarda apenas requisições que já estavam em andamento. Na utilização
+      // normal este conjunto fica vazio e não acrescenta espera ao envio.
+      while(gravacoesPendentes.size){
+        const resultados = await Promise.allSettled(Array.from(gravacoesPendentes));
+        if(resultados.some(r => r.status === "rejected")) {
+          throw new Error("Não foi possível concluir uma gravação pendente.");
+        }
       }
     }
 
@@ -2500,7 +2959,9 @@ const scannerDiv = document.getElementById("scanner");
 
           try{
             // mantém await aqui (pode demorar, mas já travou e já bipou)
-            const registrado = await registrarBipeServidor_(ean13, { confirmarExtra: true });
+            const registrado = await rastrearGravacao_(
+              registrarBipeServidor_(ean13, { confirmarExtra: true })
+            );
             if(!registrado){
               scannerBloqueado = false;
               scannerView.classList.remove("scanner-paused");
@@ -2708,7 +3169,9 @@ const scannerDiv = document.getElementById("scanner");
       }
 
       try{
-        const registrado = await registrarBipeServidor_(ean13, { confirmarExtra: true });
+        const registrado = await rastrearGravacao_(
+          registrarBipeServidor_(ean13, { confirmarExtra: true })
+        );
         if(registrado) beepOk();
       }catch(e){
         alert(e.message || "Erro ao registrar EAN.");
@@ -2791,38 +3254,88 @@ const scannerDiv = document.getElementById("scanner");
       const erro = document.getElementById("erro");
       const msg = document.getElementById("msg");
       erro.textContent = "";
-
-      const itensPayload = payload.itens || [];
-      const divergenciasReais = itensPayload.filter(i => Number(i.diff || 0) !== 0);
+      let envioConcluido = false;
 
       setEnvioBloqueado_(true);
 
       if(msg){
-        msg.textContent = divergenciasReais.length
-          ? "Enviando divergências da conferência..."
-          : "Enviando conferência sem divergências...";
+        msg.textContent = "Enviando conferência...";
         msg.classList.remove("hidden");
       }
 
       try{
+        // A partir daqui nenhuma ação, leitura ou ajuste novo é aceito.
+        pararSync_();
+        scannerBloqueado = true;
+        await pararScannerAtual_();
+        await concluirGravacoesPendentesAntesEnvio_();
+
+        // Se uma gravação terminou enquanto a tela estava sendo bloqueada,
+        // recalcula o resultado antes de montar o envio definitivo.
+        if(!resultadoConferenciaAtual){
+          const listaCompleta = montarListaConferencia(true);
+          const divergencias = listaCompleta.filter(i => Number(i.diff || 0) !== 0);
+          resultadoConferenciaAtual = { criadoEm: Date.now(), listaCompleta, divergencias };
+        }
+
+        const listaFinal = resultadoConferenciaAtual.listaCompleta || [];
+        payload.totalNF = Number(document.getElementById("kpi-nf").textContent || 0);
+        payload.totalScan = Number(document.getElementById("kpi-scan").textContent || 0);
+        payload.itens = listaFinal.map(i => ({
+          ean: i.ean,
+          codigo: i.codigo,
+          cor: i.cor,
+          tamanho: i.tamanho,
+          qtdNF: i.qtdNF,
+          qtdScan: i.qtdScan,
+          diff: i.diff,
+          status: i.status
+        }));
+
+        const divergenciasReais = payload.itens.filter(i => Number(i.diff || 0) !== 0);
         const data = await postJSON_(payload);
-        if(!data.success) throw new Error(data.message || "Falha ao registrar conferência.");
+        if(
+          !data ||
+          !data.success ||
+          data.registroConfirmado !== true ||
+          data.syncLimpa !== true ||
+          Number(data.linhasMarcadasConferencia || 0) <= 0
+        ){
+          throw new Error(data?.message || "Falha ao registrar conferência.");
+        }
 
         conferenciaEnviadaAtual = true;
+        envioConcluido = true;
+
+        // Limpa a NF concluída antes de mostrar o aviso. Ao fechar o aviso,
+        // o conferente já encontra o campo vazio para ler a próxima nota.
+        limparTela();
 
         if(divergenciasReais.length){
           alert("Conferência registrada com divergências.");
         }else{
           alert("Conferência registrada com sucesso, sem divergências.");
         }
-
-        limparTela();
       }catch(err){
         console.error("Erro ao enviar conferência:", err);
         exibirErroUsuario_("enviar");
       }finally{
+        if(!envioConcluido && cabecalhoAtual){
+          scannerBloqueado = false;
+          iniciarSync_();
+        }
         if(msg) msg.classList.add("hidden");
         setEnvioBloqueado_(false);
+
+        if(envioConcluido){
+          const chaveProximaNF = document.getElementById("chave");
+          if(chaveProximaNF){
+            chaveProximaNF.disabled = false;
+            chaveProximaNF.readOnly = false;
+            chaveProximaNF.value = "";
+            requestAnimationFrame(() => chaveProximaNF.focus());
+          }
+        }
       }
     }
 
@@ -2846,12 +3359,43 @@ const scannerDiv = document.getElementById("scanner");
 
       document.getElementById("painel").classList.add("hidden");
       document.getElementById("btn-enviar").classList.add("hidden");
+      document.getElementById("resumo-nf").innerHTML = "";
       document.getElementById("resumo-div").textContent = "";
       document.getElementById("lista").innerHTML = "";
+      document.getElementById("kpi-nf").textContent = "0";
+      document.getElementById("kpi-scan").textContent = "0";
+      document.getElementById("kpi-faltam").textContent = "0";
+      document.getElementById("kpi-percentual").textContent = "0%";
+      document.getElementById("barra-progresso-fill").style.width = "0%";
+      document.getElementById("barra-progresso").classList.add("progresso-baixo");
+      document.getElementById("barra-progresso").setAttribute("aria-valuenow", "0");
+      document.getElementById("kpi-sync").textContent = "—";
+      document.getElementById("loading").classList.add("hidden");
+      document.getElementById("erro").textContent = "";
 
-      document.getElementById("chave").focus();
+      const scannerPecas = document.getElementById("scanner");
+      if(scannerPecas) scannerPecas.style.display = "none";
+      const scannerNF = document.getElementById("scannerOverlayNF44");
+      if(scannerNF) scannerNF.style.display = "none";
+      document.body.style.overflow = "";
+      modoScanner = "";
+      scannerBloqueado = false;
+      inFlightEAN = false;
+
+      ["modal-divergencia", "modal-ean-extra", "modal-confirmacao-envio", "modal-confirmacao-zerar"].forEach(id => {
+        const modal = document.getElementById(id);
+        if(modal) modal.style.display = "none";
+      });
+
+      if(timerFecharZeragem_){
+        clearTimeout(timerFecharZeragem_);
+        timerFecharZeragem_ = null;
+      }
+
       Object.values(timersAjusteManual || {}).forEach(t => clearTimeout(t));
       timersAjusteManual = {};
+      promessasAjusteManual = {};
+      gravacoesPendentes.clear();
       valoresAjusteManualPendentes = {};
       valoresAjusteManualConfirmados = {};
     }
