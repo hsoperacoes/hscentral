@@ -491,9 +491,55 @@ window.__HS_DISABLE_DYNAMSOFT__ = true;
     let torchOn = false;
     let torchSupported = false;
     let zoomSupported = false;
+    let cameraIdIOSAutorizada = "";
 
-    // Detectar iOS
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    // Detecta iPhone/iPad, inclusive iPads que o Safari identifica como Mac.
+    // Esta flag altera somente o leitor no iOS. Android continua utilizando
+    // integralmente a configuração que já estava funcionando.
+    const isIOS = (() => {
+      const ua = String(navigator.userAgent || "");
+      const plataforma = String(navigator.platform || "");
+      const iosTradicional = /iPad|iPhone|iPod/i.test(ua);
+      const ipadModoDesktop = plataforma === "MacIntel" && Number(navigator.maxTouchPoints || 0) > 1;
+      return (iosTradicional || ipadModoDesktop) && !window.MSStream;
+    })();
+
+    // No iOS a permissão é solicitada diretamente no clique do usuário.
+    // Depois o Html5Qrcode recebe o ID da câmera já autorizada, evitando que
+    // uma validação interna impeça o Safari de exibir o pedido de acesso.
+    async function autorizarCameraIOS_(){
+      if(!isIOS) return "";
+      if(cameraIdIOSAutorizada) return cameraIdIOSAutorizada;
+
+      if(!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function"){
+        const erro = new Error("Câmera indisponível neste navegador");
+        erro.name = "NotSupportedError";
+        throw erro;
+      }
+
+      let stream = null;
+      try{
+        try{
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: { facingMode: "environment" }
+          });
+        }catch(erroInicial){
+          const nome = String(erroInicial && erroInicial.name || "");
+          if(nome !== "OverconstrainedError" && nome !== "NotFoundError") throw erroInicial;
+          stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+        }
+
+        const track = stream && stream.getVideoTracks ? stream.getVideoTracks()[0] : null;
+        const ajustes = track && track.getSettings ? track.getSettings() : {};
+        cameraIdIOSAutorizada = String(ajustes.deviceId || "");
+        return cameraIdIOSAutorizada;
+      }finally{
+        if(stream && stream.getTracks){
+          stream.getTracks().forEach(track => track.stop());
+        }
+      }
+    }
 
     function status_(html){
       document.getElementById("scanStatus").innerHTML = "Status: " + html;
@@ -593,6 +639,25 @@ window.__HS_DISABLE_DYNAMSOFT__ = true;
       travado = false;
       status_("<b>abrindo câmera…</b>");
 
+      // Precisa ser a primeira operação assíncrona no iOS para preservar o
+      // gesto do toque e fazer o Safari abrir a solicitação de câmera.
+      let cameraIdIOS = "";
+      if(isIOS){
+        try{
+          cameraIdIOS = await autorizarCameraIOS_();
+        }catch(error){
+          console.error("Erro ao solicitar câmera no iOS:", error);
+          const nomeErro = String(error && error.name || "");
+          if(nomeErro === "NotAllowedError" || nomeErro === "SecurityError"){
+            status_("<b style='color:#ff6b6b'>Permissão necessária</b><br/>Permita o acesso à câmera no Safari");
+          }else{
+            status_("<b style='color:#ff6b6b'>Erro na câmera</b><br/>Tente novamente");
+          }
+          setTimeout(() => fecharScanner(), 3000);
+          return;
+        }
+      }
+
       try{
         if(html5Scanner){
           await html5Scanner.stop().catch(()=>{});
@@ -614,9 +679,9 @@ window.__HS_DISABLE_DYNAMSOFT__ = true;
         }
       }catch(e){}
 
-      // Configurações otimizadas para iOS
-      const config = {
-        fps: isIOS ? 20 : 30,
+      // Android permanece com a configuração anterior, sem qualquer alteração.
+      const configAndroid = {
+        fps: 30,
         qrbox: (view) => {
           const w = Math.min(view.width, 520);
           const h = Math.min(view.height, 820);
@@ -624,23 +689,62 @@ window.__HS_DISABLE_DYNAMSOFT__ = true;
           const boxH = Math.floor(h * 0.22);
           return { width: boxW, height: boxH };
         },
-        aspectRatio: isIOS ? 1.0 : 0.75,
+        aspectRatio: 0.75,
         disableFlip: true,
         experimentalFeatures: { useBarCodeDetectorIfSupported: true },
         rememberLastUsedCamera: true,
         ...(formats ? { formatsToSupport: formats } : {})
       };
 
-      // Constraints SIMPLES - SEM verificação antecipada de permissões
-      const constraints = { 
-        facingMode: "environment"
+      // No iOS usamos a assinatura correta e também aceitamos a assinatura por
+      // objeto, caso a biblioteca a altere. A área horizontal favorece CODE_128.
+      const formatosIOS = (window.Html5QrcodeSupportedFormats)
+        ? [Html5QrcodeSupportedFormats.CODE_128]
+        : undefined;
+
+      const configIOS = {
+        fps: 12,
+        qrbox: (viewfinderWidth, viewfinderHeight) => {
+          let largura = Number(viewfinderWidth);
+          let altura = Number(viewfinderHeight);
+
+          if(viewfinderWidth && typeof viewfinderWidth === "object"){
+            largura = Number(viewfinderWidth.width);
+            altura = Number(viewfinderWidth.height);
+          }
+
+          if(!Number.isFinite(largura) || largura <= 0) largura = Math.max(280, window.innerWidth || 390);
+          if(!Number.isFinite(altura) || altura <= 0) altura = Math.max(320, window.innerHeight || 700);
+
+          const boxW = Math.max(250, Math.floor(largura * 0.94));
+          const boxH = Math.max(90, Math.min(180, Math.floor(altura * 0.23)));
+
+          return {
+            width: Math.min(boxW, Math.floor(largura)),
+            height: Math.min(boxH, Math.floor(altura))
+          };
+        },
+        disableFlip: true,
+        // No Safari usamos o decodificador interno, mais estável para CODE_128.
+        experimentalFeatures: { useBarCodeDetectorIfSupported: false },
+        rememberLastUsedCamera: true,
+        ...(formatosIOS ? { formatsToSupport: formatosIOS } : {})
       };
+
+      const config = isIOS ? configIOS : configAndroid;
+
+      // Android conserva exatamente o mesmo facingMode. No iOS usamos o ID da
+      // câmera que o Safari acabou de autorizar; se ele não informar um ID,
+      // utilizamos o mesmo formato simples já aceito pela biblioteca.
+      const constraints = isIOS
+        ? (cameraIdIOS || { facingMode: "environment" })
+        : { facingMode: "environment" };
 
       status_("<b>procurando o código…</b><br/>Aproxime e alinhe no retângulo.");
 
       try {
-        // ✅ MUDANÇA CRÍTICA: NÃO verificar permissões antecipadamente!
-        // O HTML5-QRCode vai pedir permissão DENTRO do .start()
+        // No Android a biblioteca continua solicitando a permissão diretamente.
+        // No iOS a câmera já foi autorizada acima, dentro do clique do usuário.
         await html5Scanner.start(
           constraints,
           config,
@@ -685,6 +789,12 @@ window.__HS_DISABLE_DYNAMSOFT__ = true;
         setTimeout(async ()=>{
           try{
             const video = document.querySelector("#html5-reader video");
+            if(isIOS && video){
+              video.setAttribute("playsinline", "true");
+              video.setAttribute("webkit-playsinline", "true");
+              video.muted = true;
+            }
+
             const stream = video && video.srcObject;
             if(!stream) return;
             const t = stream.getVideoTracks && stream.getVideoTracks()[0];
@@ -697,8 +807,16 @@ window.__HS_DISABLE_DYNAMSOFT__ = true;
               zoomSupported = true;
               zoomMin = caps.zoom.min;
               zoomMax = caps.zoom.max;
-              zoomLevel = Math.min(Math.max(1.5, zoomMin), zoomMax);
-              await applyZoom_(zoomLevel);
+              if(isIOS){
+                const ajustesAtuais = currentTrack.getSettings ? currentTrack.getSettings() : {};
+                zoomLevel = Math.min(
+                  Math.max(Number(ajustesAtuais.zoom || zoomMin), zoomMin),
+                  zoomMax
+                );
+              }else{
+                zoomLevel = Math.min(Math.max(1.5, zoomMin), zoomMax);
+                await applyZoom_(zoomLevel);
+              }
             }
             if(caps.torch !== undefined){
               torchSupported = true;
@@ -708,9 +826,11 @@ window.__HS_DISABLE_DYNAMSOFT__ = true;
 
       } catch (error) {
         console.error("Erro ao iniciar scanner:", error);
+        const nomeErro = String(error && error.name || "");
+        const mensagemErro = String(error && error.message || error || "");
         
         // ✅ TRATAMENTO ESPECÍFICO PARA ERROS DE PERMISSÃO
-        if (error.name === 'NotAllowedError' || error.message.includes('Permission')) {
+        if (nomeErro === 'NotAllowedError' || nomeErro === 'SecurityError' || /permission|notallowed|denied/i.test(mensagemErro)) {
           status_("<b style='color:#ff6b6b'>❌ Permissão necessária</b><br/>Permita o acesso à câmera para usar o scanner");
           
           if (isIOS) {
