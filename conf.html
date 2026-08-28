@@ -1620,7 +1620,7 @@
   </footer>
 
   <script>
-    const APP_VERSION = "4.0";
+    const APP_VERSION = "4.1";
 
     const URL_API = "https://script.google.com/macros/s/AKfycbx1HDzA2b478DAhi5ONS6TstKieKf4lvFM9wzib9McUrdP7Z4Xwhb6SrUt5KW1YcR3x/exec";
 
@@ -1657,12 +1657,19 @@
     // ✅ CONTROLE REFORÇADO SCANNER EAN
     let scannerBloqueado = false; // bloqueia totalmente novos scans (UI)
     let inFlightEAN = false;      // bloqueia reentrância enquanto existe request pendente
+    let bipeRequestAtivo = false;
+    let entradaManualEmAndamento = false;
+    let eventosRetryBipe = {};
+    let eventosRetryAjuste = {};
     let ultimoEanLido = "";
     let ultimoEanTimestamp = 0;
 
     // Sync
     let syncTimer = null;
     let syncAtivo = false;
+    let syncEmAndamento = false;
+    let sequenciaSync = 0;
+    let ultimaSequenciaSyncAplicada = 0;
     let ultimoSyncHash = "";
     let envioEmAndamento = false;
     let pendenciaEnvioConfirmado_ = null;
@@ -1670,6 +1677,7 @@
     let gravacoesPendentes = new Set();
     let promessasAjusteManual = {};
     let timerFecharZeragem_ = null;
+    let idEnvioConferenciaAtual = "";
 
     function setEnvioBloqueado_(ativo){
       envioEmAndamento = !!ativo;
@@ -1810,13 +1818,41 @@
     let valoresAjusteManualConfirmados = {};
     let resultadoConferenciaAtual = null;
 
-    async function postJSON_(payload){
-      const resp = await fetch(URL_API, {
-        method: "POST",
-        headers: { "Content-Type":"text/plain;charset=utf-8" },
-        body: JSON.stringify(payload)
-      });
-      return await resp.json();
+    function gerarIdUnico_(prefixo){
+      const uuid = (window.crypto && typeof window.crypto.randomUUID === "function")
+        ? window.crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+      return `${prefixo || "evt"}-${uuid}`;
+    }
+
+    async function postJSON_(payload, timeoutMs = 15000){
+      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+
+      try{
+        const resp = await fetch(URL_API, {
+          method: "POST",
+          headers: { "Content-Type":"text/plain;charset=utf-8" },
+          body: JSON.stringify(payload),
+          signal: controller ? controller.signal : undefined
+        });
+        if(!resp.ok) throw new Error("Falha na comunicação.");
+        return await resp.json();
+      }finally{
+        if(timer) clearTimeout(timer);
+      }
+    }
+
+    async function postJSONComRetrySilencioso_(payload, tentativas = 2, timeoutMs = 15000){
+      let ultimoErro = null;
+      for(let tentativa = 0; tentativa < tentativas; tentativa++){
+        try{
+          return await postJSON_(payload, timeoutMs);
+        }catch(e){
+          ultimoErro = e;
+        }
+      }
+      throw ultimoErro || new Error("Não foi possível concluir a operação.");
     }
 
     function rastrearGravacao_(promessa){
@@ -1889,20 +1925,17 @@
         const cabecalhoRecebido = data.cabecalho;
 
         if (data.jaConferida) {
-          const continuar = confirm(
-            "⚠️ Esta nota fiscal já consta como conferida.\n\n" +
-            "Deseja abrir mesmo assim para consulta ou nova conferência?"
-          );
-
-          if (!continuar) {
-            erro.textContent = "Carregamento cancelado.";
-            loading.classList.add("hidden");
-            return;
-          }
+          alert("⚠️ Esta nota fiscal já consta como conferida.");
+          painel.classList.add("hidden");
+          const chaveJaConferida = document.getElementById("chave");
+          chaveJaConferida.readOnly = false;
+          chaveJaConferida.select();
+          return;
         }
 
         cabecalhoAtual = cabecalhoRecebido;
         conferenciaEnviadaAtual = false;
+        idEnvioConferenciaAtual = gerarIdUnico_("envio");
         const chaveInputAtiva = document.getElementById("chave");
         if(chaveInputAtiva) chaveInputAtiva.readOnly = true;
 
@@ -1949,11 +1982,9 @@
     }
 
     function atualizarKPIs(){
-      let totalNF = Number(cabecalhoAtual?.totalItensNF || 0);
-      if(!totalNF){
-        totalNF = 0;
-        itensNF.forEach(i => totalNF += Number(i.quantidade || 0));
-      }
+      let totalNF = 0;
+      itensNF.forEach(i => totalNF += Math.max(0, Number(i.quantidade || 0)));
+      if(!totalNF) totalNF = Number(cabecalhoAtual?.totalItensNF || 0);
 
       let totalScan = 0;
       Object.values(mapaScan).forEach(v => totalScan += Number(v || 0));
@@ -2423,13 +2454,23 @@
       mostrarProcessandoZeragem_();
 
       try{
-        await postJSON_({
+        await concluirGravacoesPendentesAntesEnvio_();
+        const data = await postJSONComRetrySilencioso_({
           api:"zerarSyncNF",
           chaveAcesso: chave
         });
+        if(!data || !data.success){
+          throw new Error(data?.message || "Não foi possível zerar a contagem.");
+        }
         mapaScan = {};
         ultimoSyncHash = _hashMapa_(mapaScan);
         resultadoConferenciaAtual = null;
+        idEnvioConferenciaAtual = gerarIdUnico_("envio");
+        eventosRetryBipe = {};
+        eventosRetryAjuste = {};
+        ajustesManuaisPendentes = {};
+        valoresAjusteManualPendentes = {};
+        valoresAjusteManualConfirmados = {};
         atualizarKPIs();
         renderizarListaAtual_(false);
         mostrarResultadoZeragem_(true);
@@ -2448,6 +2489,7 @@
       ean = String(ean || "").trim();
       delta = Number(delta || 0);
       if(!ean || !delta) return;
+      if(promessasAjusteManual[ean]) return;
 
       const atualTela = Number(mapaScan[ean] || 0);
       const novaQtdTela = Math.max(0, atualTela + delta);
@@ -2511,22 +2553,26 @@
 
       const novaQtd = Number(valoresAjusteManualPendentes[ean] || 0);
       const valorAnteriorConfirmado = Number(valoresAjusteManualConfirmados[ean] || 0);
+      const deltaAjuste = novaQtd - valorAnteriorConfirmado;
+      const idEvento = eventosRetryAjuste[ean] || gerarIdUnico_("ajuste");
 
       ajustesManuaisPendentes[ean] = true;
       bloqueioSyncAte = Date.now() + 7000;
 
       try{
-        const data = await postJSON_({
+        const data = await postJSONComRetrySilencioso_({
           api:"ajustarBipeManual",
           chaveAcesso: String(cabecalhoAtual.chaveAcesso || "").trim(),
           ean,
-          novaQtd,
+          deltaAjuste,
+          idEvento,
           conferente: conferenteAtual || "Usuário"
         });
 
         if(!data || !data.success){
           throw new Error(data?.message || "Não consegui ajustar no servidor.");
         }
+        delete eventosRetryAjuste[ean];
 
         // Se o servidor retornar mapa completo, usa. Caso contrário, mantém a quantidade final escolhida.
         if(data.bipes){
@@ -2536,7 +2582,7 @@
           else mapaScan[ean] = novaQtd;
         }
 
-        valoresAjusteManualConfirmados[ean] = novaQtd;
+        valoresAjusteManualConfirmados[ean] = Number(mapaScan[ean] || 0);
         delete valoresAjusteManualPendentes[ean];
 
         if(!itensNF.some(i => String(i.ean||"") === ean) && !cacheInfoEAN[ean]){
@@ -2551,6 +2597,7 @@
         renderizarListaAtual_(jaConferido);
         return true;
       }catch(e){
+        eventosRetryAjuste[ean] = idEvento;
         // Se falhar, volta apenas para o último valor confirmado antes da sequência rápida.
         if(valorAnteriorConfirmado <= 0) delete mapaScan[ean];
         else mapaScan[ean] = valorAnteriorConfirmado;
@@ -2679,6 +2726,7 @@
 
     function iniciarSync_(){
       if(!cabecalhoAtual || !cabecalhoAtual.chaveAcesso) return;
+      if(syncTimer){ clearInterval(syncTimer); syncTimer = null; }
       syncAtivo = true;
       // ✅ Já partimos com o hash do que veio no carregamento da NF (mapaScan
       // pré-preenchido), então esse primeiro puxarSyncAgora_() não causa mais
@@ -2710,17 +2758,25 @@
       await buscarEANsNoBanco(pendentes);
     }
 
-    async function puxarSyncAgora_(){
+    async function puxarSyncAgora_(forcar = false){
       if(!syncAtivo || !cabecalhoAtual) return;
-      if(Date.now() < bloqueioSyncAte) return;
+      if(syncEmAndamento) return;
+      if(!forcar && Date.now() < bloqueioSyncAte) return;
 
       const chave = String(cabecalhoAtual.chaveAcesso || "").trim();
       if(!chave || chave.length !== 44) return;
+      const sequencia = ++sequenciaSync;
+      syncEmAndamento = true;
 
       try{
         const resp = await fetch(`${URL_API}?api=sincronizarBipes&chave=${encodeURIComponent(chave)}&v=${APP_VERSION}&t=${Date.now()}`);
+        if(!resp.ok) throw new Error("sync fail");
         const data = await resp.json();
         if(!data || !data.success) throw new Error("sync fail");
+        if(!syncAtivo || !cabecalhoAtual || String(cabecalhoAtual.chaveAcesso || "").trim() !== chave) return;
+        if(!forcar && Date.now() < bloqueioSyncAte) return;
+        if(sequencia < ultimaSequenciaSyncAplicada) return;
+        ultimaSequenciaSyncAplicada = sequencia;
 
         const bipes = data.bipes || {};
         const hash = _hashMapa_(bipes);
@@ -2735,6 +2791,12 @@
           });
 
           mapaScan = mesclado;
+          Object.keys(valoresAjusteManualConfirmados || {}).forEach(ean => {
+            if(!ajustesManuaisPendentes[ean]) {
+              valoresAjusteManualConfirmados[ean] = Number(mapaScan[ean] || 0);
+            }
+          });
+          resultadoConferenciaAtual = null;
           await garantirInfoExtras_();
           atualizarKPIs();
 
@@ -2745,6 +2807,8 @@
         document.getElementById("kpi-sync").textContent = "OK";
       }catch(e){
         document.getElementById("kpi-sync").textContent = "OFF";
+      }finally{
+        syncEmAndamento = false;
       }
     }
 
@@ -2913,7 +2977,7 @@ const scannerDiv = document.getElementById("scanner");
           if(modoScanner !== "EAN") return;
 
           // ✅ BLOQUEIO TOTAL (tela travada) ou request pendente
-          if(scannerBloqueado || inFlightEAN) return;
+          if(scannerBloqueado || inFlightEAN || bipeRequestAtivo) return;
 
           const textoLimpo = String(decodedText || "").trim();
           if(textoLimpo.length < 10) return;
@@ -2975,7 +3039,7 @@ const scannerDiv = document.getElementById("scanner");
             scannerView.classList.remove("scanner-paused");
             info.classList.remove("scanner-info-paused");
             info.innerHTML = `
-              ❌ Falha ao registrar no servidor.<br/>
+              ❌ Não foi possível registrar esta peça.<br/>
               Tente novamente apontando para o EAN-13.
             `;
           }finally{
@@ -3049,27 +3113,40 @@ const scannerDiv = document.getElementById("scanner");
 
     async function registrarBipeServidor_(ean, opcoes = {}){
       if(!cabecalhoAtual || !cabecalhoAtual.chaveAcesso) return false;
+      if(bipeRequestAtivo) return false;
 
       const pedirConfirmacaoExtra = opcoes.confirmarExtra !== false;
       const podeRegistrar = await prepararEANParaRegistro_(ean, pedirConfirmacaoExtra);
       if(!podeRegistrar) return false;
 
       ean = String(ean || "").trim();
+      const valorAnterior = Number(mapaScan[ean] || 0);
+      const idEvento = eventosRetryBipe[ean] || gerarIdUnico_("bipe");
 
       const payload = {
         api: "registrarBipeIndividual",
         chaveAcesso: String(cabecalhoAtual.chaveAcesso || "").trim(),
         ean,
         qtd: 1,
+        idEvento,
         conferente: conferenteAtual || "Usuário"
       };
 
+      bipeRequestAtivo = true;
+      bloqueioSyncAte = Date.now() + 20000;
+      mapaScan[ean] = valorAnterior + 1;
+      ultimoSyncHash = _hashMapa_(mapaScan);
+      resultadoConferenciaAtual = null;
+      atualizarKPIs();
+      renderizarListaAtual_(!document.getElementById("btn-enviar").classList.contains("hidden"));
+
       try{
-        const data = await postJSON_(payload);
+        const data = await postJSONComRetrySilencioso_(payload, 2, 12000);
         if(data && data.success){
-          // ✅ Atualiza localmente na hora e bloqueia sync antigo por instantes.
-          mapaScan[ean] = Number(mapaScan[ean] || 0) + 1;
-          bloqueioSyncAte = Date.now() + 1800;
+          if(data.bipes) mapaScan = data.bipes || {};
+          else mapaScan[ean] = Math.max(0, Number(data.qtdAtual ?? (valorAnterior + 1)));
+          delete eventosRetryBipe[ean];
+          bloqueioSyncAte = Date.now() + 500;
           ultimoSyncHash = _hashMapa_(mapaScan);
           resultadoConferenciaAtual = null;
 
@@ -3083,8 +3160,17 @@ const scannerDiv = document.getElementById("scanner");
           throw new Error(data?.message || "Falha ao registrar bipe.");
         }
       }catch(e){
+        eventosRetryBipe[ean] = idEvento;
+        if(valorAnterior <= 0) delete mapaScan[ean];
+        else mapaScan[ean] = valorAnterior;
+        ultimoSyncHash = _hashMapa_(mapaScan);
+        atualizarKPIs();
+        renderizarListaAtual_(!document.getElementById("btn-enviar").classList.contains("hidden"));
         console.error("Falha ao registrar bipe no servidor", e);
         throw e;
+      }finally{
+        bipeRequestAtivo = false;
+        bloqueioSyncAte = Date.now() + 350;
       }
     }
 
@@ -3156,6 +3242,7 @@ const scannerDiv = document.getElementById("scanner");
 
     async function adicionarEANManual(){
       if(!cabecalhoAtual){ alert("Carregue a NF primeiro."); return; }
+      if(entradaManualEmAndamento || bipeRequestAtivo) return;
 
       const inp = document.getElementById("ean-manual");
       const ean13 = extrairEAN13DoTexto(inp.value || "");
@@ -3168,6 +3255,7 @@ const scannerDiv = document.getElementById("scanner");
         inp.value = ""; inp.focus(); return;
       }
 
+      entradaManualEmAndamento = true;
       try{
         const registrado = await rastrearGravacao_(
           registrarBipeServidor_(ean13, { confirmarExtra: true })
@@ -3175,6 +3263,8 @@ const scannerDiv = document.getElementById("scanner");
         if(registrado) beepOk();
       }catch(e){
         alert(e.message || "Erro ao registrar EAN.");
+      }finally{
+        entradaManualEmAndamento = false;
       }
       inp.value = ""; inp.focus();
     }
@@ -3215,6 +3305,7 @@ const scannerDiv = document.getElementById("scanner");
 
       const payload = {
         api: "registrarConferenciaNF",
+        idEnvio: idEnvioConferenciaAtual || (idEnvioConferenciaAtual = gerarIdUnico_("envio")),
         filialCodigo: filialAtual,
         filialNome: nomesFiliais[filialAtual] || "",
         numeroNF: cabecalhoAtual.numeroNF || "",
@@ -3250,6 +3341,20 @@ const scannerDiv = document.getElementById("scanner");
       await enviarConferenciaFinal_(payload);
     }
 
+    async function verificarNotaConferidaSilenciosamente_(chave){
+      for(let tentativa = 0; tentativa < 3; tentativa++){
+        try{
+          const resp = await fetch(`${URL_API}?api=consultarConferenciaNF&filial=${encodeURIComponent(filialAtual)}&chave=${encodeURIComponent(chave)}&v=${APP_VERSION}&t=${Date.now()}`);
+          if(resp.ok){
+            const data = await resp.json();
+            if(data && data.success && data.jaConferida) return true;
+          }
+        }catch(e){}
+        if(tentativa < 2) await new Promise(resolve => setTimeout(resolve, 700));
+      }
+      return false;
+    }
+
     async function enviarConferenciaFinal_(payload){
       const erro = document.getElementById("erro");
       const msg = document.getElementById("msg");
@@ -3270,13 +3375,11 @@ const scannerDiv = document.getElementById("scanner");
         await pararScannerAtual_();
         await concluirGravacoesPendentesAntesEnvio_();
 
-        // Se uma gravação terminou enquanto a tela estava sendo bloqueada,
-        // recalcula o resultado antes de montar o envio definitivo.
-        if(!resultadoConferenciaAtual){
-          const listaCompleta = montarListaConferencia(true);
-          const divergencias = listaCompleta.filter(i => Number(i.diff || 0) !== 0);
-          resultadoConferenciaAtual = { criadoEm: Date.now(), listaCompleta, divergencias };
-        }
+        // Atualiza os metadados enviados. As quantidades finais são calculadas
+        // novamente pelo servidor, dentro do bloqueio da conferência.
+        const listaCompleta = montarListaConferencia(true);
+        const divergencias = listaCompleta.filter(i => Number(i.diff || 0) !== 0);
+        resultadoConferenciaAtual = { criadoEm: Date.now(), listaCompleta, divergencias };
 
         const listaFinal = resultadoConferenciaAtual.listaCompleta || [];
         payload.totalNF = Number(document.getElementById("kpi-nf").textContent || 0);
@@ -3292,8 +3395,7 @@ const scannerDiv = document.getElementById("scanner");
           status: i.status
         }));
 
-        const divergenciasReais = payload.itens.filter(i => Number(i.diff || 0) !== 0);
-        const data = await postJSON_(payload);
+        const data = await postJSONComRetrySilencioso_(payload, 2, 20000);
         if(
           !data ||
           !data.success ||
@@ -3311,14 +3413,26 @@ const scannerDiv = document.getElementById("scanner");
         // o conferente já encontra o campo vazio para ler a próxima nota.
         limparTela();
 
-        if(divergenciasReais.length){
+        if(Number(data.totalDivergencias ?? data.divergenciasRegistradas ?? 0) > 0){
           alert("Conferência registrada com divergências.");
         }else{
           alert("Conferência registrada com sucesso, sem divergências.");
         }
       }catch(err){
         console.error("Erro ao enviar conferência:", err);
-        exibirErroUsuario_("enviar");
+        const chaveVerificacao = String(payload?.chaveAcesso || "").trim();
+        const confirmada = chaveVerificacao
+          ? await verificarNotaConferidaSilenciosamente_(chaveVerificacao)
+          : false;
+
+        if(confirmada){
+          conferenciaEnviadaAtual = true;
+          envioConcluido = true;
+          limparTela();
+          alert("Conferência registrada com sucesso.");
+        }else{
+          exibirErroUsuario_("enviar");
+        }
       }finally{
         if(!envioConcluido && cabecalhoAtual){
           scannerBloqueado = false;
@@ -3350,6 +3464,9 @@ const scannerDiv = document.getElementById("scanner");
       resultadoConferenciaAtual = null;
       cacheInfoEAN = {};
       conferenciaEnviadaAtual = false;
+      idEnvioConferenciaAtual = "";
+      eventosRetryBipe = {};
+      eventosRetryAjuste = {};
 
       const chaveInputLimpar = document.getElementById("chave");
       chaveInputLimpar.readOnly = false;
@@ -3381,6 +3498,10 @@ const scannerDiv = document.getElementById("scanner");
       modoScanner = "";
       scannerBloqueado = false;
       inFlightEAN = false;
+      bipeRequestAtivo = false;
+      entradaManualEmAndamento = false;
+      syncEmAndamento = false;
+      ultimaSequenciaSyncAplicada = sequenciaSync;
 
       ["modal-divergencia", "modal-ean-extra", "modal-confirmacao-envio", "modal-confirmacao-zerar"].forEach(id => {
         const modal = document.getElementById(id);
