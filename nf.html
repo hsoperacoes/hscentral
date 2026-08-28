@@ -706,13 +706,21 @@ window.__HS_DISABLE_DYNAMSOFT__ = true;
         ...(formats ? { formatsToSupport: formats } : {})
       };
 
-      // No iOS pedimos resolução alta para preservar as barras estreitas da
-      // chave de 44 dígitos. Sem qrbox, a biblioteca analisa o quadro inteiro;
-      // a moldura verde continua servindo como guia visual para o usuário.
+      // No iOS o Safari não tem o BarcodeDetector nativo, então o decode cai
+      // sempre no decoder em JS puro (mais pesado). Por isso aqui usamos um
+      // "qrbox" (igual em espírito ao do Android) para limitar a área
+      // analisada a cada frame — sem isso a lib tinha que varrer o frame
+      // inteiro em alta resolução e a leitura praticamente não avançava.
+      // fps um pouco maior porque o frame agora é bem menor (mais barato).
       const videoConstraintsIOS = {
         width: { ideal: 1920 },
         height: { ideal: 1080 },
-        frameRate: { ideal: 30, max: 30 }
+        frameRate: { ideal: 30, max: 30 },
+        // Solicita foco contínuo já na abertura da câmera, em vez de só
+        // tentar aplicar via applyConstraints 800ms depois do start (tarde
+        // demais para o primeiro frame nítido). Se o dispositivo não suportar
+        // essa constraint o navegador simplesmente ignora, sem quebrar nada.
+        advanced: [{ focusMode: "continuous" }]
       };
 
       if(cameraIdIOS){
@@ -722,8 +730,15 @@ window.__HS_DISABLE_DYNAMSOFT__ = true;
       }
 
       const configIOS = {
-        fps: 10,
+        fps: 15,
         disableFlip: true,
+        qrbox: (view) => {
+          const w = Math.min(view.width, 520);
+          const h = Math.min(view.height, 820);
+          const boxW = Math.floor(w * 0.92);
+          const boxH = Math.floor(h * 0.30);
+          return { width: boxW, height: boxH };
+        },
         videoConstraints: videoConstraintsIOS
       };
 
