@@ -666,8 +666,6 @@ window.__HS_DISABLE_DYNAMSOFT__ = true;
         }
       }catch(e){}
 
-      html5Scanner = new Html5Qrcode("html5-reader");
-
       let formats = undefined;
       try{
         if(window.Html5QrcodeSupportedFormats){
@@ -678,6 +676,18 @@ window.__HS_DISABLE_DYNAMSOFT__ = true;
           ];
         }
       }catch(e){}
+
+      // formatsToSupport e useBarCodeDetectorIfSupported são opções de criação
+      // do Html5Qrcode, não opções do método start(). Aplicamos corretamente
+      // apenas no iOS; Android continua sendo criado exatamente como antes.
+      if(isIOS && formats && formats.length){
+        html5Scanner = new Html5Qrcode("html5-reader", {
+          formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128],
+          useBarCodeDetectorIfSupported: true
+        });
+      }else{
+        html5Scanner = new Html5Qrcode("html5-reader");
+      }
 
       // Android permanece com a configuração anterior, sem qualquer alteração.
       const configAndroid = {
@@ -696,39 +706,25 @@ window.__HS_DISABLE_DYNAMSOFT__ = true;
         ...(formats ? { formatsToSupport: formats } : {})
       };
 
-      // No iOS usamos a assinatura correta e também aceitamos a assinatura por
-      // objeto, caso a biblioteca a altere. A área horizontal favorece CODE_128.
-      const formatosIOS = (window.Html5QrcodeSupportedFormats)
-        ? [Html5QrcodeSupportedFormats.CODE_128]
-        : undefined;
+      // No iOS pedimos resolução alta para preservar as barras estreitas da
+      // chave de 44 dígitos. Sem qrbox, a biblioteca analisa o quadro inteiro;
+      // a moldura verde continua servindo como guia visual para o usuário.
+      const videoConstraintsIOS = {
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        frameRate: { ideal: 30, max: 30 }
+      };
+
+      if(cameraIdIOS){
+        videoConstraintsIOS.deviceId = { exact: cameraIdIOS };
+      }else{
+        videoConstraintsIOS.facingMode = "environment";
+      }
 
       const configIOS = {
-        fps: 12,
-        qrbox: (viewfinderWidth, viewfinderHeight) => {
-          let largura = Number(viewfinderWidth);
-          let altura = Number(viewfinderHeight);
-
-          if(viewfinderWidth && typeof viewfinderWidth === "object"){
-            largura = Number(viewfinderWidth.width);
-            altura = Number(viewfinderWidth.height);
-          }
-
-          if(!Number.isFinite(largura) || largura <= 0) largura = Math.max(280, window.innerWidth || 390);
-          if(!Number.isFinite(altura) || altura <= 0) altura = Math.max(320, window.innerHeight || 700);
-
-          const boxW = Math.max(250, Math.floor(largura * 0.94));
-          const boxH = Math.max(90, Math.min(180, Math.floor(altura * 0.23)));
-
-          return {
-            width: Math.min(boxW, Math.floor(largura)),
-            height: Math.min(boxH, Math.floor(altura))
-          };
-        },
+        fps: 10,
         disableFlip: true,
-        // No Safari usamos o decodificador interno, mais estável para CODE_128.
-        experimentalFeatures: { useBarCodeDetectorIfSupported: false },
-        rememberLastUsedCamera: true,
-        ...(formatosIOS ? { formatsToSupport: formatosIOS } : {})
+        videoConstraints: videoConstraintsIOS
       };
 
       const config = isIOS ? configIOS : configAndroid;
@@ -802,6 +798,13 @@ window.__HS_DISABLE_DYNAMSOFT__ = true;
 
             currentTrack = t;
             const caps = currentTrack.getCapabilities ? currentTrack.getCapabilities() : {};
+
+            if(isIOS && caps.focusMode){
+              const modosFoco = Array.isArray(caps.focusMode) ? caps.focusMode : [caps.focusMode];
+              if(modosFoco.includes("continuous")){
+                await currentTrack.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(()=>{});
+              }
+            }
 
             if(caps.zoom){
               zoomSupported = true;
