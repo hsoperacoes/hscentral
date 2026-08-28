@@ -1620,7 +1620,7 @@
   </footer>
 
   <script>
-    const APP_VERSION = "4.1";
+    const APP_VERSION = "4.2";
 
     const URL_API = "https://script.google.com/macros/s/AKfycbx1HDzA2b478DAhi5ONS6TstKieKf4lvFM9wzib9McUrdP7Z4Xwhb6SrUt5KW1YcR3x/exec";
 
@@ -3535,7 +3535,16 @@ const scannerDiv = document.getElementById("scanner");
     let torchSupportedNF44 = false;
     let zoomSupportedNF44 = false;
 
-    const isIOS_NF44 = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    // Detecta iPhone/iPad, inclusive iPads que o Safari identifica como Mac.
+    // Esta flag é usada somente no leitor da chave de 44 dígitos. Android
+    // continua utilizando integralmente a configuração que já estava ativa.
+    const isIOS_NF44 = (() => {
+      const ua = String(navigator.userAgent || "");
+      const plataforma = String(navigator.platform || "");
+      const iosTradicional = /iPad|iPhone|iPod/i.test(ua);
+      const ipadModoDesktop = plataforma === "MacIntel" && Number(navigator.maxTouchPoints || 0) > 1;
+      return (iosTradicional || ipadModoDesktop) && !window.MSStream;
+    })();
 
     function statusNF44_(html){
       const el = document.getElementById("scanStatusNF44");
@@ -3638,8 +3647,9 @@ const scannerDiv = document.getElementById("scanner");
         }
       }catch(e){}
 
-      const config = {
-        fps: isIOS_NF44 ? 20 : 30,
+      // Android permanece com a configuração anterior, sem qualquer alteração.
+      const configAndroidNF44 = {
+        fps: 30,
         qrbox: (view) => {
           const w = Math.min(view.width, 520);
           const h = Math.min(view.height, 820);
@@ -3647,18 +3657,59 @@ const scannerDiv = document.getElementById("scanner");
           const boxH = Math.floor(h * 0.22);
           return { width: boxW, height: boxH };
         },
-        aspectRatio: isIOS_NF44 ? 1.0 : 0.75,
+        aspectRatio: 0.75,
         disableFlip: true,
         experimentalFeatures: { useBarCodeDetectorIfSupported: true },
         rememberLastUsedCamera: true,
         ...(formats ? { formatsToSupport: formats } : {})
       };
 
+      // No iOS usamos a assinatura correta e também aceitamos a assinatura por
+      // objeto, caso a biblioteca a altere. A área horizontal favorece CODE_128.
+      const formatosIOS = (window.Html5QrcodeSupportedFormats)
+        ? [Html5QrcodeSupportedFormats.CODE_128]
+        : undefined;
+
+      const configIOSNF44 = {
+        fps: 12,
+        qrbox: (viewfinderWidth, viewfinderHeight) => {
+          let largura = Number(viewfinderWidth);
+          let altura = Number(viewfinderHeight);
+
+          if(viewfinderWidth && typeof viewfinderWidth === "object"){
+            largura = Number(viewfinderWidth.width);
+            altura = Number(viewfinderWidth.height);
+          }
+
+          if(!Number.isFinite(largura) || largura <= 0) largura = Math.max(280, window.innerWidth || 390);
+          if(!Number.isFinite(altura) || altura <= 0) altura = Math.max(320, window.innerHeight || 700);
+
+          const boxW = Math.max(250, Math.floor(largura * 0.94));
+          const boxH = Math.max(90, Math.min(180, Math.floor(altura * 0.23)));
+
+          return {
+            width: Math.min(boxW, Math.floor(largura)),
+            height: Math.min(boxH, Math.floor(altura))
+          };
+        },
+        disableFlip: true,
+        // O detector nativo ainda é instável para CODE_128 em algumas versões
+        // do Safari. No iOS forçamos o decodificador interno da biblioteca.
+        experimentalFeatures: { useBarCodeDetectorIfSupported: false },
+        rememberLastUsedCamera: true,
+        ...(formatosIOS ? { formatsToSupport: formatosIOS } : {})
+      };
+
+      const config = isIOS_NF44 ? configIOSNF44 : configAndroidNF44;
+      const cameraConfig = isIOS_NF44
+        ? { facingMode: { ideal: "environment" } }
+        : { facingMode: "environment" };
+
       statusNF44_("<b>procurando o código…</b><br/>Aproxime e alinhe no retângulo.");
 
       try{
         await html5ScannerNF44.start(
-          { facingMode: "environment" },
+          cameraConfig,
           config,
           async (decodedText) => {
             if(!scannerOpenNF44) return;
@@ -3692,6 +3743,12 @@ const scannerDiv = document.getElementById("scanner");
         setTimeout(async ()=>{
           try{
             const video = document.querySelector("#html5-reader-nf44 video");
+            if(isIOS_NF44 && video){
+              video.setAttribute("playsinline", "true");
+              video.setAttribute("webkit-playsinline", "true");
+              video.muted = true;
+            }
+
             const stream = video && video.srcObject;
             if(!stream) return;
 
@@ -3705,8 +3762,16 @@ const scannerDiv = document.getElementById("scanner");
               zoomSupportedNF44 = true;
               zoomMinNF44 = caps.zoom.min;
               zoomMaxNF44 = caps.zoom.max;
-              zoomLevelNF44 = Math.min(Math.max(1.5, zoomMinNF44), zoomMaxNF44);
-              await applyZoomNF44_(zoomLevelNF44);
+              if(isIOS_NF44){
+                const ajustesAtuais = currentTrackNF44.getSettings ? currentTrackNF44.getSettings() : {};
+                zoomLevelNF44 = Math.min(
+                  Math.max(Number(ajustesAtuais.zoom || zoomMinNF44), zoomMinNF44),
+                  zoomMaxNF44
+                );
+              }else{
+                zoomLevelNF44 = Math.min(Math.max(1.5, zoomMinNF44), zoomMaxNF44);
+                await applyZoomNF44_(zoomLevelNF44);
+              }
             }
 
             if(caps.torch !== undefined){
