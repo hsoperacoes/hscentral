@@ -239,7 +239,7 @@ async function consultarNF() {
     const resp = await fetchComTimeout(
       API_URL + "?" + params.toString(),
       { method: "GET", cache: "no-store" },
-      30000
+      45000
     );
 
     const textoResposta = await resp.text();
@@ -265,7 +265,7 @@ async function consultarNF() {
     }
 
     if (precisaRecuperar) {
-      const erroRetorno = new Error("Resposta principal indisponível; iniciando recuperação segura.");
+      const erroRetorno = new Error("Resposta inválida do servidor.");
       erroRetorno.name = "RespostaPrincipalInvalida";
       erroRetorno.detalhes = [
         "status=" + resp.status,
@@ -276,7 +276,7 @@ async function consultarNF() {
       ].join(" | ");
 
       registrarErroCliente("RESPOSTA_PRINCIPAL_INVALIDA", erroRetorno, requestId, chave);
-      json = await recuperarResultadoConsulta(requestId);
+      throw erroRetorno;
     }
 
     if (!json || json.success !== true) {
@@ -310,52 +310,8 @@ async function consultarNF() {
     renderHistorico();
   } catch (err) {
     registrarErroCliente("FETCH_OU_RESPOSTA", err, requestId, chave);
-
-    // Não reenviamos o POST, pois ele pode já ter sido processado e uma nova
-    // tentativa poderia duplicar a operação. Recuperamos o resultado salvo
-    // pelo GS usando o mesmo requestId.
-    try {
-      const jsonRecuperado = await recuperarResultadoConsulta(requestId);
-
-      if (!jsonRecuperado || jsonRecuperado.success !== true) {
-        elErroMain.textContent =
-          jsonRecuperado?.message || "Não foi possível concluir a consulta. Tente novamente.";
-        return;
-      }
-
-      const data = jsonRecuperado.data || {};
-
-      if (data.jaConsultada === true) {
-        elErroMain.textContent =
-          "Esta nota já foi consultada anteriormente. Nenhum item foi enviado novamente.";
-      }
-
-      if (data.recusa === true && typeof abrirOverlayRecusa === "function") {
-        abrirOverlayRecusa(data.mensagemRecusa || "Esta nota está marcada para recusa.");
-      }
-
-      renderResultado(data);
-
-      salvarNoHistorico({
-        when: data.dataRegistro || agoraBR(),
-        chave,
-        numeroNF: data.numeroNF || "-",
-        valorTotal: data.valorTotal || "0",
-        quantidadeTotal: data.quantidadeTotal || "0",
-        status: data.status || "-"
-      });
-
-      renderHistorico();
-    } catch (erroRecuperacao) {
-      registrarErroCliente(
-        "FALHA_RECUPERACAO_RESULTADO",
-        erroRecuperacao,
-        requestId,
-        chave
-      );
-      elErroMain.textContent =
-        "Não foi possível concluir a consulta. Verifique a conexão e tente novamente.";
-    }
+    elErroMain.textContent =
+      "Não foi possível concluir a consulta. Tente novamente.";
   } finally {
     setLoading(false);
   }
