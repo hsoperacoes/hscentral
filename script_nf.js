@@ -73,7 +73,10 @@ function esperar(ms) {
 }
 
 async function recuperarResultadoConsulta(requestId) {
-  const MAX_TENTATIVAS = 6;
+  // O POST do Apps Script pode continuar sendo processado mesmo quando o
+  // navegador perde a resposta com "Failed to fetch". Damos tempo suficiente
+  // para o servidor concluir e recuperar o resultado pelo mesmo requestId.
+  const MAX_TENTATIVAS = 15;
 
   for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {
     try {
@@ -285,7 +288,52 @@ async function consultarNF() {
     renderHistorico();
   } catch (err) {
     registrarErroCliente("FETCH_OU_RESPOSTA", err, requestId, chave);
-    elErroMain.textContent = "Falha na consulta: " + (err?.message || err);
+
+    // Não reenviamos o POST, pois ele pode já ter sido processado e uma nova
+    // tentativa poderia duplicar a operação. Recuperamos o resultado salvo
+    // pelo GS usando o mesmo requestId.
+    try {
+      const jsonRecuperado = await recuperarResultadoConsulta(requestId);
+
+      if (!jsonRecuperado || jsonRecuperado.success !== true) {
+        elErroMain.textContent =
+          jsonRecuperado?.message || "Não foi possível concluir a consulta. Tente novamente.";
+        return;
+      }
+
+      const data = jsonRecuperado.data || {};
+
+      if (data.jaConsultada === true) {
+        elErroMain.textContent =
+          "Esta nota já foi consultada anteriormente. Nenhum item foi enviado novamente.";
+      }
+
+      if (data.recusa === true && typeof abrirOverlayRecusa === "function") {
+        abrirOverlayRecusa(data.mensagemRecusa || "Esta nota está marcada para recusa.");
+      }
+
+      renderResultado(data);
+
+      salvarNoHistorico({
+        when: data.dataRegistro || agoraBR(),
+        chave,
+        numeroNF: data.numeroNF || "-",
+        valorTotal: data.valorTotal || "0",
+        quantidadeTotal: data.quantidadeTotal || "0",
+        status: data.status || "-"
+      });
+
+      renderHistorico();
+    } catch (erroRecuperacao) {
+      registrarErroCliente(
+        "FALHA_RECUPERACAO_RESULTADO",
+        erroRecuperacao,
+        requestId,
+        chave
+      );
+      elErroMain.textContent =
+        "Não foi possível concluir a consulta. Verifique a conexão e tente novamente.";
+    }
   } finally {
     setLoading(false);
   }
