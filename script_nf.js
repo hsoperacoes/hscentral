@@ -72,18 +72,36 @@ function esperar(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function fetchComTimeout(url, opcoes = {}, timeoutMs = 20000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...opcoes,
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function recuperarResultadoConsulta(requestId) {
   // O POST do Apps Script pode continuar sendo processado mesmo quando o
   // navegador perde a resposta com "Failed to fetch". Damos tempo suficiente
   // para o servidor concluir e recuperar o resultado pelo mesmo requestId.
-  const MAX_TENTATIVAS = 15;
+  const MAX_TENTATIVAS = 5;
 
   for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {
     try {
       const url = API_URL + "?acao=resultado&requestId=" +
         encodeURIComponent(requestId) + "&_ts=" + Date.now();
 
-      const resp = await fetch(url, { method: "GET", cache: "no-store" });
+      const resp = await fetchComTimeout(
+        url,
+        { method: "GET", cache: "no-store" },
+        10000
+      );
       const texto = await resp.text();
       const inicio = texto.trim();
 
@@ -208,17 +226,21 @@ async function consultarNF() {
   const requestId = criarRequestId();
 
   try {
-    const form = new URLSearchParams();
-    form.append("chave", chave);
-    form.append("filial", filialAtual.codigoApi);
-    form.append("requestId", requestId);
-    form.append("userAgent", navigator.userAgent || "");
+    // A conferência usa GET para consultar o mesmo banco. Aqui seguimos o
+    // mesmo padrão para evitar a falha de redirecionamento do POST entre o
+    // GitHub Pages e o Web App do Google.
+    const params = new URLSearchParams();
+    params.append("chave", chave);
+    params.append("filial", filialAtual.codigoApi);
+    params.append("requestId", requestId);
+    params.append("userAgent", navigator.userAgent || "");
+    params.append("_ts", Date.now().toString());
 
-    const resp = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-      body: form.toString()
-    });
+    const resp = await fetchComTimeout(
+      API_URL + "?" + params.toString(),
+      { method: "GET", cache: "no-store" },
+      30000
+    );
 
     const textoResposta = await resp.text();
     const contentType = resp.headers.get("content-type") || "";
