@@ -1391,6 +1391,24 @@
     @keyframes spinV5{to{transform:rotate(360deg)}}
     .icone-final-v5{font-size:44px;color:#16a34a}
 
+
+    /* V5.1 - mensagens centrais do fluxo de conferência */
+    #overlay-status-central{
+      position:fixed;inset:0;z-index:310000;background:rgba(2,6,23,.82);
+      backdrop-filter:blur(7px);display:none;align-items:center;justify-content:center;padding:20px;
+    }
+    #overlay-status-central.ativo{display:flex}
+    .status-central-card{
+      width:min(470px,94vw);background:#fff;color:#0f172a;border-radius:26px;padding:30px 26px;
+      text-align:center;border:1px solid rgba(255,255,255,.22);box-shadow:0 24px 80px rgba(0,0,0,.38)
+    }
+    .status-central-icone{width:62px;height:62px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center}
+    .status-central-icone .spinner-v5{width:54px;height:54px}
+    .status-central-icone i{font-size:52px;color:#16a34a}
+    .status-central-card h3{margin:0 0 9px;color:#071a45;font-size:23px;font-weight:900}
+    .status-central-card p{margin:0;color:#475569;font-size:14px;line-height:1.5;font-weight:700}
+    #overlay-status-central.erro .status-central-icone i{color:#dc2626}
+
   </style>
 </head>
 <body>
@@ -1641,6 +1659,14 @@
     </div>
   </div>
 
+  <div id="overlay-status-central">
+    <div class="status-central-card">
+      <div id="status-central-icone" class="status-central-icone"><div class="spinner-v5"></div></div>
+      <h3 id="status-central-titulo">Sistema verificando a conferência...</h3>
+      <p id="status-central-texto">Aguarde enquanto o sistema consolida as leituras.</p>
+    </div>
+  </div>
+
   <div id="overlay-envio-bloqueante">
     <div class="card-envio-bloqueante">
       <div class="spinner-envio"></div>
@@ -1650,11 +1676,11 @@
   </div>
 
   <footer>
-    &copy; 2025 HS - Sistema de Conferência de Notas Fiscais. Versão 5.0
+    &copy; 2025 HS - Sistema de Conferência de Notas Fiscais. Versão 5.1
   </footer>
 
   <script>
-    const APP_VERSION = "5.0";
+    const APP_VERSION = "5.1";
 
     const URL_API = "https://script.google.com/macros/s/AKfycbx1HDzA2b478DAhi5ONS6TstKieKf4lvFM9wzib9McUrdP7Z4Xwhb6SrUt5KW1YcR3x/exec";
 
@@ -1731,6 +1757,36 @@
       if(!id){ id = gerarIdUnico_("device"); localStorage.setItem(DEVICE_ID_KEY, id); }
       return id;
     })();
+
+    function mostrarStatusCentral_(titulo, texto, tipo="loading"){
+      const overlay=document.getElementById("overlay-status-central");
+      const icone=document.getElementById("status-central-icone");
+      const tit=document.getElementById("status-central-titulo");
+      const txt=document.getElementById("status-central-texto");
+      if(!overlay) return;
+      overlay.classList.remove("erro");
+      if(tipo==="sucesso"){
+        if(icone) icone.innerHTML='<i class="fas fa-circle-check"></i>';
+      }else if(tipo==="erro"){
+        overlay.classList.add("erro");
+        if(icone) icone.innerHTML='<i class="fas fa-circle-xmark"></i>';
+      }else{
+        if(icone) icone.innerHTML='<div class="spinner-v5"></div>';
+      }
+      if(tit) tit.textContent=titulo||"Aguarde...";
+      if(txt) txt.textContent=texto||"";
+      overlay.classList.add("ativo");
+    }
+
+    function ocultarStatusCentral_(){
+      document.getElementById("overlay-status-central")?.classList.remove("ativo");
+    }
+
+    async function mostrarStatusCentralTemporario_(titulo,texto,tipo="sucesso",tempo=1800){
+      mostrarStatusCentral_(titulo,texto,tipo);
+      await new Promise(resolve=>setTimeout(resolve,tempo));
+      ocultarStatusCentral_();
+    }
 
     function setEnvioBloqueado_(ativo){
       envioEmAndamento = !!ativo;
@@ -2418,16 +2474,22 @@
     }
 
     async function fazerConferencia(){
-      const msg=document.getElementById("msg");
-      if(msg){msg.textContent="Sistema verificando a conferência...";msg.classList.remove("hidden");}
+      mostrarStatusCentral_(
+        "Sistema verificando a conferência...",
+        "Aguarde enquanto o sistema sincroniza e consolida todas as leituras.",
+        "loading"
+      );
       try{
         await concluirGravacoesPendentesAntesEnvio_();
       }catch(e){
-        if(msg) msg.classList.add("hidden");
-        alert("Ainda existem leituras aguardando sincronização. Verifique a internet e tente novamente.");
+        await mostrarStatusCentralTemporario_(
+          "Não foi possível concluir a verificação",
+          "Ainda existem leituras aguardando sincronização. Verifique a internet e tente novamente.",
+          "erro",
+          2400
+        );
         return;
       }
-      if(msg) msg.classList.add("hidden");
       // 🔧 CORREÇÃO: antes, o modal de divergências podia abrir com itens
       // "FORA DA NOTA" mostrando "--- / --- / ---", porque a busca do código
       // real do EAN no banco (buscarEANNoBanco) é assíncrona e o modal era
@@ -2436,6 +2498,7 @@
       // ele já nasce com o código correto (ou "EAN <código>" quando o EAN
       // realmente não existe em nenhuma aba do banco).
       await garantirInfoExtras_();
+      ocultarStatusCentral_();
 
       exibindoSomenteDivergencias = true;
 
@@ -2457,7 +2520,12 @@
         abrirModal(divergencias);
       } else {
         document.getElementById("resumo-div").textContent = "Sem divergências";
-        alert("Conferência sem divergências. Todos os itens estão OK.");
+        await mostrarStatusCentralTemporario_(
+          "Conferência verificada",
+          "Todos os itens estão OK. Você já pode enviar o resultado.",
+          "sucesso",
+          1600
+        );
       }
     }
 
@@ -3392,16 +3460,10 @@ const scannerDiv = document.getElementById("scanner");
 
     async function enviarConferenciaFinal_(payload){
       const erro = document.getElementById("erro");
-      const msg = document.getElementById("msg");
       erro.textContent = "";
       let envioConcluido = false;
 
       setEnvioBloqueado_(true);
-
-      if(msg){
-        msg.textContent = "Enviando conferência...";
-        msg.classList.remove("hidden");
-      }
 
       try{
         // A partir daqui nenhuma ação, leitura ou ajuste novo é aceito.
@@ -3465,9 +3527,19 @@ const scannerDiv = document.getElementById("scanner");
         limparTela();
 
         if(Number(data.totalDivergencias ?? data.divergenciasRegistradas ?? 0) > 0){
-          alert("Conferência registrada com divergências.");
+          await mostrarStatusCentralTemporario_(
+            "Conferência enviada",
+            "A nota fiscal foi registrada com divergências. Você será direcionado para a próxima nota.",
+            "sucesso",
+            2200
+          );
         }else{
-          alert("Conferência registrada com sucesso, sem divergências.");
+          await mostrarStatusCentralTemporario_(
+            "Conferência enviada com sucesso",
+            "A nota fiscal foi registrada sem divergências. Você será direcionado para a próxima nota.",
+            "sucesso",
+            2200
+          );
         }
       }catch(err){
         console.error("Erro ao enviar conferência:", err);
@@ -3480,7 +3552,12 @@ const scannerDiv = document.getElementById("scanner");
           conferenciaEnviadaAtual = true;
           envioConcluido = true;
           limparTela();
-          alert("Conferência registrada com sucesso.");
+          await mostrarStatusCentralTemporario_(
+            "Conferência enviada com sucesso",
+            "O registro foi confirmado. Você será direcionado para a próxima nota.",
+            "sucesso",
+            2200
+          );
         }else{
           try{ await postJSON_({api:"cancelarPreparacaoFinalizacaoNF",chaveAcesso:String(payload?.chaveAcesso||""),idEnvio:String(payload?.idEnvio||"")},5000); }catch(_){ }
           exibirErroUsuario_("enviar");
@@ -3490,7 +3567,6 @@ const scannerDiv = document.getElementById("scanner");
           scannerBloqueado = false;
           iniciarSync_();
         }
-        if(msg) msg.classList.add("hidden");
         setEnvioBloqueado_(false);
 
         if(envioConcluido){
