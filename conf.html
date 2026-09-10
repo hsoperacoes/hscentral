@@ -1373,6 +1373,24 @@
       .btn-zerar-principal.fechar-erro{grid-column:auto}
     }
 
+
+
+    /* V5 - sincronização inicial e aviso de finalização remota */
+    #overlay-sync-inicial,#overlay-finalizada-remota{
+      position:fixed;inset:0;z-index:300000;background:rgba(2,6,23,.94);
+      display:none;align-items:center;justify-content:center;padding:20px;
+    }
+    #overlay-sync-inicial.ativo,#overlay-finalizada-remota.ativo{display:flex}
+    .card-v5-overlay{
+      width:min(470px,94vw);background:#fff;color:#0f172a;border-radius:24px;padding:28px;
+      text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.35)
+    }
+    .card-v5-overlay h3{margin:14px 0 8px;color:#071a45;font-size:21px}
+    .card-v5-overlay p{margin:0;color:#64748b;line-height:1.5;font-weight:700}
+    .spinner-v5{width:44px;height:44px;border:4px solid #dbe3ef;border-top-color:#2563eb;border-radius:50%;margin:0 auto;animation:spinV5 .8s linear infinite}
+    @keyframes spinV5{to{transform:rotate(360deg)}}
+    .icone-final-v5{font-size:44px;color:#16a34a}
+
   </style>
 </head>
 <body>
@@ -1607,20 +1625,36 @@
     </div>
   </div>
 
+  <div id="overlay-sync-inicial">
+    <div class="card-v5-overlay">
+      <div class="spinner-v5"></div>
+      <h3>Sincronizando dados...</h3>
+      <p>Aguarde enquanto o sistema prepara o banco de peças.</p>
+    </div>
+  </div>
+
+  <div id="overlay-finalizada-remota">
+    <div class="card-v5-overlay">
+      <div id="icone-finalizada-remota" class="icone-final-v5"><i class="fas fa-circle-check"></i></div>
+      <h3 id="titulo-finalizada-remota">Nota fiscal finalizada</h3>
+      <p id="texto-finalizada-remota">Outro conferente finalizou esta nota fiscal.</p>
+    </div>
+  </div>
+
   <div id="overlay-envio-bloqueante">
     <div class="card-envio-bloqueante">
       <div class="spinner-envio"></div>
-      <h3>Enviando conferência...</h3>
-      <p>Aguarde a conclusão. Não feche a tela e não faça nenhuma ação até o sistema finalizar o registro.</p>
+      <h3>Sistema verificando a conferência...</h3>
+      <p>Aguarde a verificação e o registro final. Não feche esta tela.</p>
     </div>
   </div>
 
   <footer>
-    &copy; 2025 HS - Sistema de Conferência de Notas Fiscais. Versão 4.0
+    &copy; 2025 HS - Sistema de Conferência de Notas Fiscais. Versão 5.0
   </footer>
 
   <script>
-    const APP_VERSION = "4.2";
+    const APP_VERSION = "5.0";
 
     const URL_API = "https://script.google.com/macros/s/AKfycbx1HDzA2b478DAhi5ONS6TstKieKf4lvFM9wzib9McUrdP7Z4Xwhb6SrUt5KW1YcR3x/exec";
 
@@ -1678,6 +1712,25 @@
     let promessasAjusteManual = {};
     let timerFecharZeragem_ = null;
     let idEnvioConferenciaAtual = "";
+
+    // V5: estado confirmado no servidor + eventos locais ainda não confirmados.
+    let mapaServidor = {};
+    let eventosPendentesLocais = [];
+    let revisionServidor = 0;
+    let catalogoEANMemoria = {};
+    let dbV5 = null;
+    let flushEventosEmAndamento = false;
+    let avisoFinalizacaoAberto = false;
+    let fechamentoRemotoAtivo = false;
+    const DEVICE_ID_KEY = "hs_conf_device_id_v5";
+    const VERSION_KEY = "hs_conf_app_version";
+    const DB_NAME_V5 = "HS_CONFERENCIA_NF_V5";
+    const DB_VERSION_V5 = 1;
+    const dispositivoId = (() => {
+      let id = localStorage.getItem(DEVICE_ID_KEY);
+      if(!id){ id = gerarIdUnico_("device"); localStorage.setItem(DEVICE_ID_KEY, id); }
+      return id;
+    })();
 
     function setEnvioBloqueado_(ativo){
       envioEmAndamento = !!ativo;
@@ -1865,22 +1918,236 @@
       return acompanhada;
     }
 
-    function entrar(){
+
+    function abrirDbV5_(){
+      if(dbV5) return Promise.resolve(dbV5);
+      return new Promise((resolve,reject)=>{
+        const req=indexedDB.open(DB_NAME_V5, DB_VERSION_V5);
+        req.onupgradeneeded=()=>{
+          const db=req.result;
+          if(!db.objectStoreNames.contains("catalogo")) db.createObjectStore("catalogo",{keyPath:"id"});
+          if(!db.objectStoreNames.contains("eventos")){
+            const st=db.createObjectStore("eventos",{keyPath:"idEvento"});
+            st.createIndex("chave","chave",{unique:false});
+          }
+        };
+        req.onsuccess=()=>{ dbV5=req.result; resolve(dbV5); };
+        req.onerror=()=>reject(req.error || new Error("Falha no armazenamento local."));
+      });
+    }
+
+    async function dbSalvarCatalogo_(mapa,versao){
+      const db=await abrirDbV5_();
+      await new Promise((resolve,reject)=>{
+        const tx=db.transaction("catalogo","readwrite");
+        tx.objectStore("catalogo").put({id:"global",versao:versao||"",mapa,atualizadoEm:Date.now()});
+        tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
+      });
+    }
+
+    async function dbLerCatalogo_(){
+      const db=await abrirDbV5_();
+      return await new Promise((resolve,reject)=>{
+        const req=db.transaction("catalogo","readonly").objectStore("catalogo").get("global");
+        req.onsuccess=()=>resolve(req.result||null); req.onerror=()=>reject(req.error);
+      });
+    }
+
+    async function dbSalvarEvento_(ev){
+      const db=await abrirDbV5_();
+      await new Promise((resolve,reject)=>{
+        const tx=db.transaction("eventos","readwrite"); tx.objectStore("eventos").put(ev);
+        tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
+      });
+    }
+
+    async function dbEventosChave_(chave){
+      const db=await abrirDbV5_();
+      return await new Promise((resolve,reject)=>{
+        const req=db.transaction("eventos","readonly").objectStore("eventos").index("chave").getAll(chave);
+        req.onsuccess=()=>resolve(req.result||[]); req.onerror=()=>reject(req.error);
+      });
+    }
+
+    async function dbExcluirEventos_(ids){
+      if(!ids || !ids.length) return;
+      const db=await abrirDbV5_();
+      await new Promise((resolve,reject)=>{
+        const tx=db.transaction("eventos","readwrite"), st=tx.objectStore("eventos");
+        ids.forEach(id=>st.delete(id)); tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
+      });
+    }
+
+    async function dbExcluirEventosChave_(chave){
+      const eventos=await dbEventosChave_(chave);
+      await dbExcluirEventos_(eventos.map(e=>e.idEvento));
+    }
+
+    function normalizarMapaCliente_(mapa){
+      const out={};
+      Object.keys(mapa||{}).forEach(ean=>{
+        const q=Math.max(0,Number(mapa[ean]||0)); if(q>0) out[String(ean)]=q;
+      });
+      return out;
+    }
+
+    function recalcularMapaVisual_(){
+      const combinado=normalizarMapaCliente_(mapaServidor);
+      eventosPendentesLocais.slice().sort((a,b)=>Number(a.ts||0)-Number(b.ts||0)).forEach(ev=>{
+        const ean=String(ev.ean||""); if(!ean) return;
+        const nova=Math.max(0,Number(combinado[ean]||0)+Number(ev.delta||0));
+        if(nova<=0) delete combinado[ean]; else combinado[ean]=nova;
+      });
+      mapaScan=combinado;
+      ultimoSyncHash=_hashMapa_(mapaScan);
+    }
+
+    async function carregarPendentesLocais_(chave){
+      eventosPendentesLocais=await dbEventosChave_(chave);
+      recalcularMapaVisual_();
+    }
+
+    async function sincronizarCatalogoInicial_(){
+      const overlay=document.getElementById("overlay-sync-inicial");
+      overlay?.classList.add("ativo");
+      try{
+        const resp=await fetch(`${URL_API}?api=catalogoEAN&v=${APP_VERSION}&t=${Date.now()}`);
+        if(!resp.ok) throw new Error("catalogo");
+        const data=await resp.json();
+        if(!data || !data.success || !Array.isArray(data.itens)) throw new Error("catalogo");
+        const mapa={};
+        data.itens.forEach(r=>{
+          if(!Array.isArray(r) || !r[0]) return;
+          mapa[String(r[0])]={codigo:r[1]||"---",cor:r[2]||"---",tamanho:r[3]||"---"};
+        });
+        catalogoEANMemoria=mapa;
+        cacheInfoEAN=Object.assign({},mapa);
+        await dbSalvarCatalogo_(mapa,data.versaoCatalogo||"");
+        return true;
+      }catch(e){
+        try{
+          const salvo=await dbLerCatalogo_();
+          if(salvo && salvo.mapa && Object.keys(salvo.mapa).length){
+            catalogoEANMemoria=salvo.mapa; cacheInfoEAN=Object.assign({},salvo.mapa); return true;
+          }
+        }catch(_){ }
+        return false;
+      }finally{ overlay?.classList.remove("ativo"); }
+    }
+
+    async function registrarEventoLocal_(ean,delta,tipo){
+      const chave=chaveAtualAberta_();
+      if(chave.length!==44) return false;
+      const ev={
+        idEvento:gerarIdUnico_(tipo||"evt"), chave, ean:String(ean), delta:Number(delta),
+        conferente:conferenteAtual||"Usuário", dispositivo:dispositivoId, ts:Date.now()
+      };
+      // Persistência local acontece ANTES da tela confirmar a alteração.
+      await dbSalvarEvento_(ev);
+      eventosPendentesLocais.push(ev);
+      recalcularMapaVisual_();
+      resultadoConferenciaAtual=null;
+      atualizarKPIs();
+      renderizarListaAtual_(!document.getElementById("btn-enviar").classList.contains("hidden"));
+      // Envio é desacoplado da UI.
+      setTimeout(()=>flushEventosPendentes_().catch(()=>{}),0);
+      return true;
+    }
+
+    async function flushEventosPendentes_(forcar=false){
+      if(flushEventosEmAndamento || !cabecalhoAtual) return false;
+      if(!eventosPendentesLocais.length) return true;
+      flushEventosEmAndamento=true;
+      const chave=chaveAtualAberta_();
+      const lote=eventosPendentesLocais.slice(0,200);
+      try{
+        const data=await postJSON_({
+          api:"registrarEventosLote", chaveAcesso:chave, conferente:conferenteAtual||"Usuário",
+          dispositivo:dispositivoId,
+          eventos:lote.map(e=>({idEvento:e.idEvento,ean:e.ean,delta:e.delta,conferente:e.conferente,dispositivo:e.dispositivo,ts:e.ts}))
+        }, forcar?20000:10000);
+        if(data && data.jaConferida){ await tratarFinalizacaoRemota_(data.finalizadoPor||"Outro conferente"); return false; }
+        if(!data || !data.success) return false;
+        const ids=new Set(data.confirmados||[]);
+        if(ids.size){
+          await dbExcluirEventos_(Array.from(ids));
+          eventosPendentesLocais=eventosPendentesLocais.filter(e=>!ids.has(e.idEvento));
+        }
+        mapaServidor=normalizarMapaCliente_(data.bipes||mapaServidor);
+        revisionServidor=Math.max(revisionServidor,Number(data.revision||0));
+        recalcularMapaVisual_();
+        resultadoConferenciaAtual=null;
+        atualizarKPIs();
+        renderizarListaAtual_(!document.getElementById("btn-enviar").classList.contains("hidden"));
+        return true;
+      }catch(e){ return false; }
+      finally{ flushEventosEmAndamento=false; }
+    }
+
+
+    async function tratarFechamentoRemoto_(nome){
+      if(!cabecalhoAtual || envioEmAndamento || fechamentoRemotoAtivo) return;
+      fechamentoRemotoAtivo=true;
+      scannerBloqueado=true;
+      try{ await pararScannerAtual_(); }catch(_){ }
+      // Entrega imediatamente tudo que já havia sido bipado antes de bloquear este aparelho.
+      await flushEventosPendentes_(true).catch(()=>{});
+      const overlay=document.getElementById("overlay-finalizada-remota");
+      const titulo=document.getElementById("titulo-finalizada-remota");
+      const icone=document.getElementById("icone-finalizada-remota");
+      const txt=document.getElementById("texto-finalizada-remota");
+      if(icone) icone.innerHTML='<div class="spinner-v5"></div>';
+      if(titulo) titulo.textContent="Conferência sendo finalizada";
+      if(txt) txt.textContent=`O conferente ${nome || "outro usuário"} está finalizando esta nota. Aguarde.`;
+      overlay?.classList.add("ativo");
+    }
+
+    function cancelarFechamentoRemoto_(){
+      if(!fechamentoRemotoAtivo || avisoFinalizacaoAberto) return;
+      fechamentoRemotoAtivo=false;
+      const overlay=document.getElementById("overlay-finalizada-remota");
+      overlay?.classList.remove("ativo");
+      scannerBloqueado=false;
+    }
+
+    async function tratarFinalizacaoRemota_(nome){
+      if(avisoFinalizacaoAberto || !cabecalhoAtual || envioEmAndamento) return;
+      avisoFinalizacaoAberto=true;
+      fechamentoRemotoAtivo=false;
+      pararSync_();
+      scannerBloqueado=true;
+      try{ await pararScannerAtual_(); }catch(_){ }
+      const overlay=document.getElementById("overlay-finalizada-remota");
+      const titulo=document.getElementById("titulo-finalizada-remota");
+      const icone=document.getElementById("icone-finalizada-remota");
+      const txt=document.getElementById("texto-finalizada-remota");
+      if(icone) icone.innerHTML='<i class="fas fa-circle-check"></i>';
+      if(titulo) titulo.textContent="Nota fiscal finalizada";
+      if(txt) txt.textContent=`O conferente ${nome || "outro usuário"} finalizou esta nota fiscal. Você será direcionado para a próxima nota.`;
+      overlay?.classList.add("ativo");
+      const chave=chaveAtualAberta_();
+      try{ await dbExcluirEventosChave_(chave); }catch(_){ }
+      setTimeout(()=>{
+        overlay?.classList.remove("ativo");
+        limparTela();
+        avisoFinalizacaoAberto=false;
+        const input=document.getElementById("chave"); if(input){input.value="";input.focus();}
+      },2800);
+    }
+    async function entrar(){
       const f = document.getElementById("codigo-filial").value.trim();
       const nome = document.getElementById("nome-conferente").value.trim();
-
       if(!filiaisValidas.includes(f)){ alert("Código de filial inválido."); return; }
       if(!nome){ alert("Informe o nome do conferente."); return; }
 
-      filialAtual = f;
-      conferenteAtual = nome;
+      filialAtual=f; conferenteAtual=nome;
+      const ok=await sincronizarCatalogoInicial_();
+      if(!ok){ alert("Não foi possível sincronizar os dados agora. Tente novamente."); filialAtual=""; conferenteAtual=""; return; }
 
-      localStorage.setItem("filial_conf_nf", f);
-      localStorage.setItem("conferente_conf_nf", nome);
-
+      localStorage.setItem("filial_conf_nf",f);
+      localStorage.setItem("conferente_conf_nf",nome);
       document.getElementById("login").classList.add("hidden");
       document.getElementById("principal").classList.remove("hidden");
-
       atualizarInfoTopo_();
     }
 
@@ -1900,85 +2167,41 @@
       localStorage.removeItem("conferente_conf_nf");
       location.reload();
     }
-
     async function carregarNF(){
       const chave = document.getElementById("chave").value.trim();
       const erro = document.getElementById("erro");
       const loading = document.getElementById("loading");
       const painel = document.getElementById("painel");
-
       if(chave.length !== 44){ alert("A chave deve ter 44 dígitos."); return; }
       if(bloquearTrocaNFSePendente_(chave)) return;
 
-      erro.textContent = "";
-      loading.classList.remove("hidden");
+      erro.textContent=""; loading.classList.remove("hidden");
       if(!existeConferenciaAbertaSemEnvio_()) painel.classList.add("hidden");
-
-      pararSync_();
-      document.getElementById("kpi-sync").textContent = "—";
-
-      try {
-        const resp = await fetch(`${URL_API}?api=consultarConferenciaNF&filial=${encodeURIComponent(filialAtual)}&chave=${encodeURIComponent(chave)}&v=${APP_VERSION}&t=${Date.now()}`);
-        const data = await resp.json();
-        if(!data.success) throw new Error(data.message || "Erro ao buscar NF.");
-
-        const cabecalhoRecebido = data.cabecalho;
-
-        if (data.jaConferida) {
-          alert("⚠️ Esta nota fiscal já consta como conferida.");
-          painel.classList.add("hidden");
-          const chaveJaConferida = document.getElementById("chave");
-          chaveJaConferida.readOnly = false;
-          chaveJaConferida.select();
-          return;
+      pararSync_(); document.getElementById("kpi-sync").textContent="—";
+      try{
+        const resp=await fetch(`${URL_API}?api=consultarConferenciaNF&filial=${encodeURIComponent(filialAtual)}&chave=${encodeURIComponent(chave)}&v=${APP_VERSION}&t=${Date.now()}`);
+        const data=await resp.json();
+        if(!data.success) throw new Error(data.message||"Erro ao buscar NF.");
+        if(data.jaConferida){
+          alert("⚠️ Esta nota fiscal já consta como conferida."); painel.classList.add("hidden");
+          const inp=document.getElementById("chave"); inp.readOnly=false; inp.select(); return;
         }
 
-        cabecalhoAtual = cabecalhoRecebido;
-        conferenciaEnviadaAtual = false;
-        idEnvioConferenciaAtual = gerarIdUnico_("envio");
-        const chaveInputAtiva = document.getElementById("chave");
-        if(chaveInputAtiva) chaveInputAtiva.readOnly = true;
+        cabecalhoAtual=data.cabecalho; conferenciaEnviadaAtual=false; idEnvioConferenciaAtual=gerarIdUnico_("envio");
+        const inp=document.getElementById("chave"); if(inp) inp.readOnly=true;
+        itensNF=data.itens||[];
+        mapaServidor=normalizarMapaCliente_(data.bipesSync||{});
+        revisionServidor=Number(data.revision||0);
+        await carregarPendentesLocais_(chave);
+        // Se o aparelho tinha eventos de uma sessão anterior, tenta entregá-los sem travar a abertura.
+        if(eventosPendentesLocais.length) setTimeout(()=>flushEventosPendentes_().catch(()=>{}),0);
 
-        itensNF = data.itens || [];
-
-        // 🔧 CORREÇÃO: antes disso, "mapaScan" era zerado aqui e só era
-        // preenchido de verdade quando o sincronismo automático rodava pela
-        // primeira vez (cerca de 1s depois). Nesse intervalo a tela mostrava
-        // TODOS os itens como "FALTANDO 100%", mesmo já tendo sido bipados,
-        // causando confusão para quem confere. Agora usamos direto o que o
-        // próprio servidor já retornou em "jaEscaneado" (ele já busca isso do
-        // banco antes de responder), então a lista nasce certa, sem flash.
-        mapaScan = {};
-        itensNF.forEach(i => {
-          const eanItem = String(i.ean || "").trim();
-          const qtdJaEscaneada = Number(i.jaEscaneado || 0);
-          if(eanItem && qtdJaEscaneada > 0){
-            mapaScan[eanItem] = qtdJaEscaneada;
-          }
-        });
-
-        resultadoConferenciaAtual = null;
-        exibindoSomenteDivergencias = false;
-
-        document.getElementById("resumo-nf").innerHTML = `
-          <strong>NF:</strong> ${cabecalhoAtual.numeroNF} |
-          <strong>Emitente:</strong> ${cabecalhoAtual.nomeEmitente} |
-          <strong>Data:</strong> ${cabecalhoAtual.dataEmissao}
-        `;
-
-        atualizarKPIs();
-        document.getElementById("painel").classList.remove("hidden");
-        document.getElementById("btn-enviar").classList.add("hidden");
-        renderizarListaAtual_(false);
-
+        resultadoConferenciaAtual=null; exibindoSomenteDivergencias=false;
+        document.getElementById("resumo-nf").innerHTML=`<strong>NF:</strong> ${cabecalhoAtual.numeroNF} | <strong>Emitente:</strong> ${cabecalhoAtual.nomeEmitente} | <strong>Data:</strong> ${cabecalhoAtual.dataEmissao}`;
+        atualizarKPIs(); painel.classList.remove("hidden"); document.getElementById("btn-enviar").classList.add("hidden"); renderizarListaAtual_(false);
         iniciarSync_();
-      } catch(err) {
-        console.error("Erro ao carregar NF:", err);
-        if(!cabecalhoAtual) painel.classList.add("hidden");
-        exibirErroUsuario_("carregar");
-      } finally {
-        loading.classList.add("hidden");
-      }
+      }catch(err){ console.error("Erro ao carregar NF:",err); if(!cabecalhoAtual) painel.classList.add("hidden"); exibirErroUsuario_("carregar"); }
+      finally{ loading.classList.add("hidden"); }
     }
 
     function atualizarKPIs(){
@@ -2195,6 +2418,16 @@
     }
 
     async function fazerConferencia(){
+      const msg=document.getElementById("msg");
+      if(msg){msg.textContent="Sistema verificando a conferência...";msg.classList.remove("hidden");}
+      try{
+        await concluirGravacoesPendentesAntesEnvio_();
+      }catch(e){
+        if(msg) msg.classList.add("hidden");
+        alert("Ainda existem leituras aguardando sincronização. Verifique a internet e tente novamente.");
+        return;
+      }
+      if(msg) msg.classList.add("hidden");
       // 🔧 CORREÇÃO: antes, o modal de divergências podia abrir com itens
       // "FORA DA NOTA" mostrando "--- / --- / ---", porque a busca do código
       // real do EAN no banco (buscarEANNoBanco) é assíncrona e o modal era
@@ -2441,88 +2674,25 @@
       };
       requestAnimationFrame(() => confirmar.focus());
     }
-
     async function limparScans(){
       if(!cabecalhoAtual) return;
-
-      const chave = String(cabecalhoAtual.chaveAcesso || "").trim();
-      const nf = cabecalhoAtual.numeroNF || chave;
-
-      const confirmado = await solicitarConfirmacaoZerar_(nf);
-      if(!confirmado) return;
-
+      const chave=chaveAtualAberta_(), nf=cabecalhoAtual.numeroNF||chave;
+      const confirmado=await solicitarConfirmacaoZerar_(nf); if(!confirmado) return;
       mostrarProcessandoZeragem_();
-
       try{
-        await concluirGravacoesPendentesAntesEnvio_();
-        const data = await postJSONComRetrySilencioso_({
-          api:"zerarSyncNF",
-          chaveAcesso: chave
-        });
-        if(!data || !data.success){
-          throw new Error(data?.message || "Não foi possível zerar a contagem.");
-        }
-        mapaScan = {};
-        ultimoSyncHash = _hashMapa_(mapaScan);
-        resultadoConferenciaAtual = null;
-        idEnvioConferenciaAtual = gerarIdUnico_("envio");
-        eventosRetryBipe = {};
-        eventosRetryAjuste = {};
-        ajustesManuaisPendentes = {};
-        valoresAjusteManualPendentes = {};
-        valoresAjusteManualConfirmados = {};
-        atualizarKPIs();
-        renderizarListaAtual_(false);
-        mostrarResultadoZeragem_(true);
-      }catch(e){
-        console.error("Erro ao zerar conferência:", e);
-        mostrarResultadoZeragem_(false);
-      }
+        await dbExcluirEventosChave_(chave); eventosPendentesLocais=[];
+        const data=await postJSONComRetrySilencioso_({api:"zerarSyncNF",chaveAcesso:chave},2,18000);
+        if(!data||!data.success) throw new Error("zerar");
+        mapaServidor={}; revisionServidor=0; recalcularMapaVisual_(); resultadoConferenciaAtual=null;
+        idEnvioConferenciaAtual=gerarIdUnico_("envio"); atualizarKPIs(); renderizarListaAtual_(false); mostrarResultadoZeragem_(true);
+      }catch(e){ console.error("Erro ao zerar conferência:",e); mostrarResultadoZeragem_(false); }
     }
-
     async function ajustarQtdServidor(ean, delta){
-      if(!cabecalhoAtual || !cabecalhoAtual.chaveAcesso){
-        alert("Carregue a NF primeiro.");
-        return;
-      }
-
-      ean = String(ean || "").trim();
-      delta = Number(delta || 0);
-      if(!ean || !delta) return;
-      if(promessasAjusteManual[ean]) return;
-
-      const atualTela = Number(mapaScan[ean] || 0);
-      const novaQtdTela = Math.max(0, atualTela + delta);
-      if(novaQtdTela === atualTela) return;
-
-      // Guarda a última quantidade confirmada antes da sequência rápida.
-      if(valoresAjusteManualConfirmados[ean] === undefined){
-        valoresAjusteManualConfirmados[ean] = atualTela;
-      }
-
-      // Atualiza a tela imediatamente em TODOS os cliques, sem esperar o banco.
-      if(novaQtdTela <= 0) delete mapaScan[ean];
-      else mapaScan[ean] = novaQtdTela;
-
-      valoresAjusteManualPendentes[ean] = novaQtdTela;
-
-      // Bloqueia sync visual enquanto o usuário está clicando e enquanto a gravação não termina.
-      bloqueioSyncAte = Date.now() + 7000;
-      ultimoSyncHash = _hashMapa_(mapaScan);
-      resultadoConferenciaAtual = null;
-
-      atualizarKPIs();
-      const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
-      renderizarListaAtual_(jaConferido);
-
-      // Debounce: vários cliques rápidos viram UMA gravação final no banco.
-      if(timersAjusteManual[ean]){
-        clearTimeout(timersAjusteManual[ean]);
-      }
-
-      timersAjusteManual[ean] = setTimeout(() => {
-        dispararAjusteManual_(ean);
-      }, 450);
+      if(!cabecalhoAtual || !cabecalhoAtual.chaveAcesso){ alert("Carregue a NF primeiro."); return; }
+      ean=String(ean||"").trim(); delta=Number(delta||0); if(!ean||!delta) return;
+      const atual=Number(mapaScan[ean]||0); if(delta<0 && atual<=0) return;
+      try{ await registrarEventoLocal_(ean,delta,"ajuste"); }
+      catch(e){ alert("Não foi possível salvar o ajuste neste aparelho. Tente novamente."); }
     }
 
     function dispararAjusteManual_(ean){
@@ -2616,28 +2786,16 @@
         delete timersAjusteManual[ean];
       }
     }
-
     async function concluirGravacoesPendentesAntesEnvio_(){
-      // Força imediatamente os ajustes que ainda estavam aguardando o debounce.
-      const eansAgendados = Object.keys(timersAjusteManual || {});
-      eansAgendados.forEach(ean => {
-        clearTimeout(timersAjusteManual[ean]);
-        delete timersAjusteManual[ean];
-      });
-
-      for(const ean of eansAgendados){
-        const ok = await dispararAjusteManual_(ean);
-        if(ok === false) throw new Error("Não foi possível concluir uma gravação pendente.");
+      // O fechamento só continua quando TODOS os eventos locais estiverem confirmados no servidor.
+      const limite=Date.now()+30000;
+      while(eventosPendentesLocais.length && Date.now()<limite){
+        await flushEventosPendentes_(true);
+        if(eventosPendentesLocais.length) await new Promise(r=>setTimeout(r,450));
       }
-
-      // Aguarda apenas requisições que já estavam em andamento. Na utilização
-      // normal este conjunto fica vazio e não acrescenta espera ao envio.
-      while(gravacoesPendentes.size){
-        const resultados = await Promise.allSettled(Array.from(gravacoesPendentes));
-        if(resultados.some(r => r.status === "rejected")) {
-          throw new Error("Não foi possível concluir uma gravação pendente.");
-        }
-      }
+      if(eventosPendentesLocais.length) throw new Error("Existem leituras ainda não sincronizadas.");
+      await puxarSyncAgora_(true);
+      if(eventosPendentesLocais.length) throw new Error("Existem leituras ainda não sincronizadas.");
     }
 
     function beepOk(){
@@ -2723,19 +2881,13 @@
       }
       return "";
     }
-
     function iniciarSync_(){
       if(!cabecalhoAtual || !cabecalhoAtual.chaveAcesso) return;
-      if(syncTimer){ clearInterval(syncTimer); syncTimer = null; }
-      syncAtivo = true;
-      // ✅ Já partimos com o hash do que veio no carregamento da NF (mapaScan
-      // pré-preenchido), então esse primeiro puxarSyncAgora_() não causa mais
-      // o "flash" de FALTANDO. Ele continua sendo chamado imediatamente para
-      // descobrir o quanto antes itens "FORA DA NOTA" (EANs bipados que não
-      // pertencem a esta NF), que só vêm por este endpoint de sync.
-      ultimoSyncHash = _hashMapa_(mapaScan);
+      if(syncTimer){ clearInterval(syncTimer); syncTimer=null; }
+      syncAtivo=true;
+      // Primeiro ciclo imediatamente; depois lote/poll em segundo plano. Nunca substitui eventos locais pendentes.
       puxarSyncAgora_();
-      syncTimer = setInterval(() => puxarSyncAgora_(), 1100);
+      syncTimer=setInterval(()=>puxarSyncAgora_(),1800);
     }
 
     function pararSync_(){
@@ -2750,66 +2902,36 @@
       for(const k of keys){ s += k + ":" + String(obj[k]) + ";"; }
       return s;
     }
-
     async function garantirInfoExtras_(){
-      const eansNaNota = new Set(itensNF.map(i => String(i.ean || "").trim()).filter(Boolean));
-      const pendentes = Object.keys(mapaScan || {}).filter(ean => !eansNaNota.has(ean) && !cacheInfoEAN[ean]);
-      if(!pendentes.length) return;
-      await buscarEANsNoBanco(pendentes);
+      Object.keys(mapaScan||{}).forEach(ean=>{
+        if(itensNF.some(i=>String(i.ean||"").trim()===ean)) return;
+        if(!cacheInfoEAN[ean]) cacheInfoEAN[ean]=catalogoEANMemoria[ean]||{codigo:"EAN "+ean,cor:"---",tamanho:"---"};
+      });
     }
-
     async function puxarSyncAgora_(forcar = false){
       if(!syncAtivo || !cabecalhoAtual) return;
-      if(syncEmAndamento) return;
-      if(!forcar && Date.now() < bloqueioSyncAte) return;
-
-      const chave = String(cabecalhoAtual.chaveAcesso || "").trim();
-      if(!chave || chave.length !== 44) return;
-      const sequencia = ++sequenciaSync;
-      syncEmAndamento = true;
-
+      if(syncEmAndamento && !forcar) return;
+      const chave=chaveAtualAberta_(); if(chave.length!==44) return;
+      syncEmAndamento=true;
       try{
-        const resp = await fetch(`${URL_API}?api=sincronizarBipes&chave=${encodeURIComponent(chave)}&v=${APP_VERSION}&t=${Date.now()}`);
-        if(!resp.ok) throw new Error("sync fail");
-        const data = await resp.json();
-        if(!data || !data.success) throw new Error("sync fail");
-        if(!syncAtivo || !cabecalhoAtual || String(cabecalhoAtual.chaveAcesso || "").trim() !== chave) return;
-        if(!forcar && Date.now() < bloqueioSyncAte) return;
-        if(sequencia < ultimaSequenciaSyncAplicada) return;
-        ultimaSequenciaSyncAplicada = sequencia;
-
-        const bipes = data.bipes || {};
-        const hash = _hashMapa_(bipes);
-
-        if(hash !== ultimoSyncHash){
-          ultimoSyncHash = hash;
-
-          // ✅ Se houver ajuste manual pendente, não deixa o sync antigo sobrescrever esse EAN.
-          const mesclado = Object.assign({}, bipes);
-          Object.keys(ajustesManuaisPendentes || {}).forEach(ean => {
-            if(mapaScan[ean] != null) mesclado[ean] = mapaScan[ean];
-          });
-
-          mapaScan = mesclado;
-          Object.keys(valoresAjusteManualConfirmados || {}).forEach(ean => {
-            if(!ajustesManuaisPendentes[ean]) {
-              valoresAjusteManualConfirmados[ean] = Number(mapaScan[ean] || 0);
-            }
-          });
-          resultadoConferenciaAtual = null;
-          await garantirInfoExtras_();
-          atualizarKPIs();
-
-          const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
-          renderizarListaAtual_(jaConferido);
-        }
-
-        document.getElementById("kpi-sync").textContent = "OK";
-      }catch(e){
-        document.getElementById("kpi-sync").textContent = "OFF";
-      }finally{
-        syncEmAndamento = false;
-      }
+        // Primeiro entrega o que este aparelho já gravou localmente.
+        if(eventosPendentesLocais.length) await flushEventosPendentes_(forcar);
+        const resp=await fetch(`${URL_API}?api=sincronizarBipes&chave=${encodeURIComponent(chave)}&v=${APP_VERSION}&t=${Date.now()}`);
+        if(!resp.ok) throw new Error("sync");
+        const data=await resp.json(); if(!data||!data.success) throw new Error("sync");
+        if(!cabecalhoAtual || chaveAtualAberta_()!==chave) return;
+        if(data.jaConferida){ await tratarFinalizacaoRemota_(data.finalizadoPor||"Outro conferente"); return; }
+        const fechamentoDeOutro = data.fechamentoAtivo && String(data.dispositivoFinalizador||"") !== String(dispositivoId);
+        if(fechamentoDeOutro) await tratarFechamentoRemoto_(data.finalizador||"Outro conferente");
+        else if(fechamentoRemotoAtivo) cancelarFechamentoRemoto_();
+        const rev=Number(data.revision||0);
+        // Resposta velha nunca retrocede o estado confirmado.
+        if(rev>=revisionServidor){ mapaServidor=normalizarMapaCliente_(data.bipes||{}); revisionServidor=rev; }
+        recalcularMapaVisual_(); resultadoConferenciaAtual=null; await garantirInfoExtras_(); atualizarKPIs();
+        renderizarListaAtual_(!document.getElementById("btn-enviar").classList.contains("hidden"));
+        document.getElementById("kpi-sync").textContent="OK";
+      }catch(e){ document.getElementById("kpi-sync").textContent="OFF"; }
+      finally{ syncEmAndamento=false; }
     }
 
     async function abrirLeitor(modo){
@@ -3015,17 +3137,16 @@ const scannerDiv = document.getElementById("scanner");
             Toque em <span class="scanner-info-highlight">QUALQUER LUGAR</span> da tela para continuar.
           `;
 
-          // ✅ BEEP IMEDIATO (não espera servidor)
-          beepOk();
-
-          // ✅ Notificação visual
-          _mostrarNotificacaoEAN_(ean13);
 
           try{
             // mantém await aqui (pode demorar, mas já travou e já bipou)
             const registrado = await rastrearGravacao_(
               registrarBipeServidor_(ean13, { confirmarExtra: true })
             );
+            if(registrado){
+              beepOk();
+              _mostrarNotificacaoEAN_(ean13);
+            }
             if(!registrado){
               scannerBloqueado = false;
               scannerView.classList.remove("scanner-paused");
@@ -3086,123 +3207,36 @@ const scannerDiv = document.getElementById("scanner");
         btnConfirmar.onclick = () => limpar(true);
       });
     }
-
     async function prepararEANParaRegistro_(ean, pedirConfirmacaoExtra){
-      ean = String(ean || "").trim();
-      if(!ean || ean.length !== 13 || !isValidEAN13(ean)){
-        throw new Error("EAN inválido.");
-      }
-      if(!prefixoEANValido(ean)){
-        throw new Error("Código fora do padrão das peças. Bipe novamente.");
-      }
-
-      const naNota = itensNF.some(i => String(i.ean || "").trim() === ean);
+      ean=String(ean||"").trim();
+      if(!ean || ean.length!==13 || !isValidEAN13(ean)) throw new Error("EAN inválido.");
+      if(!prefixoEANValido(ean)) throw new Error("Código fora do padrão das peças. Bipe novamente.");
+      const naNota=itensNF.some(i=>String(i.ean||"").trim()===ean);
       if(naNota) return true;
-
-      if(!cacheInfoEAN[ean]){
-        await buscarEANNoBanco(ean);
-      }
-
-      if(pedirConfirmacaoExtra){
-        const confirmado = await confirmarEANExtra_(ean, cacheInfoEAN[ean]);
-        if(!confirmado) return false;
-      }
-
+      if(!cacheInfoEAN[ean]) cacheInfoEAN[ean]=catalogoEANMemoria[ean]||{codigo:"EAN "+ean,cor:"---",tamanho:"---"};
+      if(pedirConfirmacaoExtra){ const confirmado=await confirmarEANExtra_(ean,cacheInfoEAN[ean]); if(!confirmado) return false; }
       return true;
     }
-
     async function registrarBipeServidor_(ean, opcoes = {}){
       if(!cabecalhoAtual || !cabecalhoAtual.chaveAcesso) return false;
       if(bipeRequestAtivo) return false;
-
-      const pedirConfirmacaoExtra = opcoes.confirmarExtra !== false;
-      const podeRegistrar = await prepararEANParaRegistro_(ean, pedirConfirmacaoExtra);
-      if(!podeRegistrar) return false;
-
-      ean = String(ean || "").trim();
-      const valorAnterior = Number(mapaScan[ean] || 0);
-      const idEvento = eventosRetryBipe[ean] || gerarIdUnico_("bipe");
-
-      const payload = {
-        api: "registrarBipeIndividual",
-        chaveAcesso: String(cabecalhoAtual.chaveAcesso || "").trim(),
-        ean,
-        qtd: 1,
-        idEvento,
-        conferente: conferenteAtual || "Usuário"
-      };
-
-      bipeRequestAtivo = true;
-      bloqueioSyncAte = Date.now() + 20000;
-      mapaScan[ean] = valorAnterior + 1;
-      ultimoSyncHash = _hashMapa_(mapaScan);
-      resultadoConferenciaAtual = null;
-      atualizarKPIs();
-      renderizarListaAtual_(!document.getElementById("btn-enviar").classList.contains("hidden"));
-
+      const pedirConfirmacaoExtra=opcoes.confirmarExtra!==false;
+      bipeRequestAtivo=true;
       try{
-        const data = await postJSONComRetrySilencioso_(payload, 2, 12000);
-        if(data && data.success){
-          if(data.bipes) mapaScan = data.bipes || {};
-          else mapaScan[ean] = Math.max(0, Number(data.qtdAtual ?? (valorAnterior + 1)));
-          delete eventosRetryBipe[ean];
-          bloqueioSyncAte = Date.now() + 500;
-          ultimoSyncHash = _hashMapa_(mapaScan);
-          resultadoConferenciaAtual = null;
-
-          await garantirInfoExtras_();
-          atualizarKPIs();
-          const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
-          renderizarListaAtual_(jaConferido);
-
-          return true;
-        }else{
-          throw new Error(data?.message || "Falha ao registrar bipe.");
-        }
-      }catch(e){
-        eventosRetryBipe[ean] = idEvento;
-        if(valorAnterior <= 0) delete mapaScan[ean];
-        else mapaScan[ean] = valorAnterior;
-        ultimoSyncHash = _hashMapa_(mapaScan);
-        atualizarKPIs();
-        renderizarListaAtual_(!document.getElementById("btn-enviar").classList.contains("hidden"));
-        console.error("Falha ao registrar bipe no servidor", e);
-        throw e;
-      }finally{
-        bipeRequestAtivo = false;
-        bloqueioSyncAte = Date.now() + 350;
-      }
+        const pode=await prepararEANParaRegistro_(ean,pedirConfirmacaoExtra); if(!pode) return false;
+        await registrarEventoLocal_(String(ean).trim(),1,"bipe");
+        return true;
+      } finally { bipeRequestAtivo=false; }
     }
-
     async function buscarEANNoBanco(ean){
-      await buscarEANsNoBanco([ean]);
-      return cacheInfoEAN[String(ean || "").trim()] || null;
+      ean=String(ean||"").trim();
+      if(!cacheInfoEAN[ean]) cacheInfoEAN[ean]=catalogoEANMemoria[ean]||{codigo:"EAN "+ean,cor:"---",tamanho:"---"};
+      return cacheInfoEAN[ean];
     }
-
     async function buscarEANsNoBanco(eans){
-      const listaEans = [...new Set((eans || []).map(e => String(e || "").trim()).filter(Boolean))];
-      if(!listaEans.length) return;
-
-      const buffer = document.getElementById("buffer-ean");
-      if(buffer) buffer.classList.remove("hidden");
-      try{
-        const data = await postJSON_({
-          api:"buscarInfoEAN",
-          filial: filialAtual,
-          eans: listaEans
-        });
-        if(data.success && data.itens){
-          listaEans.forEach(ean => {
-            if(data.itens[ean]) cacheInfoEAN[ean] = data.itens[ean];
-          });
-          const jaConferido = !document.getElementById("btn-enviar").classList.contains("hidden");
-          renderizarListaAtual_(jaConferido);
-        }
-      }catch(e){
-        console.error("Falha ao buscar EAN no banco", e);
-      }finally{
-        if(buffer) buffer.classList.add("hidden");
-      }
+      [...new Set((eans||[]).map(e=>String(e||"").trim()).filter(Boolean))].forEach(ean=>{
+        if(!cacheInfoEAN[ean]) cacheInfoEAN[ean]=catalogoEANMemoria[ean]||{codigo:"EAN "+ean,cor:"---",tamanho:"---"};
+      });
     }
 
     // ✅ Clique para liberar (somente quando estiver bloqueado)
@@ -3318,6 +3352,7 @@ const scannerDiv = document.getElementById("scanner");
         totalScan: Number(document.getElementById("kpi-scan").textContent || 0),
         versaoApp: APP_VERSION,
         conferente: conferenteAtual || "Usuário",
+        dispositivo: dispositivoId,
         itens: listaFinal.map(i => ({
           ean: i.ean,
           codigo: i.codigo,
@@ -3375,6 +3410,20 @@ const scannerDiv = document.getElementById("scanner");
         await pararScannerAtual_();
         await concluirGravacoesPendentesAntesEnvio_();
 
+        // V5: avisa os demais aparelhos antes do fechamento. Eles param novos bipes
+        // e têm uma janela curta para entregar qualquer evento local já persistido.
+        const prep = await postJSONComRetrySilencioso_({
+          api:"prepararFinalizacaoNF",
+          chaveAcesso:String(payload.chaveAcesso||""),
+          idEnvio:String(payload.idEnvio||""),
+          conferente:conferenteAtual||"Usuário",
+          dispositivo:dispositivoId
+        }, 2, 10000);
+        if(prep && prep.jaConferida){ await tratarFinalizacaoRemota_(prep.finalizadoPor||"Outro conferente"); return; }
+        if(!prep || !prep.success) throw new Error("Não foi possível preparar a finalização.");
+        await new Promise(resolve=>setTimeout(resolve,2300));
+        await concluirGravacoesPendentesAntesEnvio_();
+
         // Atualiza os metadados enviados. As quantidades finais são calculadas
         // novamente pelo servidor, dentro do bloqueio da conferência.
         const listaCompleta = montarListaConferencia(true);
@@ -3408,6 +3457,8 @@ const scannerDiv = document.getElementById("scanner");
 
         conferenciaEnviadaAtual = true;
         envioConcluido = true;
+        try{ await dbExcluirEventosChave_(String(payload.chaveAcesso||"")); }catch(_){ }
+        eventosPendentesLocais = [];
 
         // Limpa a NF concluída antes de mostrar o aviso. Ao fechar o aviso,
         // o conferente já encontra o campo vazio para ler a próxima nota.
@@ -3431,6 +3482,7 @@ const scannerDiv = document.getElementById("scanner");
           limparTela();
           alert("Conferência registrada com sucesso.");
         }else{
+          try{ await postJSON_({api:"cancelarPreparacaoFinalizacaoNF",chaveAcesso:String(payload?.chaveAcesso||""),idEnvio:String(payload?.idEnvio||"")},5000); }catch(_){ }
           exibirErroUsuario_("enviar");
         }
       }finally{
@@ -3458,11 +3510,16 @@ const scannerDiv = document.getElementById("scanner");
 
       cabecalhoAtual = null;
       mapaScan = {};
+      mapaServidor = {};
+      eventosPendentesLocais = [];
+      revisionServidor = 0;
+      fechamentoRemotoAtivo = false;
+      avisoFinalizacaoAberto = false;
       itensNF = [];
       termoFiltro = "";
       exibindoSomenteDivergencias = false;
       resultadoConferenciaAtual = null;
-      cacheInfoEAN = {};
+      cacheInfoEAN = Object.assign({}, catalogoEANMemoria);
       conferenciaEnviadaAtual = false;
       idEnvioConferenciaAtual = "";
       eventosRetryBipe = {};
@@ -3833,19 +3890,29 @@ const scannerDiv = document.getElementById("scanner");
     }
 
 
-    window.addEventListener("load", ()=>{
+    window.addEventListener("load", async ()=>{
       configurarBotoesNF44();
-      configurarBotoesNF44();
+
+      // Mudança estrutural de versão: invalida login antigo e força uma navegação com cache-buster.
+      const versaoSalva=localStorage.getItem(VERSION_KEY);
+      if(versaoSalva!==APP_VERSION){
+        localStorage.setItem(VERSION_KEY,APP_VERSION);
+        localStorage.removeItem("filial_conf_nf");
+        localStorage.removeItem("conferente_conf_nf");
+        const u=new URL(location.href);
+        if(u.searchParams.get("appv")!==APP_VERSION){ u.searchParams.set("appv",APP_VERSION); location.replace(u.toString()); return; }
+      }
+
       const f = localStorage.getItem("filial_conf_nf");
       const nome = localStorage.getItem("conferente_conf_nf");
-
       if(f && filiaisValidas.includes(f) && nome){
-        filialAtual = f;
-        conferenteAtual = nome;
-
-        document.getElementById("login").classList.add("hidden");
-        document.getElementById("principal").classList.remove("hidden");
-        atualizarInfoTopo_();
+        filialAtual=f; conferenteAtual=nome;
+        const ok=await sincronizarCatalogoInicial_();
+        if(ok){
+          document.getElementById("login").classList.add("hidden");
+          document.getElementById("principal").classList.remove("hidden");
+          atualizarInfoTopo_();
+        }else{ filialAtual=""; conferenteAtual=""; }
       }
 
       document.getElementById("filtro").addEventListener("input", (e)=>{
