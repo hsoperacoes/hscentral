@@ -1687,7 +1687,7 @@
   </footer>
 
   <script>
-    const APP_VERSION = "5.3";
+    const APP_VERSION = "5.4";
 
     const URL_API = "https://script.google.com/macros/s/AKfycbx1HDzA2b478DAhi5ONS6TstKieKf4lvFM9wzib9McUrdP7Z4Xwhb6SrUt5KW1YcR3x/exec";
 
@@ -1933,6 +1933,9 @@
     let valoresAjusteManualPendentes = {};
     let valoresAjusteManualConfirmados = {};
     let resultadoConferenciaAtual = null;
+    // V5.4: enquanto o usuário clica em Fazer Conferência, respostas de sync
+    // podem atualizar o estado interno, mas NUNCA redesenham a contagem no meio da verificação.
+    let conferenciaEmVerificacao = false;
 
     function gerarIdUnico_(prefixo){
       const uuid = (window.crypto && typeof window.crypto.randomUUID === "function")
@@ -2149,8 +2152,12 @@
         }
         recalcularMapaVisual_();
         resultadoConferenciaAtual=null;
-        atualizarKPIs();
-        renderizarListaAtual_(!document.getElementById("btn-enviar").classList.contains("hidden"));
+        // V5.4: durante a conferência final, não renderiza snapshots intermediários.
+        // O usuário continua vendo a quantidade estável até o estado final estar consolidado.
+        if(!conferenciaEmVerificacao){
+          atualizarKPIs();
+          renderizarListaAtual_(!document.getElementById("btn-enviar").classList.contains("hidden"));
+        }
         return true;
       }catch(e){ return false; }
       finally{ flushEventosEmAndamento=false; }
@@ -2496,6 +2503,9 @@
     }
 
     async function fazerConferencia(){
+      // V5.4: congela apenas a RENDERIZAÇÃO enquanto consolida. O estado interno
+      // pode receber confirmações, porém nenhum número intermediário aparece na tela.
+      conferenciaEmVerificacao = true;
       mostrarStatusCentral_(
         "Sistema verificando a conferência...",
         "Aguarde enquanto o sistema sincroniza e consolida todas as leituras.",
@@ -2504,6 +2514,7 @@
       try{
         await concluirGravacoesPendentesAntesEnvio_();
       }catch(e){
+        conferenciaEmVerificacao = false;
         await mostrarStatusCentralTemporario_(
           "Não foi possível concluir a verificação",
           "Ainda existem leituras aguardando sincronização. Verifique a internet e tente novamente.",
@@ -2520,6 +2531,11 @@
       // ele já nasce com o código correto (ou "EAN <código>" quando o EAN
       // realmente não existe em nenhuma aba do banco).
       await garantirInfoExtras_();
+
+      // V5.4: agora sim publica UMA única vez o estado consolidado.
+      recalcularMapaVisual_();
+      atualizarKPIs();
+      conferenciaEmVerificacao = false;
       ocultarStatusCentral_();
 
       exibindoSomenteDivergencias = true;
@@ -2877,13 +2893,27 @@
       }
     }
     async function concluirGravacoesPendentesAntesEnvio_(){
-      // O fechamento só continua quando TODOS os eventos locais estiverem confirmados no servidor.
+      // V5.4: cria uma barreira real antes de calcular a conferência.
+      // 1) espera qualquer sync/lote já em andamento terminar;
+      // 2) confirma todos os eventos locais;
+      // 3) faz UMA única leitura final do servidor, sem concorrência com o polling.
       const limite=Date.now()+30000;
+
+      while((syncEmAndamento || flushEventosEmAndamento) && Date.now()<limite){
+        await new Promise(r=>setTimeout(r,80));
+      }
+
       while(eventosPendentesLocais.length && Date.now()<limite){
         await flushEventosPendentes_(true);
-        if(eventosPendentesLocais.length) await new Promise(r=>setTimeout(r,450));
+        if(eventosPendentesLocais.length) await new Promise(r=>setTimeout(r,120));
       }
       if(eventosPendentesLocais.length) throw new Error("Existem leituras ainda não sincronizadas.");
+
+      while((syncEmAndamento || flushEventosEmAndamento) && Date.now()<limite){
+        await new Promise(r=>setTimeout(r,80));
+      }
+      if(syncEmAndamento || flushEventosEmAndamento) throw new Error("Sincronização ainda em andamento.");
+
       await puxarSyncAgora_(true);
       if(eventosPendentesLocais.length) throw new Error("Existem leituras ainda não sincronizadas.");
     }
@@ -3000,7 +3030,10 @@
     }
     async function puxarSyncAgora_(forcar = false){
       if(!syncAtivo || !cabecalhoAtual) return;
-      if(syncEmAndamento && !forcar) return;
+      // V5.4: polling normal fica suspenso enquanto Fazer Conferência consolida.
+      if(conferenciaEmVerificacao && !forcar) return;
+      // Nunca permite duas requisições de sync concorrentes, nem quando forçado.
+      if(syncEmAndamento) return;
       const chave=chaveAtualAberta_(); if(chave.length!==44) return;
       syncEmAndamento=true;
       try{
@@ -3024,8 +3057,11 @@
           recalcularMapaVisual_();
           resultadoConferenciaAtual=null;
           await garantirInfoExtras_();
-          atualizarKPIs();
-          renderizarListaAtual_(!document.getElementById("btn-enviar").classList.contains("hidden"));
+          // V5.4: a leitura final atualiza a UI apenas depois da barreira em fazerConferencia().
+          if(!conferenciaEmVerificacao){
+            atualizarKPIs();
+            renderizarListaAtual_(!document.getElementById("btn-enviar").classList.contains("hidden"));
+          }
         }
         document.getElementById("kpi-sync").textContent="OK";
         return;
