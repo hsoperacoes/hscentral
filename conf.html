@@ -1687,7 +1687,7 @@
   </footer>
 
   <script>
-    const APP_VERSION = "5.2";
+    const APP_VERSION = "5.3";
 
     const URL_API = "https://script.google.com/macros/s/AKfycbx1HDzA2b478DAhi5ONS6TstKieKf4lvFM9wzib9McUrdP7Z4Xwhb6SrUt5KW1YcR3x/exec";
 
@@ -2136,8 +2136,17 @@
           await dbExcluirEventos_(Array.from(ids));
           eventosPendentesLocais=eventosPendentesLocais.filter(e=>!ids.has(e.idEvento));
         }
-        mapaServidor=normalizarMapaCliente_(data.bipes||mapaServidor);
-        revisionServidor=Math.max(revisionServidor,Number(data.revision||0));
+        // BLINDAGEM V5.3: resposta atrasada nunca pode substituir um estado mais novo.
+        // O servidor incrementa revision a cada alteração real; portanto só aplicamos
+        // o snapshot quando ele for estritamente mais novo que o já exibido.
+        const revResposta=Number(data.revision||0);
+        if(revResposta>revisionServidor){
+          mapaServidor=normalizarMapaCliente_(data.bipes||{});
+          revisionServidor=revResposta;
+        }else if(revisionServidor===0 && revResposta===0 && !Object.keys(mapaServidor||{}).length){
+          // Compatibilidade apenas para uma sessão ainda sem revisão criada.
+          mapaServidor=normalizarMapaCliente_(data.bipes||{});
+        }
         recalcularMapaVisual_();
         resultadoConferenciaAtual=null;
         atualizarKPIs();
@@ -3006,11 +3015,20 @@
         if(fechamentoDeOutro) await tratarFechamentoRemoto_(data.finalizador||"Outro conferente");
         else if(fechamentoRemotoAtivo) cancelarFechamentoRemoto_();
         const rev=Number(data.revision||0);
-        // Resposta velha nunca retrocede o estado confirmado.
-        if(rev>=revisionServidor){ mapaServidor=normalizarMapaCliente_(data.bipes||{}); revisionServidor=rev; }
-        recalcularMapaVisual_(); resultadoConferenciaAtual=null; await garantirInfoExtras_(); atualizarKPIs();
-        renderizarListaAtual_(!document.getElementById("btn-enviar").classList.contains("hidden"));
+        // BLINDAGEM V5.3: polling com a mesma revisão ou revisão antiga NÃO toca
+        // na contagem da tela. Isso impede o efeito 50 -> 69 -> 50 provocado
+        // por respostas assíncronas chegando fora de ordem.
+        if(rev>revisionServidor){
+          mapaServidor=normalizarMapaCliente_(data.bipes||{});
+          revisionServidor=rev;
+          recalcularMapaVisual_();
+          resultadoConferenciaAtual=null;
+          await garantirInfoExtras_();
+          atualizarKPIs();
+          renderizarListaAtual_(!document.getElementById("btn-enviar").classList.contains("hidden"));
+        }
         document.getElementById("kpi-sync").textContent="OK";
+        return;
       }catch(e){ document.getElementById("kpi-sync").textContent="OFF"; }
       finally{ syncEmAndamento=false; }
     }
