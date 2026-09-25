@@ -1687,7 +1687,7 @@
   </footer>
 
   <script>
-    const APP_VERSION = "5.4";
+    const APP_VERSION = "5.5";
 
     const URL_API = "https://script.google.com/macros/s/AKfycbx1HDzA2b478DAhi5ONS6TstKieKf4lvFM9wzib9McUrdP7Z4Xwhb6SrUt5KW1YcR3x/exec";
 
@@ -2258,7 +2258,7 @@
       if(!existeConferenciaAbertaSemEnvio_()) painel.classList.add("hidden");
       pararSync_(); document.getElementById("kpi-sync").textContent="—";
       try{
-        const resp=await fetch(`${URL_API}?api=consultarConferenciaNF&filial=${encodeURIComponent(filialAtual)}&chave=${encodeURIComponent(chave)}&v=${APP_VERSION}&t=${Date.now()}`);
+        const resp=await fetch(`${URL_API}?api=consultarConferenciaNF&filial=${encodeURIComponent(filialAtual)}&chave=${encodeURIComponent(chave)}&dispositivo=${encodeURIComponent(dispositivoId)}&v=${APP_VERSION}&t=${Date.now()}`);
         const data=await resp.json();
         if(!data.success) throw new Error(data.message||"Erro ao buscar NF.");
         if(data.jaConferida){
@@ -2892,7 +2892,7 @@
         delete timersAjusteManual[ean];
       }
     }
-    async function concluirGravacoesPendentesAntesEnvio_(){
+    async function concluirGravacoesPendentesAntesEnvio_(lerServidorFinal=true){
       // V5.4: cria uma barreira real antes de calcular a conferência.
       // 1) espera qualquer sync/lote já em andamento terminar;
       // 2) confirma todos os eventos locais;
@@ -2914,8 +2914,10 @@
       }
       if(syncEmAndamento || flushEventosEmAndamento) throw new Error("Sincronização ainda em andamento.");
 
-      await puxarSyncAgora_(true);
-      if(eventosPendentesLocais.length) throw new Error("Existem leituras ainda não sincronizadas.");
+      if(lerServidorFinal){
+        await puxarSyncAgora_(true);
+        if(eventosPendentesLocais.length) throw new Error("Existem leituras ainda não sincronizadas.");
+      }
     }
 
     function beepOk(){
@@ -3039,7 +3041,7 @@
       try{
         // Primeiro entrega o que este aparelho já gravou localmente.
         if(eventosPendentesLocais.length) await flushEventosPendentes_(forcar);
-        const resp=await fetch(`${URL_API}?api=sincronizarBipes&chave=${encodeURIComponent(chave)}&v=${APP_VERSION}&t=${Date.now()}`);
+        const resp=await fetch(`${URL_API}?api=sincronizarBipes&chave=${encodeURIComponent(chave)}&dispositivo=${encodeURIComponent(dispositivoId)}&v=${APP_VERSION}&t=${Date.now()}`);
         if(!resp.ok) throw new Error("sync");
         const data=await resp.json(); if(!data||!data.success) throw new Error("sync");
         if(!cabecalhoAtual || chaveAtualAberta_()!==chave) return;
@@ -3514,7 +3516,7 @@ const scannerDiv = document.getElementById("scanner");
     async function verificarNotaConferidaSilenciosamente_(chave){
       for(let tentativa = 0; tentativa < 3; tentativa++){
         try{
-          const resp = await fetch(`${URL_API}?api=consultarConferenciaNF&filial=${encodeURIComponent(filialAtual)}&chave=${encodeURIComponent(chave)}&v=${APP_VERSION}&t=${Date.now()}`);
+          const resp = await fetch(`${URL_API}?api=consultarConferenciaNF&filial=${encodeURIComponent(filialAtual)}&chave=${encodeURIComponent(chave)}&dispositivo=${encodeURIComponent(dispositivoId)}&v=${APP_VERSION}&t=${Date.now()}`);
           if(resp.ok){
             const data = await resp.json();
             if(data && data.success && data.jaConferida) return true;
@@ -3550,8 +3552,18 @@ const scannerDiv = document.getElementById("scanner");
         }, 2, 10000);
         if(prep && prep.jaConferida){ await tratarFinalizacaoRemota_(prep.finalizadoPor||"Outro conferente"); return; }
         if(!prep || !prep.success) throw new Error("Não foi possível preparar a finalização.");
-        await new Promise(resolve=>setTimeout(resolve,2300));
-        await concluirGravacoesPendentesAntesEnvio_();
+
+        const envioMultiUsuario = prep.modoEnvio === "MULTI" || prep.multiUsuario === true;
+        if(envioMultiUsuario){
+          // Só quando houve outro aparelho damos a janela para ele entregar os
+          // eventos locais e fazemos a leitura final consolidada do servidor.
+          await new Promise(resolve=>setTimeout(resolve,2300));
+          await concluirGravacoesPendentesAntesEnvio_(true);
+        }else{
+          // Aparelho único: os eventos deste aparelho já foram confirmados acima.
+          // Não faz nova consulta/reconstrução pesada antes do POST final.
+          await concluirGravacoesPendentesAntesEnvio_(false);
+        }
 
         // Atualiza os metadados enviados. As quantidades finais são calculadas
         // novamente pelo servidor, dentro do bloqueio da conferência.
