@@ -83,9 +83,9 @@
       <img src="logo.png" alt="Logo" class="logo">
       <h2>Cadastro de Folga Funcionários</h2>
 
-      <!-- Endpoint unificado: grava a folga e envia o aviso por e-mail -->
+      <!-- ✅ mantém seu endpoint de folgas (GS SEPARADO) -->
       <form id="form-folgas" method="POST"
-            action="https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec">
+            action="https://script.google.com/macros/s/AKfycbwh-YUwL2o3_i-bfcV9RMzLcoI98vyyGwEXf4LHlG5KJ59gIAlUe1_VVlFQMBqU6PwR/exec">
 
         <div class="form-group">
           <label for="filial-folgas">Filial</label>
@@ -256,10 +256,6 @@
           if (btnSubmit) btnSubmit.disabled = true;
 
           try {
-            if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(formFolgas.action)) {
-              alert("Endereço do Apps Script inválido.");
-              return;
-            }
             const formData = new FormData(formFolgas);
 
             const resp = await fetch(formFolgas.action, {
@@ -271,17 +267,9 @@
             console.log("Resposta App Web (folgas):", texto);
 
             // Só confirma se o GS realmente respondeu SUCESSO
-            const resultado = String(texto || "").trim();
-            if (resultado === "GRAVADO_SEM_EMAIL") {
-              alert("Folga gravada na planilha, mas o e-mail não foi enviado. Não envie novamente para evitar duplicidade.");
-              formFolgas.reset();
-              funcSel.innerHTML = '<option value="">Selecione um funcionário</option>';
-              motivoOutrosDiv.style.display = "none";
-              return;
-            }
-            if (resultado !== "SUCESSO") {
-              alert("Cadastro não confirmado. Verifique a planilha antes de tentar novamente.");
-              console.error("Resposta inesperada:", resultado);
+            const ok = String(texto || "").toUpperCase().includes("SUCESSO");
+            if (!ok) {
+              alert("Não confirmado pelo servidor.\n\nResposta: " + texto);
               return;
             }
 
