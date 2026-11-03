@@ -85,7 +85,7 @@
 
       <!-- Endpoint unificado: grava a folga e envia o aviso por e-mail -->
       <form id="form-folgas" method="POST"
-            action="https://script.google.com/macros/s/AKfycbxu_jVaotWytMOQh4UCZetFZFOxgk5ePrOkaviDd-qKNPiu2_8BjCaNczAVZzaDwAbj/exec">
+            action="COLE_AQUI_URL_DO_NOVO_GS_DE_FOLGAS">
 
         <div class="form-group">
           <label for="filial-folgas">Filial</label>
@@ -256,6 +256,10 @@
           if (btnSubmit) btnSubmit.disabled = true;
 
           try {
+            if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(formFolgas.action)) {
+              alert("Configure o endereço do novo GS de folgas antes de enviar.");
+              return;
+            }
             const formData = new FormData(formFolgas);
 
             const resp = await fetch(formFolgas.action, {
@@ -267,9 +271,17 @@
             console.log("Resposta App Web (folgas):", texto);
 
             // Só confirma se o GS realmente respondeu SUCESSO
-            const ok = String(texto || "").toUpperCase().includes("SUCESSO");
-            if (!ok) {
-              alert("Não confirmado pelo servidor.\n\nResposta: " + texto);
+            const resultado = String(texto || "").trim();
+            if (resultado === "GRAVADO_SEM_EMAIL") {
+              alert("Folga gravada na planilha, mas o e-mail não foi enviado. Não envie novamente para evitar duplicidade.");
+              formFolgas.reset();
+              funcSel.innerHTML = '<option value="">Selecione um funcionário</option>';
+              motivoOutrosDiv.style.display = "none";
+              return;
+            }
+            if (resultado !== "SUCESSO") {
+              alert("Cadastro não confirmado. Verifique a planilha antes de tentar novamente.");
+              console.error("Resposta inesperada:", resultado);
               return;
             }
 
@@ -301,4 +313,3 @@
   </script>
 </body>
 </html>
-
